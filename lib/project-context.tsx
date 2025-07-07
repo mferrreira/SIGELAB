@@ -1,0 +1,129 @@
+"use client"
+
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
+import type { Project } from "@/lib/types"
+import { ProjectsAPI } from "@/lib/api-client"
+import { useAuth } from "@/lib/auth-context"
+
+interface ProjectContextType {
+  projects: Project[]
+  loading: boolean
+  error: string | null
+  fetchProjects: () => Promise<void>
+  createProject: (project: Omit<Project, "id" | "createdAt" | "createdBy">) => Promise<Project>
+  updateProject: (id: string, project: Partial<Project>) => Promise<Project>
+  deleteProject: (id: string) => Promise<void>
+}
+
+const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
+
+export function ProjectProvider({ children }: { children: ReactNode }) {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
+
+  const fetchProjects = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { projects } = await ProjectsAPI.getAll()
+      setProjects(projects)
+    } catch (err) {
+      setError("Erro ao carregar projetos")
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  // Carregar projetos quando o componente montar ou o usuário mudar
+  useEffect(() => {
+    if (user) {
+      fetchProjects()
+    } else {
+      setProjects([])
+    }
+  }, [user, fetchProjects])
+
+  const createProject = async (projectData: Omit<Project, "id" | "createdAt" | "createdBy">) => {
+    try {
+      if (!user) throw new Error("Usuário não autenticado")
+
+      setLoading(true)
+      setError(null)
+
+      const { project } = await ProjectsAPI.create({
+        ...projectData,
+        createdBy: user.id,
+      })
+
+      setProjects((prevProjects) => [...prevProjects, project])
+      return project
+    } catch (err) {
+      setError("Erro ao criar projeto")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateProject = async (id: string, projectData: Partial<Project>) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { project } = await ProjectsAPI.update(id, projectData)
+      setProjects((prevProjects) => prevProjects.map((p) => (p.id === id ? project : p)))
+      return project
+    } catch (err) {
+      setError("Erro ao atualizar projeto")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const deleteProject = async (id: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      await ProjectsAPI.delete(id)
+      setProjects((prevProjects) => prevProjects.filter((p) => p.id !== id))
+    } catch (err) {
+      setError("Erro ao excluir projeto")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <ProjectContext.Provider
+      value={{
+        projects,
+        loading,
+        error,
+        fetchProjects,
+        createProject,
+        updateProject,
+        deleteProject,
+      }}
+    >
+      {children}
+    </ProjectContext.Provider>
+  )
+}
+
+export function useProject() {
+  const context = useContext(ProjectContext)
+  if (context === undefined) {
+    throw new Error("useProject deve ser usado dentro de um ProjectProvider")
+  }
+  return context
+}
