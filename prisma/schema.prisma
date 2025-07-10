@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/kanban.db"
+}
+
+model users {
+  id              Int                    @id @default(autoincrement())
+  name            String
+  email           String                 @unique
+  role            String
+  points          Int                    @default(0)
+  completedTasks  Int                    @default(0)
+  password        String?
+  status          String                 @default("pending")
+  projects        projects[]             @relation("UserProjects")
+  tasks           tasks[]                @relation("UserTasks")
+  purchases       purchases[]            @relation("UserPurchases")
+  lab_responsibilities lab_responsibilities[] @relation("UserLabResponsibilities")
+  daily_logs      daily_logs[]           @relation("UserDailyLogs")
+  schedules       user_schedules[]       @relation("UserSchedules")
+}
+
+model projects {
+  id          Int       @id @default(autoincrement())
+  name        String
+  description String?
+  createdAt   String
+  createdBy   Int
+  status      String
+  creator     users     @relation("UserProjects", fields: [createdBy], references: [id])
+  tasks       tasks[]   @relation("ProjectTasks")
+}
+
+model tasks {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  status      String
+  priority    String
+  assignedTo  Int?
+  projectId   Int?
+  dueDate     String?
+  points      Int      @default(0)
+  completed   Boolean  @default(false)
+  assignee    users?   @relation("UserTasks", fields: [assignedTo], references: [id])
+  projectObj  projects? @relation("ProjectTasks", fields: [projectId], references: [id])
+}
+
+model rewards {
+  id          Int        @id @default(autoincrement())
+  name        String
+  description String?
+  price       Int
+  available   Boolean    @default(true)
+  purchases   purchases[] @relation("RewardPurchases")
+}
+
+model purchases {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  rewardId     Int
+  rewardName   String
+  price        Int
+  purchaseDate String
+  status       String
+  user         users    @relation("UserPurchases", fields: [userId], references: [id])
+  reward       rewards  @relation("RewardPurchases", fields: [rewardId], references: [id])
+}
+
+model lab_responsibilities {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  userName  String
+  startTime String
+  endTime   String?
+  notes     String?
+  user      users    @relation("UserLabResponsibilities", fields: [userId], references: [id])
+}
+
+model daily_logs {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  date      DateTime
+  note      String?
+  createdAt DateTime @default(now())
+  user      users    @relation("UserDailyLogs", fields: [userId], references: [id])
+}
+
+model user_schedules {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime String   // Format: "HH:MM"
+  endTime   String   // Format: "HH:MM"
+  createdAt DateTime @default(now())
+  user      users    @relation("UserSchedules", fields: [userId], references: [id])
+}

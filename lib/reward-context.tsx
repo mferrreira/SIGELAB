@@ -11,12 +11,12 @@ interface RewardContextType {
   loading: boolean
   error: string | null
   fetchRewards: () => Promise<void>
-  fetchPurchases: (userId?: string) => Promise<void>
+  fetchPurchases: (userId?: number) => Promise<void>
   createReward: (reward: Omit<Reward, "id">) => Promise<Reward>
-  updateReward: (id: string, reward: Partial<Reward>) => Promise<Reward>
-  deleteReward: (id: string) => Promise<void>
-  purchaseReward: (userId: string, rewardId: string) => Promise<Purchase | null>
-  updatePurchaseStatus: (id: string, status: Purchase["status"]) => Promise<Purchase>
+  updateReward: (id: number, reward: Partial<Reward>) => Promise<Reward>
+  deleteReward: (id: number) => Promise<void>
+  purchaseReward: (userId: number, rewardId: number) => Promise<Purchase | null>
+  updatePurchaseStatus: (id: number, status: Purchase["status"]) => Promise<Purchase>
 }
 
 const RewardContext = createContext<RewardContextType | undefined>(undefined)
@@ -43,7 +43,7 @@ export function RewardProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const fetchPurchases = useCallback(async (userId?: string) => {
+  const fetchPurchases = useCallback(async (userId?: number) => {
     try {
       setLoading(true)
       setError(null)
@@ -62,7 +62,7 @@ export function RewardProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user) {
       fetchRewards()
-      fetchPurchases()
+      fetchPurchases(Number(user.id))
     } else {
       setRewards([])
       setPurchases([])
@@ -86,7 +86,7 @@ export function RewardProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateReward = async (id: string, rewardData: Partial<Reward>) => {
+  const updateReward = async (id: number, rewardData: Partial<Reward>) => {
     try {
       setLoading(true)
       setError(null)
@@ -103,7 +103,7 @@ export function RewardProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const deleteReward = async (id: string) => {
+  const deleteReward = async (id: number) => {
     try {
       setLoading(true)
       setError(null)
@@ -119,7 +119,7 @@ export function RewardProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const purchaseReward = async (userId: string, rewardId: string) => {
+  const purchaseReward = async (userId: number, rewardId: number) => {
     try {
       setLoading(true)
       setError(null)
@@ -140,7 +140,7 @@ export function RewardProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updatePurchaseStatus = async (id: string, status: Purchase["status"]) => {
+  const updatePurchaseStatus = async (id: number, status: Purchase["status"]) => {
     try {
       setLoading(true)
       setError(null)

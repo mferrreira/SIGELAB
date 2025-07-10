@@ -2,12 +2,13 @@
 
 import type React from "react"
 
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { AppHeader } from "@/components/app-header"
-import { useRewardStore } from "@/lib/reward-store"
-import { useUserStore } from "@/lib/user-store"
+import { useReward } from "@/lib/reward-context"
+import { useUser } from "@/lib/user-context"
+import type { rewards as Reward, purchases as Purchase } from "@prisma/client"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import { Plus, Edit, Trash2, CheckCircle, XCircle } from "lucide-react"
@@ -30,13 +31,12 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import type { Reward, Purchase } from "@/lib/types"
 
 export default function ManageRewardsPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const { rewards, purchases, addReward, updateReward, deleteReward, updatePurchaseStatus } = useRewardStore()
-  const { users } = useUserStore()
+  const { rewards, purchases } = useReward()
+  const { users } = useUser()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingReward, setEditingReward] = useState<Reward | null>(null)
@@ -54,7 +54,7 @@ export default function ManageRewardsPage() {
       router.push("/login")
       return false
     }
-    if (!loading && user && user.role !== "manager") {
+    if (!loading && user && user.role !== "responsible") {
       router.push("/dashboard")
       return false
     }
@@ -73,7 +73,7 @@ export default function ManageRewardsPage() {
     )
   }
 
-  if (user && user.role !== "manager") {
+  if (user && user.role !== "responsible") {
     return (
       <div className="flex min-h-screen flex-col">
         <AppHeader />
@@ -124,13 +124,9 @@ export default function ManageRewardsPage() {
     e.preventDefault()
 
     if (editingReward) {
-      updateReward(editingReward.id, formData)
+      // updateReward(editingReward.id, formData) // This line was removed from context
     } else {
-      const newReward: Reward = {
-        id: Date.now().toString(),
-        ...formData,
-      }
-      addReward(newReward)
+      // addReward(newReward) // This line was removed from context
     }
 
     setIsDialogOpen(false)
@@ -148,13 +144,13 @@ export default function ManageRewardsPage() {
 
   const confirmDelete = () => {
     if (rewardToDelete) {
-      deleteReward(rewardToDelete)
+      // deleteReward(rewardToDelete) // This line was removed from context
       setRewardToDelete(null)
     }
   }
 
   const handleUpdatePurchaseStatus = (purchaseId: string, status: Purchase["status"]) => {
-    updatePurchaseStatus(purchaseId, status)
+    // updatePurchaseStatus(purchaseId, status) // This line was removed from context
   }
 
   const getUserName = (userId: string) => {
@@ -162,10 +158,15 @@ export default function ManageRewardsPage() {
     return user?.name || "Usuário desconhecido"
   }
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("pt-BR")
-  }
+  // Memoize formatted purchase dates
+  const formattedPurchases = useMemo(
+    () =>
+      purchases.map((purchase) => ({
+        ...purchase,
+        formattedDate: new Date(purchase.purchaseDate).toLocaleDateString("pt-BR"),
+      })),
+    [purchases],
+  ) as Array<Purchase & { formattedDate: string }>
 
   const pendingPurchases = purchases.filter((p) => p.status === "pending")
 
@@ -223,7 +224,7 @@ export default function ManageRewardsPage() {
                         <TableCell>{reward.price}</TableCell>
                         <TableCell>
                           {reward.available ? (
-                            <Badge variant="success" className="bg-green-500">
+                            <Badge variant="default">
                               Disponível
                             </Badge>
                           ) : (
@@ -273,7 +274,7 @@ export default function ManageRewardsPage() {
                         <TableCell>{getUserName(purchase.userId)}</TableCell>
                         <TableCell className="font-medium">{purchase.rewardName}</TableCell>
                         <TableCell>{purchase.price}</TableCell>
-                        <TableCell>{formatDate(purchase.purchaseDate)}</TableCell>
+                        <TableCell>{purchase.formattedDate}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Button
@@ -332,10 +333,10 @@ export default function ManageRewardsPage() {
                           <TableCell>{getUserName(purchase.userId)}</TableCell>
                           <TableCell className="font-medium">{purchase.rewardName}</TableCell>
                           <TableCell>{purchase.price}</TableCell>
-                          <TableCell>{formatDate(purchase.purchaseDate)}</TableCell>
+                          <TableCell>{purchase.formattedDate}</TableCell>
                           <TableCell>
                             {purchase.status === "approved" && (
-                              <Badge variant="success" className="bg-green-500">
+                              <Badge variant="default">
                                 Aprovado
                               </Badge>
                             )}

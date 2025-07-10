@@ -18,7 +18,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState("user")
+  const [role, setRole] = useState("volunteer")
   const [error, setError] = useState("")
   const { register } = useAuth()
   const router = useRouter()
@@ -28,7 +28,7 @@ export default function RegisterPage() {
     setError("")
 
     try {
-      await register(name, email, password, role as "user" | "manager")
+      await register(name, email, password, role as "admin" | "laboratorist" | "responsible" | "volunteer")
       router.push("/login")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao registrar")
@@ -88,8 +88,10 @@ export default function RegisterPage() {
                   <SelectValue placeholder="Selecione a função" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Usuário</SelectItem>
-                  <SelectItem value="manager">Gerente</SelectItem>
+                  <SelectItem value="volunteer">Voluntário</SelectItem>
+                  <SelectItem value="responsible">Responsável</SelectItem>
+                  <SelectItem value="laboratorist">Laboratorista</SelectItem>
+                  <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Clock, User } from "lucide-react"
@@ -21,12 +21,21 @@ function formatDuration(seconds: number): string {
 
 export function LabResponsibilityStatus() {
   const { activeResponsibility, loading, error, fetchActiveResponsibility } = useResponsibility()
+  const [formattedStartTime, setFormattedStartTime] = useState("")
 
   // Buscar responsabilidade ativa ao montar o componente
   useEffect(() => {
     fetchActiveResponsibility()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (activeResponsibility?.startTime) {
+      setFormattedStartTime(new Date(activeResponsibility.startTime).toLocaleTimeString())
+    } else {
+      setFormattedStartTime("")
+    }
+  }, [activeResponsibility?.startTime])
 
   if (loading) {
     return (
@@ -55,11 +64,11 @@ export function LabResponsibilityStatus() {
         {activeResponsibility ? (
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-2">
-              <Badge variant="success" className="bg-green-500">
+              <Badge variant="default" className="bg-green-500">
                 Laboratório em uso
               </Badge>
               <span className="text-sm text-muted-foreground">
-                Desde {new Date(activeResponsibility.startTime).toLocaleTimeString()}
+                Desde {formattedStartTime}
               </span>
             </div>
             <div className="flex items-center gap-2 mb-2">

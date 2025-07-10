@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
-import { getAllProjects, createProject } from "@/lib/db/projects"
+import { prisma } from "@/lib/prisma"
 
 // GET: Obter todos os projetos
 export async function GET() {
   try {
-    const projects = getAllProjects()
-
+    const projects = await prisma.projects.findMany()
     return NextResponse.json({ projects }, { status: 200 })
   } catch (error) {
     console.error("Erro ao buscar projetos:", error)
@@ -17,21 +16,18 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-
-    // Validar dados
     if (!body.name || !body.createdBy) {
       return NextResponse.json({ error: "Nome e criador são obrigatórios" }, { status: 400 })
     }
-
-    // Criar novo projeto
-    const project = createProject({
-      name: body.name,
-      description: body.description || "",
-      createdAt: new Date().toISOString(),
-      createdBy: body.createdBy,
-      status: body.status || "active",
+    const project = await prisma.projects.create({
+      data: {
+        name: body.name,
+        description: body.description || "",
+        createdAt: new Date().toISOString(),
+        createdBy: body.createdBy,
+        status: body.status || "active",
+      },
     })
-
     return NextResponse.json({ project }, { status: 201 })
   } catch (error) {
     console.error("Erro ao criar projeto:", error)

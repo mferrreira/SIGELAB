@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { User } from "@/lib/types"
+import type { users as User } from "@prisma/client"
 import { UsersAPI } from "@/lib/api-client"
 import { useAuth } from "@/lib/auth-context"
 
@@ -37,7 +37,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Carregar usuários quando o componente montar ou o usuário mudar
   useEffect(() => {
     if (user) {
       fetchUsers()

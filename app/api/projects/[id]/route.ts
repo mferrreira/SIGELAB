@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server"
-import { getProjectById, updateProject, deleteProject } from "@/lib/db/projects"
+import { prisma } from "@/lib/prisma"
 
 // GET: Obter um projeto específico
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id
-    const project = getProjectById(id)
-
+    const project = await prisma.projects.findUnique({ where: { id } })
     if (!project) {
       return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 })
     }
-
     return NextResponse.json({ project }, { status: 200 })
   } catch (error) {
     console.error("Erro ao buscar projeto:", error)
@@ -23,15 +21,15 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const id = params.id
     const body = await request.json()
-
-    const updatedProject = updateProject(id, body)
-
-    if (!updatedProject) {
+    const updatedProject = await prisma.projects.update({
+      where: { id },
+      data: body,
+    })
+    return NextResponse.json({ project: updatedProject }, { status: 200 })
+  } catch (error: any) {
+    if (error.code === 'P2025') {
       return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 })
     }
-
-    return NextResponse.json({ project: updatedProject }, { status: 200 })
-  } catch (error) {
     console.error("Erro ao atualizar projeto:", error)
     return NextResponse.json({ error: "Erro ao atualizar projeto" }, { status: 500 })
   }
@@ -41,15 +39,12 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = params.id
-
-    const success = deleteProject(id)
-
-    if (!success) {
+    await prisma.projects.delete({ where: { id } })
+    return NextResponse.json({ success: true }, { status: 200 })
+  } catch (error: any) {
+    if (error.code === 'P2025') {
       return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 })
     }
-
-    return NextResponse.json({ success: true }, { status: 200 })
-  } catch (error) {
     console.error("Erro ao excluir projeto:", error)
     return NextResponse.json({ error: "Erro ao excluir projeto" }, { status: 500 })
   }

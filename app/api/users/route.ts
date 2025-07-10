@@ -1,64 +1,84 @@
 import { NextResponse } from "next/server"
-import { getAllUsers, createUser, getUserByEmail } from "@/lib/db/users"
+import { prisma } from "@/lib/prisma"
+import bcrypt from "bcryptjs"
+import crypto from "crypto"
 
-// GET: Obter todos os usuários
-export async function GET() {
+// GET: Obter todos os usuários ou apenas pendentes
+export async function GET(request: Request) {
   try {
-    const users = getAllUsers()
-
-    // Em um ambiente de produção, você provavelmente não retornaria informações sensíveis
-    const safeUsers = users.map(({ id, name, email, role, points, completedTasks }) => ({
-      id,
-      name,
-      email,
-      role,
-      points,
-      completedTasks,
-    }))
-
-    return NextResponse.json({ users: safeUsers }, { status: 200 })
+    const url = new URL(request.url)
+    const status = url.searchParams.get("status")
+    let users
+    if (status) {
+      users = await prisma.users.findMany({ where: { status } })
+    } else {
+      users = await prisma.users.findMany()
+    }
+    return NextResponse.json({ users }, { status: 200 })
   } catch (error) {
     console.error("Erro ao buscar usuários:", error)
     return NextResponse.json({ error: "Erro ao buscar usuários" }, { status: 500 })
   }
 }
 
-// POST: Criar um novo usuário
+// POST: Criar um novo usuário (status: pending)
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-
-    // Validar dados
-    if (!body.name || !body.email || !body.role) {
-      return NextResponse.json({ error: "Nome, email e função são obrigatórios" }, { status: 400 })
+    const email = body.email?.toLowerCase()
+    if (!body.name || !email || !body.role || !body.password) {
+      return NextResponse.json({ error: "Nome, email, senha e função são obrigatórios" }, { status: 400 })
     }
-
-    // Verificar se o email já está em uso
-    const existingUser = getUserByEmail(body.email)
+    const validRoles = ["admin", "laboratorist", "responsible", "volunteer"]
+    if (!validRoles.includes(body.role)) {
+      return NextResponse.json({ error: "Função inválida" }, { status: 400 })
+    }
+    // Check if user already exists by email
+    let existingUser = null
+    try {
+      existingUser = await prisma.users.findUnique({ where: { email } })
+    } catch (e) {
+      console.error("Erro ao buscar usuário existente:", e)
+    }
     if (existingUser) {
       return NextResponse.json({ error: "Email já está em uso" }, { status: 400 })
     }
-
-    // Criar novo usuário
-    const user = createUser({
-      name: body.name,
-      email: body.email,
-      role: body.role,
-      points: 0,
-      completedTasks: 0,
-    })
-
-    // Não retornar informações sensíveis
-    const { id, name, email, role, points, completedTasks } = user
-
-    return NextResponse.json(
-      {
-        user: { id, name, email, role, points, completedTasks },
+    const hashedPassword = await bcrypt.hash(body.password, 10)
+    const user = await prisma.users.create({
+      data: {
+        name: body.name,
+        email,
+        role: body.role,
+        password: hashedPassword,
+        // points, completedTasks, and status will use their defaults
       },
-      { status: 201 },
-    )
+    })
+    return NextResponse.json({ user }, { status: 201 })
   } catch (error) {
     console.error("Erro ao criar usuário:", error)
     return NextResponse.json({ error: "Erro ao criar usuário" }, { status: 500 })
+  }
+}
+
+// PATCH: Aprovar ou rejeitar usuário
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json()
+    const { id, action } = body
+    if (!id || !["approve", "reject"].includes(action)) {
+      return NextResponse.json({ error: "ID e ação são obrigatórios" }, { status: 400 })
+    }
+    const status = action === "approve" ? "active" : "rejected"
+    const user = await prisma.users.update({
+      where: { id: Number(id) },
+      data: { status },
+    })
+    return NextResponse.json({ user }, { status: 200 })
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
+    }
+    console.error("Erro ao atualizar status do usuário:", error)
+    return NextResponse.json({ error: "Erro ao atualizar status do usuário" }, { status: 500 })
   }
 }

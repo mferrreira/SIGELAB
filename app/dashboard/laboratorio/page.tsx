@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { AppHeader } from "@/components/app-header"
 import { useResponsibility } from "@/lib/responsibility-context"
+import { useDailyLogs } from "@/lib/daily-log-context";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
@@ -15,6 +16,9 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, Clock, Play, Square, AlertCircle, FileText } from "lucide-react"
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import { Tooltip } from "@/components/ui/tooltip"
+import DayViewCalendar from "@/components/ui/day-view-calendar"
+import { Input } from "@/components/ui/input"
 
 export default function LabResponsibilityPage() {
   const { user, loading: authLoading } = useAuth()
@@ -31,12 +35,19 @@ export default function LabResponsibilityPage() {
     updateNotes,
   } = useResponsibility()
 
-  const [date, setDate] = useState<Date>(new Date())
+  const { logs: dailyLogs, loading: logsLoading, createLog } = useDailyLogs();
+
+  const [date, setDate] = useState<Date | null>(null)
   const [isStarting, setIsStarting] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
   const [notes, setNotes] = useState("")
   const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false)
   const [selectedResponsibility, setSelectedResponsibility] = useState<string | null>(null)
+  const [showEventDialog, setShowEventDialog] = useState(false)
+  const [eventDialogTime, setEventDialogTime] = useState<string>("")
+  const [eventDialogType, setEventDialogType] = useState<"log"|"responsibility">("log")
+  const [eventDialogNote, setEventDialogNote] = useState("")
+  const [editingEvent, setEditingEvent] = useState<any|null>(null)
 
   // Redirecionar para login se não estiver autenticado
   useEffect(() => {
@@ -52,6 +63,10 @@ export default function LabResponsibilityPage() {
       fetchActiveResponsibility()
     }
   }, [user, fetchResponsibilities, fetchActiveResponsibility])
+
+  useEffect(() => {
+    setDate(new Date())
+  }, [])
 
   // Quando o mês muda, buscar responsabilidades para o novo período
   useEffect(() => {
@@ -125,15 +140,101 @@ export default function LabResponsibilityPage() {
     return formatDuration(durationInSeconds)
   }
 
-  // Função para destacar dias no calendário com responsabilidades
+  // Função para destacar dias no calendário com responsabilidades ou daily log
   const isDayWithResponsibility = (day: Date) => {
-    return responsibilities.some((resp) => {
+    // Guard against undefined/null day
+    if (!day || !(day instanceof Date)) {
+      return { hasResponsibility: false, hasDailyLog: false }
+    }
+    
+    const hasResponsibility = responsibilities.some((resp) => {
       const start = parseISO(resp.startTime)
       const end = resp.endTime ? parseISO(resp.endTime) : new Date()
-
-      // Verificar se o dia está dentro do intervalo ou é o mesmo dia
       return isWithinInterval(day, { start, end }) || isSameDay(day, start) || (resp.endTime && isSameDay(day, end))
     })
+    const hasDailyLog = dailyLogs.some((log) => isSameDay(day, new Date(log.date)))
+    return { hasResponsibility, hasDailyLog }
+  }
+
+  // Memoize formatted active responsibility start time
+  const formattedActiveStartTime = useMemo(() =>
+    activeResponsibility ? format(new Date(activeResponsibility.startTime), "dd/MM/yyyy HH:mm") : ""
+  , [activeResponsibility])
+
+  // Memoize formatted responsibilities
+  const formattedResponsibilities = useMemo(() =>
+    responsibilities.map((responsibility) => ({
+      ...responsibility,
+      formattedStart: format(new Date(responsibility.startTime), "dd/MM/yyyy HH:mm"),
+      formattedEnd: responsibility.endTime ? format(new Date(responsibility.endTime), "dd/MM/yyyy HH:mm") : null,
+      duration: calculateDuration(responsibility.startTime, responsibility.endTime || null),
+    }))
+  , [responsibilities])
+
+  // Build events for the selected day
+  const events = useMemo(() => {
+    const logs = dailyLogs
+      .filter(log => isSameDay(new Date(log.date), date || new Date()))
+      .map(log => ({ 
+        time: log.date.slice(11,16), 
+        note: log.note || undefined, 
+        type: "log" as const
+      }))
+    const resps = responsibilities
+      .filter(resp => {
+        const start = parseISO(resp.startTime)
+        return isSameDay(start, date || new Date())
+      })
+      .map(resp => ({ 
+        time: new Date(resp.startTime).toTimeString().slice(0,5), 
+        note: resp.notes || undefined, 
+        type: "responsibility" as const
+      }))
+    return [...logs, ...resps]
+  }, [dailyLogs, responsibilities, date])
+
+  // Handle add event
+  const handleAddEvent = (time: string) => {
+    setEventDialogTime(time)
+    setEventDialogType("log")
+    setEventDialogNote("")
+    setEditingEvent(null)
+    setShowEventDialog(true)
+  }
+
+  // Handle edit event (optional, for future inline editing)
+  // const handleEditEvent = (event: DayViewEvent) => {
+  //   setEventDialogTime(event.time)
+  //   setEventDialogType(event.type || "log")
+  //   setEventDialogNote(event.note || "")
+  //   setEditingEvent(event)
+  //   setShowEventDialog(true)
+  // }
+
+  // Save event (log or responsibility)
+  const handleSaveEvent = async () => {
+    if (!user) return
+
+    if (eventDialogType === "log") {
+      // Save as daily log
+      const logDate = new Date(date || new Date())
+      const [h, m] = eventDialogTime.split(":").map(Number)
+      logDate.setHours(h, m, 0, 0)
+      await createLog({ userId: user.id, date: logDate.toISOString(), note: eventDialogNote })
+    } else {
+      // Save as responsibility (start at selected time, end null, notes)
+      const start = new Date(date || new Date())
+      const [h, m] = eventDialogTime.split(":").map(Number)
+      start.setHours(h, m, 0, 0)
+      await startResponsibility(eventDialogNote)
+      // Optionally, update the responsibility's startTime to the selected time (if your API allows)
+    }
+    setShowEventDialog(false)
+  }
+
+  // Handle day change
+  const handleDateChange = (newDate: Date) => {
+    setDate(newDate)
   }
 
   if (authLoading) {
@@ -173,17 +274,17 @@ export default function LabResponsibilityPage() {
                 ) : activeResponsibility ? (
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                      <Badge variant="success" className="bg-green-500">
+                      <Badge variant="default">
                         Ativo
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        Desde {format(new Date(activeResponsibility.startTime), "dd/MM/yyyy HH:mm")}
+                        Desde {formattedActiveStartTime}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-center">
                       <Clock className="h-5 w-5 mr-2 text-primary" />
-                      <span className="text-2xl font-mono">{formatDuration(activeResponsibility.duration)}</span>
+                      <span className="text-2xl font-mono">{activeResponsibility.duration}</span>
                     </div>
 
                     <Button
@@ -233,37 +334,32 @@ export default function LabResponsibilityPage() {
             </Card>
           </div>
 
-          {/* Coluna 2: Calendário */}
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Calendário de Responsabilidades</CardTitle>
-              <CardDescription>Visualize os dias em que houve responsáveis pelo laboratório</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex justify-center">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={(newDate) => newDate && setDate(newDate)}
-                  locale={ptBR}
-                  modifiers={{
-                    withResponsibility: (date) => isDayWithResponsibility(date),
-                  }}
-                  modifiersClassNames={{
-                    withResponsibility: "bg-primary/20 font-bold",
-                  }}
-                  className="rounded-md border"
+          {/* Coluna 2: Day View Calendar */}
+          <div className="md:col-span-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Agenda do Dia</CardTitle>
+                <CardDescription>
+                  Slots padrão e eventos do dia selecionado. Clique em "+ Adicionar evento" para registrar um log ou responsabilidade.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <DayViewCalendar
+                  date={date || new Date()}
+                  events={events}
+                  onAddEvent={handleAddEvent}
+                  onDateChange={handleDateChange}
                 />
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Histórico de responsabilidades */}
           <Card className="md:col-span-3">
             <CardHeader>
               <CardTitle>Histórico de Responsabilidades</CardTitle>
               <CardDescription>
-                Registro de todas as responsabilidades do mês de {format(date, "MMMM 'de' yyyy", { locale: ptBR })}
+                Registro de todas as responsabilidades do mês de {format(date || new Date(), "MMMM 'de' yyyy", { locale: ptBR })}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -277,27 +373,27 @@ export default function LabResponsibilityPage() {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {responsibilities.map((responsibility) => (
+                  {formattedResponsibilities.map((responsibility) => (
                     <Card key={responsibility.id} className="overflow-hidden">
                       <div className="p-4 border-l-4 border-primary">
                         <div className="flex justify-between items-start mb-2">
                           <div>
                             <h3 className="font-medium">{responsibility.userName}</h3>
                             <p className="text-sm text-muted-foreground">
-                              {format(new Date(responsibility.startTime), "dd/MM/yyyy HH:mm")}
-                              {responsibility.endTime
-                                ? ` até ${format(new Date(responsibility.endTime), "dd/MM/yyyy HH:mm")}`
+                              {responsibility.formattedStart}
+                              {responsibility.formattedEnd
+                                ? ` até ${responsibility.formattedEnd}`
                                 : " (Em andamento)"}
                             </p>
                           </div>
-                          <Badge variant={responsibility.endTime ? "secondary" : "success"}>
+                          <Badge variant={responsibility.endTime ? "secondary" : "default"}>
                             {responsibility.endTime ? "Concluído" : "Ativo"}
                           </Badge>
                         </div>
 
                         <div className="flex items-center gap-2 mb-2">
                           <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>Duração: {calculateDuration(responsibility.startTime, responsibility.endTime)}</span>
+                          <span>Duração: {responsibility.duration}</span>
                         </div>
 
                         {responsibility.notes && (
@@ -339,6 +435,54 @@ export default function LabResponsibilityPage() {
                 Cancelar
               </Button>
               <Button onClick={handleUpdateNotes}>Salvar</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal for adding/editing event */}
+        <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editingEvent ? "Editar Evento" : "Adicionar Evento"}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
+                <Input value={eventDialogTime} disabled className="w-32" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                <select
+                  className="w-full border rounded p-2"
+                  value={eventDialogType}
+                  onChange={e => setEventDialogType(e.target.value as any)}
+                >
+                  <option value="log">Log diário</option>
+                  <option value="responsibility">Responsabilidade</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Nota</label>
+                <Input
+                  value={eventDialogNote}
+                  onChange={e => setEventDialogNote(e.target.value)}
+                  placeholder="Digite uma nota (opcional)"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <button
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                onClick={handleSaveEvent}
+              >
+                Salvar
+              </button>
+              <button
+                className="ml-2 px-4 py-2 rounded border"
+                onClick={() => setShowEventDialog(false)}
+              >
+                Cancelar
+              </button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -1,11 +1,11 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
-import { KanbanColumn } from "@/components/kanban-column"
+import { KanbanColumn } from "@/components/ui/kanban-column"
 import { TaskDialog } from "@/components/task-dialog"
 import { Button } from "@/components/ui/button"
-import { Plus, AlertTriangle, Filter, Loader2 } from "lucide-react"
+import { Plus, AlertTriangle, Filter, Loader2, CheckCircle } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useTask } from "@/lib/task-context"
 import type { Task } from "@/lib/types"
@@ -16,72 +16,103 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useToast } from "@/hooks/use-toast"
+
+const COLUMNS = [
+  { id: "todo", title: "A Fazer" },
+  { id: "in-progress", title: "Em Andamento" },
+  { id: "in-review", title: "Em Revisão" },
+  { id: "adjust", title: "Ajustes" },
+  { id: "done", title: "Concluído" },
+]
 
 export function KanbanBoard() {
   const { user } = useAuth()
   const { tasks, loading, error, fetchTasks, updateTask } = useTask()
+  const { toast } = useToast()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [optimisticTasks, setOptimisticTasks] = useState<Task[]>([])
 
-  // Recarregar tarefas quando necessário
+  // Load tasks when user changes
   useEffect(() => {
     if (user) {
       fetchTasks()
     }
   }, [user, fetchTasks])
 
-  const columns = [
-    { id: "todo", title: "A Fazer" },
-    { id: "in-progress", title: "Em Andamento" },
-    { id: "in-review", title: "Em Revisão" },
-    { id: "adjust", title: "Ajustes" },
-    { id: "done", title: "Concluído" },
-  ]
+  // Update optimistic tasks when tasks change
+  useEffect(() => {
+    setOptimisticTasks(tasks)
+  }, [tasks])
 
-  // Verificar se uma tarefa está atrasada
-  const isTaskOverdue = (task: Task) => {
-    if (!task.dueDate) return false
+  // Memoize overdue status for each task
+  const overdueStatusMap = useMemo(() => {
+    const map: { [id: string]: boolean } = {}
+    optimisticTasks.forEach((task) => {
+      map[task.id] = isTaskOverdue(task)
+    })
+    return map
+  }, [optimisticTasks])
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+  // Filter tasks based on user role and overdue filter
+  const filteredTasks = useMemo(() => {
+    return optimisticTasks
+      .filter((task) => (user?.role === "responsible" ? true : task.assignedTo === user?.id))
+      .filter((task) => (showOverdueOnly ? overdueStatusMap[task.id] : true))
+  }, [optimisticTasks, user, showOverdueOnly, overdueStatusMap])
 
-    const dueDate = new Date(task.dueDate)
-
-    return today > dueDate && task.status !== "done"
-  }
-
-  // Filtrar tarefas com base na função do usuário e filtro de atraso
-  const filteredTasks = tasks
-    .filter((task) => (user?.role === "manager" ? true : task.assignedTo === user?.id))
-    .filter((task) => (showOverdueOnly ? isTaskOverdue(task) : true))
-
-  // Contar tarefas atrasadas
-  const overdueTasksCount = tasks
-    .filter((task) => (user?.role === "manager" ? true : task.assignedTo === user?.id))
-    .filter(isTaskOverdue).length
+  // Count overdue tasks
+  const overdueTasksCount = useMemo(() => {
+    return optimisticTasks
+      .filter((task) => (user?.role === "responsible" ? true : task.assignedTo === user?.id))
+      .filter((task) => overdueStatusMap[task.id]).length
+  }, [optimisticTasks, user, overdueStatusMap])
 
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result
 
-    // Se não houver destino ou o item foi solto no mesmo lugar
     if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
       return
     }
 
     try {
       setIsUpdating(true)
-
-      // Encontrar a tarefa que foi arrastada
-      const taskToUpdate = tasks.find((task) => task.id === draggableId)
-
+      const taskToUpdate = optimisticTasks.find((task) => task.id.toString() === draggableId)
+      
       if (taskToUpdate) {
-        // Atualizar seu status com base na coluna de destino
-        await updateTask(draggableId, { status: destination.droppableId })
+        const previousStatus = taskToUpdate.status
+        const newStatus = destination.droppableId
+        
+        // Optimistically update the UI immediately
+        const updatedTask = { ...taskToUpdate, status: newStatus }
+        setOptimisticTasks(prev => 
+          prev.map(task => 
+            task.id === taskToUpdate.id ? updatedTask : task
+          )
+        )
+
+        // Then update the backend
+        const result = await updateTask(taskToUpdate.id, { status: newStatus })
+        
+        // Show success message if points were awarded
+        if (newStatus === "done" && previousStatus !== "done" && taskToUpdate.points > 0 && taskToUpdate.assignedTo) {
+          toast({
+            title: "🎉 Tarefa Concluída!",
+            description: `${taskToUpdate.points} pontos foram adicionados ao perfil do responsável.`,
+            variant: "default",
+          })
+        }
+        
+        // Refresh tasks to ensure consistency
+        await fetchTasks()
       }
     } catch (error) {
       console.error("Erro ao atualizar status da tarefa:", error)
+      // Revert optimistic update on error
+      await fetchTasks()
     } finally {
       setIsUpdating(false)
     }
@@ -97,76 +128,68 @@ export function KanbanBoard() {
     setIsDialogOpen(true)
   }
 
-  if (loading && tasks.length === 0) {
+  if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center p-8">
-        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-        <p>Carregando tarefas...</p>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
   }
 
   if (error) {
     return (
-      <Alert variant="destructive" className="mb-4">
+      <Alert variant="destructive">
         <AlertTriangle className="h-4 w-4" />
         <AlertDescription>{error}</AlertDescription>
-        <Button variant="outline" size="sm" className="mt-2" onClick={fetchTasks}>
-          Tentar novamente
-        </Button>
       </Alert>
     )
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-4">
-          <h2 className="text-xl font-semibold">{user?.role === "manager" ? "Todas as Tarefas" : "Minhas Tarefas"}</h2>
-
+    <div className="space-y-6">
+      {/* Header with controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center space-x-4">
+          <h2 className="text-lg font-semibold">Quadro Kanban</h2>
           {overdueTasksCount > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant={showOverdueOnly ? "destructive" : "outline"} size="sm" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  Filtros
-                  {overdueTasksCount > 0 && (
-                    <span
-                      className={`rounded-full px-1.5 py-0.5 text-xs ${showOverdueOnly ? "bg-destructive-foreground text-destructive" : "bg-destructive text-destructive-foreground"}`}
-                    >
-                      {overdueTasksCount}
-                    </span>
-                  )}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuCheckboxItem checked={showOverdueOnly} onCheckedChange={setShowOverdueOnly}>
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4 text-red-500" />
-                    Mostrar apenas atrasadas
-                  </div>
-                </DropdownMenuCheckboxItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <div className="flex items-center text-orange-600">
+              <AlertTriangle className="h-4 w-4 mr-1" />
+              <span className="text-sm hidden sm:inline">{overdueTasksCount} tarefa(s) atrasada(s)</span>
+              <span className="text-sm sm:hidden">{overdueTasksCount}</span>
+            </div>
           )}
         </div>
 
-        <Button onClick={handleAddTask} disabled={isUpdating}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Tarefa
-        </Button>
+        <div className="flex items-center space-x-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Filter className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">Filtros</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuCheckboxItem
+                checked={showOverdueOnly}
+                onCheckedChange={setShowOverdueOnly}
+              >
+                Mostrar apenas atrasadas
+              </DropdownMenuCheckboxItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button onClick={handleAddTask} disabled={isUpdating}>
+            <Plus className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Nova Tarefa</span>
+            <span className="sm:hidden">Nova</span>
+          </Button>
+        </div>
       </div>
 
-      {isUpdating && (
-        <div className="flex items-center justify-center py-2">
-          <Loader2 className="h-4 w-4 animate-spin text-primary mr-2" />
-          <span className="text-sm text-muted-foreground">Atualizando...</span>
-        </div>
-      )}
-
+      {/* Kanban Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {columns.map((column) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          {COLUMNS.map((column) => (
             <KanbanColumn
               key={column.id}
               id={column.id}
@@ -181,4 +204,15 @@ export function KanbanBoard() {
       <TaskDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} task={editingTask} />
     </div>
   )
+}
+
+// Helper function to check if a task is overdue
+function isTaskOverdue(task: Task): boolean {
+  if (!task.dueDate) return false
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const dueDate = new Date(task.dueDate)
+  return today > dueDate && task.status !== "done"
 }

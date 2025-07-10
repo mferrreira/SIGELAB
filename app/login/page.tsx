@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
+import { signIn } from "next-auth/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -17,7 +17,6 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
-  const { login } = useAuth()
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,8 +24,16 @@ export default function LoginPage() {
     setError("")
 
     try {
-      await login(email, password)
-      router.push("/dashboard")
+      const result = await signIn("credentials", {
+        redirect: false,
+        email: email.toLowerCase(),
+        password,
+      })
+      if (result?.error) {
+        setError(result.error)
+      } else {
+        router.push("/dashboard")
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao fazer login")
     }

@@ -11,8 +11,8 @@ interface ProjectContextType {
   error: string | null
   fetchProjects: () => Promise<void>
   createProject: (project: Omit<Project, "id" | "createdAt" | "createdBy">) => Promise<Project>
-  updateProject: (id: string, project: Partial<Project>) => Promise<Project>
-  deleteProject: (id: string) => Promise<void>
+  updateProject: (id: number, project: Partial<Project>) => Promise<Project>
+  deleteProject: (id: number) => Promise<void>
 }
 
 const ProjectContext = createContext<ProjectContextType | undefined>(undefined)
@@ -38,7 +38,6 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Carregar projetos quando o componente montar ou o usuário mudar
   useEffect(() => {
     if (user) {
       fetchProjects()
@@ -70,7 +69,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateProject = async (id: string, projectData: Partial<Project>) => {
+  const updateProject = async (id: number, projectData: Partial<Project>) => {
     try {
       setLoading(true)
       setError(null)
@@ -87,7 +86,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const deleteProject = async (id: string) => {
+  const deleteProject = async (id: number) => {
     try {
       setLoading(true)
       setError(null)

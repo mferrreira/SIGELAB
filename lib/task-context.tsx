@@ -10,10 +10,10 @@ interface TaskContextType {
   loading: boolean
   error: string | null
   fetchTasks: () => Promise<void>
-  createTask: (task: Omit<Task, "id">) => Promise<Task>
-  updateTask: (id: string, task: Partial<Task>) => Promise<Task>
-  completeTask: (id: string) => Promise<Task>
-  deleteTask: (id: string) => Promise<void>
+  createTask: (task: any) => Promise<Task>
+  updateTask: (id: number, task: Partial<Task>) => Promise<Task>
+  completeTask: (id: number) => Promise<Task>
+  deleteTask: (id: number) => Promise<void>
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined)
@@ -39,7 +39,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Carregar tarefas quando o componente montar ou o usuário mudar
   useEffect(() => {
     if (user) {
       fetchTasks()
@@ -48,7 +47,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchTasks])
 
-  const createTask = async (taskData: Omit<Task, "id">) => {
+  const createTask = async (taskData: any) => {
     try {
       setLoading(true)
       setError(null)
@@ -65,7 +64,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateTask = async (id: string, taskData: Partial<Task>) => {
+  const updateTask = async (id: number, taskData: Partial<Task>) => {
     try {
       setLoading(true)
       setError(null)
@@ -82,7 +81,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const completeTask = async (id: string) => {
+  const completeTask = async (id: number) => {
     try {
       setLoading(true)
       setError(null)
@@ -99,7 +98,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const deleteTask = async (id: string) => {
+  const deleteTask = async (id: number) => {
     try {
       setLoading(true)
       setError(null)

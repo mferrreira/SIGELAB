@@ -1,10 +1,5 @@
 import { NextResponse } from "next/server"
-import {
-  getAllResponsibilities,
-  getResponsibilitiesByPeriod,
-  getActiveResponsibility,
-  startResponsibility,
-} from "@/lib/db/responsibilities"
+import { prisma } from "@/lib/prisma"
 
 // GET: Obter todas as responsabilidades ou filtrar por período
 export async function GET(request: Request) {
@@ -14,39 +9,42 @@ export async function GET(request: Request) {
     const endDate = searchParams.get("endDate")
     const active = searchParams.get("active")
 
-    let responsibilities
-
     if (active === "true") {
-      // Obter apenas a responsabilidade ativa
-      const activeResponsibility = getActiveResponsibility()
-
+      // Obter apenas a responsabilidade ativa (sem endTime)
+      const activeResponsibility = await prisma.lab_responsibilities.findFirst({
+        where: { endTime: null },
+        orderBy: { startTime: "desc" },
+      })
       if (activeResponsibility) {
-        // Calcular a duração em segundos
         const startTime = new Date(activeResponsibility.startTime).getTime()
         const now = new Date().getTime()
         const duration = Math.floor((now - startTime) / 1000)
-
-        return NextResponse.json(
-          {
-            activeResponsibility: {
-              ...activeResponsibility,
-              duration,
-            },
+        return NextResponse.json({
+          activeResponsibility: {
+            ...activeResponsibility,
+            duration,
           },
-          { status: 200 },
-        )
+        }, { status: 200 })
       } else {
         return NextResponse.json({ activeResponsibility: null }, { status: 200 })
       }
     } else if (startDate && endDate) {
       // Filtrar por período
-      responsibilities = getResponsibilitiesByPeriod(startDate, endDate)
+      const responsibilities = await prisma.lab_responsibilities.findMany({
+        where: {
+          startTime: { gte: startDate },
+          endTime: { lte: endDate },
+        },
+        orderBy: { startTime: "desc" },
+      })
+      return NextResponse.json({ responsibilities }, { status: 200 })
     } else {
       // Obter todas
-      responsibilities = getAllResponsibilities()
+      const responsibilities = await prisma.lab_responsibilities.findMany({
+        orderBy: { startTime: "desc" },
+      })
+      return NextResponse.json({ responsibilities }, { status: 200 })
     }
-
-    return NextResponse.json({ responsibilities }, { status: 200 })
   } catch (error) {
     console.error("Erro ao buscar responsabilidades:", error)
     return NextResponse.json({ error: "Erro ao buscar responsabilidades" }, { status: 500 })
@@ -57,15 +55,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-
-    // Validar dados
     if (!body.userId || !body.userName) {
       return NextResponse.json({ error: "ID do usuário e nome são obrigatórios" }, { status: 400 })
     }
-
-    // Iniciar nova responsabilidade
-    const responsibility = startResponsibility(body.userId, body.userName, body.notes)
-
+    const responsibility = await prisma.lab_responsibilities.create({
+      data: {
+        userId: Number(body.userId),
+        userName: body.userName,
+        startTime: new Date().toISOString(),
+        endTime: null,
+        notes: body.notes || "",
+      },
+    })
     return NextResponse.json({ responsibility }, { status: 201 })
   } catch (error) {
     console.error("Erro ao iniciar responsabilidade:", error)

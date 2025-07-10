@@ -1,17 +1,15 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useState } from "react"
-import { useAuth } from "@/lib/auth-context"
-import { useProjectStore } from "@/lib/project-store"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { useState, useEffect } from "react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { Project } from "@/lib/types"
+import { useAuth } from "@/lib/auth-context"
+import { useProject } from "@/lib/project-context"
+import type { Project, ProjectFormData } from "@/lib/types"
 
 interface ProjectDialogProps {
   open: boolean
@@ -21,20 +19,22 @@ interface ProjectDialogProps {
 
 export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDialogProps) {
   const { user } = useAuth()
-  const { addProject, updateProject } = useProjectStore()
+  const { createProject, updateProject } = useProject()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  const [formData, setFormData] = useState<Omit<Project, "id" | "createdAt" | "createdBy">>({
+  const [formData, setFormData] = useState<ProjectFormData>({
     name: "",
     description: "",
     status: "active",
   })
 
-  // Resetar formulário quando o diálogo abre/fecha ou o projeto muda
+  // Reset form when dialog opens/closes or project changes
   useEffect(() => {
     if (open && project) {
       setFormData({
         name: project.name,
-        description: project.description,
+        description: project.description || "",
         status: project.status,
       })
     } else if (open) {
@@ -44,6 +44,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         status: "active",
       })
     }
+    setError(null)
   }, [open, project])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -55,40 +56,57 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
     setFormData((prev) => ({ ...prev, status: value as "active" | "completed" | "archived" }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!user) return
 
-    if (project) {
-      // Atualizar projeto existente
-      updateProject(project.id, formData)
-    } else {
-      // Criar novo projeto
-      const newProject: Project = {
-        id: Date.now().toString(),
-        ...formData,
-        createdAt: new Date().toISOString(),
-        createdBy: user.id,
-      }
-      addProject(newProject)
-    }
+    try {
+      setIsSubmitting(true)
+      setError(null)
 
-    onOpenChange(false)
+      if (project) {
+        await updateProject(project.id, formData)
+      } else {
+        await createProject(formData)
+      }
+
+      onOpenChange(false)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erro ao salvar projeto")
+      console.error(err)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(newOpen) => !isSubmitting && onOpenChange(newOpen)}>
       <DialogContent className="sm:max-w-[500px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>{project ? "Editar Projeto" : "Novo Projeto"}</DialogTitle>
+            <DialogTitle>{project ? "Editar Projeto" : "Adicionar Novo Projeto"}</DialogTitle>
           </DialogHeader>
+
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Nome do Projeto</Label>
-              <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
+              <Input
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                required
+                placeholder="Digite o nome do projeto"
+              />
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="description">Descrição</Label>
               <Textarea
@@ -97,30 +115,33 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
                 value={formData.description}
                 onChange={handleChange}
                 rows={3}
+                placeholder="Digite a descrição do projeto"
               />
             </div>
-            {project && (
-              <div className="grid gap-2">
-                <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={handleSelectChange}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="completed">Concluído</SelectItem>
-                    <SelectItem value="archived">Arquivado</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+
+            <div className="grid gap-2">
+              <Label htmlFor="status">Status</Label>
+              <Select value={formData.status} onValueChange={handleSelectChange}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Ativo</SelectItem>
+                  <SelectItem value="completed">Concluído</SelectItem>
+                  <SelectItem value="archived">Arquivado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
               Cancelar
             </Button>
-            <Button type="submit">{project ? "Salvar Alterações" : "Criar Projeto"}</Button>
-          </DialogFooter>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Salvando..." : project ? "Atualizar" : "Criar"}
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>

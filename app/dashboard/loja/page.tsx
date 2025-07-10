@@ -1,16 +1,21 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { AppHeader } from "@/components/app-header"
-import { useUserStore } from "@/lib/user-store"
-import { useRewardStore } from "@/lib/reward-store"
+import { useUser } from "@/lib/user-context"
+import { useReward } from "@/lib/reward-context"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Trophy, ShoppingBag, Clock, CheckCircle, XCircle } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Trophy, ShoppingBag, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Settings } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   AlertDialog,
@@ -25,16 +30,27 @@ import {
 import { toast } from "@/components/ui/use-toast"
 import { ToastAction } from "@/components/ui/toast"
 import { Toaster } from "@/components/ui/toaster"
-import type { Reward } from "@/lib/types"
+import type { Reward, Purchase } from "@/lib/types"
 
 export default function StorePage() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const { users } = useUserStore()
-  const { rewards, purchases, purchaseReward, getUserPurchases, updatePurchaseStatus } = useRewardStore()
+  const { users } = useUser()
+  const { rewards, purchases, purchaseReward, createReward, updateReward, deleteReward } = useReward()
 
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null)
   const [confirmPurchaseOpen, setConfirmPurchaseOpen] = useState(false)
+  const [isManageDialogOpen, setIsManageDialogOpen] = useState(false)
+  const [editingReward, setEditingReward] = useState<Reward | null>(null)
+  const [newReward, setNewReward] = useState({
+    name: "",
+    description: "",
+    price: 0,
+    available: true,
+  })
+
+  // Check if user can manage store (admin or laboratorist)
+  const canManageStore = user?.role === "admin" || user?.role === "laboratorist"
 
   useEffect(() => {
     // Redirecionar para login se não estiver autenticado
@@ -56,10 +72,18 @@ export default function StorePage() {
   const userPoints = currentUserData?.points || 0
 
   // Obter compras do usuário
-  const userPurchases = getUserPurchases(user.id)
+  const userPurchases = purchases.filter((p: Purchase) => p.userId === user.id)
 
   // Filtrar recompensas disponíveis
   const availableRewards = rewards.filter((reward) => reward.available)
+
+  // Memoize formatted purchase dates
+  const formattedPurchases = useMemo(() =>
+    userPurchases.map((purchase) => ({
+      ...purchase,
+      formattedDate: new Date(purchase.purchaseDate).toLocaleDateString("pt-BR"),
+    }))
+  , [userPurchases])
 
   // Função para comprar recompensa
   const handlePurchase = (reward: Reward) => {
@@ -68,22 +92,30 @@ export default function StorePage() {
   }
 
   // Confirmar compra
-  const confirmPurchase = () => {
+  const confirmPurchase = async () => {
     if (!selectedReward || !user) return
 
-    const success = purchaseReward(user.id, selectedReward.id)
-
-    if (success) {
-      toast({
-        title: "Compra realizada com sucesso!",
-        description: `Você adquiriu "${selectedReward.name}" por ${selectedReward.price} pontos.`,
-        action: <ToastAction altText="Ver minhas compras">Ver compras</ToastAction>,
-      })
-    } else {
+    try {
+      const purchase = await purchaseReward(user.id, selectedReward.id)
+      
+      if (purchase) {
+        toast({
+          title: "Compra realizada com sucesso!",
+          description: `Você adquiriu "${selectedReward.name}" por ${selectedReward.price} pontos.`,
+          action: <ToastAction altText="Ver minhas compras">Ver compras</ToastAction>,
+        })
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Erro ao realizar compra",
+          description: "Você não tem pontos suficientes para esta recompensa.",
+        })
+      }
+    } catch (error) {
       toast({
         variant: "destructive",
         title: "Erro ao realizar compra",
-        description: "Você não tem pontos suficientes para esta recompensa.",
+        description: "Ocorreu um erro ao processar sua compra.",
       })
     }
 
@@ -91,10 +123,71 @@ export default function StorePage() {
     setSelectedReward(null)
   }
 
-  // Formatar data
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString("pt-BR")
+  // Abrir diálogo para adicionar/editar recompensa
+  const openManageDialog = (reward?: Reward) => {
+    if (reward) {
+      setEditingReward(reward)
+      setNewReward({
+        name: reward.name,
+        description: reward.description || "",
+        price: reward.price,
+        available: reward.available,
+      })
+    } else {
+      setEditingReward(null)
+      setNewReward({
+        name: "",
+        description: "",
+        price: 0,
+        available: true,
+      })
+    }
+    setIsManageDialogOpen(true)
+  }
+
+  // Salvar recompensa
+  const handleSaveReward = async () => {
+    try {
+      if (editingReward) {
+        await updateReward(editingReward.id, newReward)
+        toast({
+          title: "Recompensa atualizada!",
+          description: `"${newReward.name}" foi atualizada com sucesso.`,
+        })
+      } else {
+        await createReward(newReward)
+        toast({
+          title: "Recompensa criada!",
+          description: `"${newReward.name}" foi adicionada à loja.`,
+        })
+      }
+      setIsManageDialogOpen(false)
+      setEditingReward(null)
+      setNewReward({ name: "", description: "", price: 0, available: true })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível salvar a recompensa.",
+      })
+    }
+  }
+
+  // Excluir recompensa
+  const handleDeleteReward = async (reward: Reward) => {
+    try {
+      await deleteReward(reward.id)
+      toast({
+        title: "Recompensa excluída!",
+        description: `"${reward.name}" foi removida da loja.`,
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível excluir a recompensa.",
+      })
+    }
   }
 
   // Obter badge de status
@@ -108,7 +201,7 @@ export default function StorePage() {
         )
       case "approved":
         return (
-          <Badge variant="success" className="bg-green-500 flex items-center gap-1">
+          <Badge variant="default" className="bg-green-500 flex items-center gap-1">
             <CheckCircle className="h-3 w-3" /> Aprovado
           </Badge>
         )
@@ -152,6 +245,12 @@ export default function StorePage() {
               <Trophy className="h-4 w-4" />
               Minhas Compras
             </TabsTrigger>
+            {canManageStore && (
+              <TabsTrigger value="manage" className="flex items-center gap-1">
+                <Settings className="h-4 w-4" />
+                Gerenciar
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="rewards">
@@ -210,7 +309,7 @@ export default function StorePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {userPurchases.map((purchase) => (
+                    {formattedPurchases.map((purchase) => (
                       <TableRow key={purchase.id}>
                         <TableCell className="font-medium">{purchase.rewardName}</TableCell>
                         <TableCell>
@@ -219,7 +318,7 @@ export default function StorePage() {
                             <span>{purchase.price}</span>
                           </div>
                         </TableCell>
-                        <TableCell>{formatDate(purchase.purchaseDate)}</TableCell>
+                        <TableCell>{purchase.formattedDate}</TableCell>
                         <TableCell>{getStatusBadge(purchase.status)}</TableCell>
                       </TableRow>
                     ))}
@@ -228,7 +327,131 @@ export default function StorePage() {
               </div>
             )}
           </TabsContent>
+
+          {canManageStore && (
+            <TabsContent value="manage">
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-semibold">Gerenciar Produtos da Loja</h2>
+                  <Button onClick={() => openManageDialog()} className="flex items-center gap-2">
+                    <Plus className="h-4 w-4" />
+                    Adicionar Produto
+                  </Button>
+                </div>
+
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead>Preço (Pontos)</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rewards.map((reward) => (
+                        <TableRow key={reward.id}>
+                          <TableCell className="font-medium">{reward.name}</TableCell>
+                          <TableCell className="max-w-xs truncate">{reward.description}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <Trophy className="h-4 w-4 text-amber-500" />
+                              <span>{reward.price}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={reward.available ? "default" : "secondary"}>
+                              {reward.available ? "Disponível" : "Indisponível"}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => openManageDialog(reward)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteReward(reward)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </TabsContent>
+          )}
         </Tabs>
+
+        {/* Dialog para adicionar/editar recompensa */}
+        <Dialog open={isManageDialogOpen} onOpenChange={setIsManageDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>
+                {editingReward ? "Editar Recompensa" : "Adicionar Nova Recompensa"}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">Nome da Recompensa *</Label>
+                <Input
+                  id="name"
+                  value={newReward.name}
+                  onChange={(e) => setNewReward({ ...newReward, name: e.target.value })}
+                  placeholder="Ex: Café grátis, Dia de folga, etc."
+                />
+              </div>
+              <div>
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea
+                  id="description"
+                  value={newReward.description}
+                  onChange={(e) => setNewReward({ ...newReward, description: e.target.value })}
+                  placeholder="Descreva a recompensa..."
+                  rows={3}
+                />
+              </div>
+              <div>
+                <Label htmlFor="price">Preço em Pontos *</Label>
+                <Input
+                  id="price"
+                  type="number"
+                  min="0"
+                  value={newReward.price}
+                  onChange={(e) => setNewReward({ ...newReward, price: parseInt(e.target.value) || 0 })}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="available"
+                  checked={newReward.available}
+                  onCheckedChange={(checked) => setNewReward({ ...newReward, available: checked })}
+                />
+                <Label htmlFor="available">Disponível para compra</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsManageDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSaveReward} disabled={!newReward.name || newReward.price <= 0}>
+                {editingReward ? "Atualizar" : "Adicionar"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <AlertDialog open={confirmPurchaseOpen} onOpenChange={setConfirmPurchaseOpen}>
           <AlertDialogContent>

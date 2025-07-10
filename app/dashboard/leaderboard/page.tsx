@@ -4,7 +4,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { AppHeader } from "@/components/app-header"
-import { useUserStore } from "@/lib/user-store"
+import { useUser } from "@/lib/user-context"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Trophy, Medal, Award, Star } from "lucide-react"
@@ -13,7 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 export default function LeaderboardPage() {
   const { user, loading } = useAuth()
   const router = useRouter()
-  const { users } = useUserStore()
+  const { users } = useUser()
 
   useEffect(() => {
     // Redirecionar para login se não estiver autenticado
@@ -31,7 +31,7 @@ export default function LeaderboardPage() {
   }
 
   // Ordenar usuários por pontos (decrescente)
-  const sortedUsers = [...users].sort((a, b) => b.points - a.points)
+  const sortedUsers = [...users].sort((a, b) => (b.points ?? 0) - (a.points ?? 0))
 
   // Encontrar a posição do usuário atual
   const currentUserRank = sortedUsers.findIndex((u) => u.id === user.id) + 1
@@ -121,7 +121,7 @@ export default function LeaderboardPage() {
                       <div>
                         <p className="font-medium">{rankedUser.name}</p>
                         <p className="text-xs text-muted-foreground capitalize">
-                          {rankedUser.role === "manager" ? "Gerente" : "Usuário"}
+                          {rankedUser.role === "responsible" ? "Gerente" : "Usuário"}
                         </p>
                       </div>
                     </div>
