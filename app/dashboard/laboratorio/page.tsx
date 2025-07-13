@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth-context"
 import { AppHeader } from "@/components/app-header"
 import { useResponsibility } from "@/lib/responsibility-context"
-import { useDailyLogs } from "@/lib/daily-log-context";
+import { useDailyLogs } from "@/lib/daily-log-context"
+import { useLaboratorySchedule } from "@/lib/laboratory-schedule-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
@@ -19,6 +20,7 @@ import { ptBR } from "date-fns/locale"
 import { Tooltip } from "@/components/ui/tooltip"
 import DayViewCalendar from "@/components/ui/day-view-calendar"
 import { Input } from "@/components/ui/input"
+import { LaboratorySchedule } from "@/components/laboratory-schedule"
 
 export default function LabResponsibilityPage() {
   const { user, loading: authLoading } = useAuth()
@@ -35,7 +37,8 @@ export default function LabResponsibilityPage() {
     updateNotes,
   } = useResponsibility()
 
-  const { logs: dailyLogs, loading: logsLoading, createLog } = useDailyLogs();
+  const { logs: dailyLogs, loading: logsLoading, createLog, fetchAllLogs, fetchProjectLogs, fetchLogs } = useDailyLogs()
+  const { schedules: labSchedules, getSchedulesByDay } = useLaboratorySchedule()
 
   const [date, setDate] = useState<Date | null>(null)
   const [isStarting, setIsStarting] = useState(false)
@@ -61,8 +64,21 @@ export default function LabResponsibilityPage() {
     if (user) {
       fetchResponsibilities()
       fetchActiveResponsibility()
+      
+      // Role-based log fetching
+      if (user.role === "administrador_laboratorio" || user.role === "laboratorista") {
+        // Admins and laboratorists see all logs
+        fetchAllLogs()
+      } else if (user.role === "gerente_projeto") {
+        // Project managers see logs from their projects
+        // For now, we'll show all logs but this can be enhanced to filter by user's projects
+        fetchAllLogs()
+      } else if (user.role === "voluntario") {
+        // Volunteers only see their own logs
+        fetchLogs(user.id)
+      }
     }
-  }, [user, fetchResponsibilities, fetchActiveResponsibility])
+  }, [user, fetchResponsibilities, fetchActiveResponsibility, fetchAllLogs, fetchLogs])
 
   useEffect(() => {
     setDate(new Date())
@@ -104,7 +120,7 @@ export default function LabResponsibilityPage() {
     if (!selectedResponsibility) return
 
     try {
-      await updateNotes(selectedResponsibility, notes)
+      await updateNotes(parseInt(selectedResponsibility), notes)
       setIsNotesDialogOpen(false)
       setSelectedResponsibility(null)
       setNotes("")
@@ -173,25 +189,51 @@ export default function LabResponsibilityPage() {
 
   // Build events for the selected day
   const events = useMemo(() => {
+    const currentDate = date || new Date()
+    const dayOfWeek = currentDate.getDay() // 0 = Sunday, 1 = Monday, etc.
+    
+    // Get laboratory schedules for this day
+    const daySchedules = getSchedulesByDay(dayOfWeek)
+    
+    // Create laboratory schedule events
+    const labScheduleEvents = daySchedules.map(schedule => ({
+      time: schedule.startTime,
+      note: schedule.notes || `Horário do laboratório: ${schedule.startTime} - ${schedule.endTime}`,
+      type: "laboratory" as const
+    }))
+    
+    // Add end time events for laboratory schedules
+    const labEndEvents = daySchedules.map(schedule => ({
+      time: schedule.endTime,
+      note: `Fim do horário: ${schedule.startTime} - ${schedule.endTime}`,
+      type: "laboratory" as const
+    }))
+    
+    // ALL user events (logs and responsibilities from everyone)
     const logs = dailyLogs
-      .filter(log => isSameDay(new Date(log.date), date || new Date()))
+      .filter(log => isSameDay(new Date(log.date), currentDate))
       .map(log => ({ 
-        time: log.date.slice(11,16), 
+        time: new Date(log.date).toTimeString().slice(0,5), 
         note: log.note || undefined, 
-        type: "log" as const
+        type: "log" as const,
+        userName: log.user?.name || "Usuário",
+        projectName: log.project?.name
       }))
+    
     const resps = responsibilities
       .filter(resp => {
         const start = parseISO(resp.startTime)
-        return isSameDay(start, date || new Date())
+        return isSameDay(start, currentDate)
       })
       .map(resp => ({ 
         time: new Date(resp.startTime).toTimeString().slice(0,5), 
         note: resp.notes || undefined, 
-        type: "responsibility" as const
+        type: "responsibility" as const,
+        userName: resp.userName
       }))
-    return [...logs, ...resps]
-  }, [dailyLogs, responsibilities, date])
+    
+    return [...labScheduleEvents, ...labEndEvents, ...logs, ...resps]
+  }, [dailyLogs, responsibilities, date, getSchedulesByDay])
 
   // Handle add event
   const handleAddEvent = (time: string) => {
@@ -264,7 +306,11 @@ export default function LabResponsibilityPage() {
             <Card>
               <CardHeader>
                 <CardTitle>Status Atual</CardTitle>
-                <CardDescription>Controle de responsabilidade pelo laboratório</CardDescription>
+                <CardDescription>
+                  {user?.role === "administrador_laboratorio" || user?.role === "laboratorista" 
+                    ? "Controle de responsabilidade pelo laboratório" 
+                    : "Visualização do status do laboratório"}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
@@ -287,19 +333,22 @@ export default function LabResponsibilityPage() {
                       <span className="text-2xl font-mono">{activeResponsibility.duration}</span>
                     </div>
 
-                    <Button
-                      variant="destructive"
-                      className="w-full"
-                      onClick={handleEndResponsibility}
-                      disabled={isEnding}
-                    >
-                      {isEnding ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Square className="h-4 w-4 mr-2" />
-                      )}
-                      Não sou mais responsável
-                    </Button>
+                            {/* Only show control buttons for administrador de laboratório and laboratorista */}
+        {(user?.role === "administrador_laboratorio" || user?.role === "laboratorista") && (
+                      <Button
+                        variant="destructive"
+                        className="w-full"
+                        onClick={handleEndResponsibility}
+                        disabled={isEnding}
+                      >
+                        {isEnding ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Square className="h-4 w-4 mr-2" />
+                        )}
+                        Não sou mais responsável
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -307,27 +356,36 @@ export default function LabResponsibilityPage() {
                       <Badge variant="outline">Laboratório disponível</Badge>
                     </div>
 
-                    <Textarea
-                      placeholder="Notas (opcional)"
-                      value={notes}
-                      onChange={(e) => setNotes(e.target.value)}
-                      className="resize-none"
-                      rows={3}
-                    />
+                            {/* Only show start controls for administrador de laboratório and laboratorista */}
+        {(user?.role === "administrador_laboratorio" || user?.role === "laboratorista") ? (
+                      <>
+                        <Textarea
+                          placeholder="Notas (opcional)"
+                          value={notes}
+                          onChange={(e) => setNotes(e.target.value)}
+                          className="resize-none"
+                          rows={3}
+                        />
 
-                    <Button
-                      variant="default"
-                      className="w-full"
-                      onClick={handleStartResponsibility}
-                      disabled={isStarting}
-                    >
-                      {isStarting ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <Play className="h-4 w-4 mr-2" />
-                      )}
-                      Estar responsável
-                    </Button>
+                        <Button
+                          variant="default"
+                          className="w-full"
+                          onClick={handleStartResponsibility}
+                          disabled={isStarting}
+                        >
+                          {isStarting ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Play className="h-4 w-4 mr-2" />
+                          )}
+                          Estar responsável
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center">
+                        Apenas laboratoristas e administradores de laboratório podem assumir responsabilidade pelo laboratório.
+                      </p>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -347,12 +405,18 @@ export default function LabResponsibilityPage() {
                 <DayViewCalendar
                   date={date || new Date()}
                   events={events}
+                  labSchedules={getSchedulesByDay((date || new Date()).getDay())}
                   onAddEvent={handleAddEvent}
                   onDateChange={handleDateChange}
                 />
               </CardContent>
             </Card>
           </div>
+
+          {/* Horários do Laboratório */}
+          <Card className="md:col-span-3">
+            <LaboratorySchedule />
+          </Card>
 
           {/* Histórico de responsabilidades */}
           <Card className="md:col-span-3">

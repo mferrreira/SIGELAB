@@ -3,99 +3,158 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:../data/kanban.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model users {
-  id              Int                    @id @default(autoincrement())
-  name            String
-  email           String                 @unique
-  role            String
-  points          Int                    @default(0)
-  completedTasks  Int                    @default(0)
-  password        String?
-  status          String                 @default("pending")
-  projects        projects[]             @relation("UserProjects")
-  tasks           tasks[]                @relation("UserTasks")
-  purchases       purchases[]            @relation("UserPurchases")
+  id                   Int                    @id @default(autoincrement())
+  name                 String
+  email                String                 @unique
+  role                 String
+  points               Int                    @default(0)
+  completedTasks       Int                    @default(0)
+  password             String?
+  status               String                 @default("pending")
+  weekHours            Int                    @default(0)
+  createdAt            DateTime               @default(now())
+  daily_logs           daily_logs[]           @relation("UserDailyLogs")
   lab_responsibilities lab_responsibilities[] @relation("UserLabResponsibilities")
-  daily_logs      daily_logs[]           @relation("UserDailyLogs")
-  schedules       user_schedules[]       @relation("UserSchedules")
+  projectMemberships   project_members[]      @relation("UserProjectMemberships")
+  projects             projects[]             @relation("UserProjects")
+  purchases            purchases[]            @relation("UserPurchases")
+  tasks                tasks[]                @relation("UserTasks")
+  schedules            user_schedules[]       @relation("UserSchedules")
+  weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
+  work_sessions        work_sessions[]        @relation("UserWorkSessions")
 }
 
 model projects {
-  id          Int       @id @default(autoincrement())
+  id          Int               @id @default(autoincrement())
   name        String
   description String?
   createdAt   String
   createdBy   Int
   status      String
-  creator     users     @relation("UserProjects", fields: [createdBy], references: [id])
-  tasks       tasks[]   @relation("ProjectTasks")
+  daily_logs  daily_logs[]      @relation("ProjectDailyLogs")
+  members     project_members[] @relation("ProjectMemberships")
+  creator     users             @relation("UserProjects", fields: [createdBy], references: [id])
+  tasks       tasks[]           @relation("ProjectTasks")
+}
+
+model project_members {
+  id        Int      @id @default(autoincrement())
+  projectId Int
+  userId    Int
+  role      String
+  joinedAt  DateTime @default(now())
+  project   projects @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
+  user      users    @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
 }
 
 model tasks {
-  id          Int      @id @default(autoincrement())
-  title       String
-  description String?
-  status      String
-  priority    String
-  assignedTo  Int?
-  projectId   Int?
-  dueDate     String?
-  points      Int      @default(0)
-  completed   Boolean  @default(false)
-  assignee    users?   @relation("UserTasks", fields: [assignedTo], references: [id])
-  projectObj  projects? @relation("ProjectTasks", fields: [projectId], references: [id])
+  id             Int       @id @default(autoincrement())
+  title          String
+  description    String?
+  status         String
+  priority       String
+  assignedTo     Int?
+  projectId      Int?
+  dueDate        String?
+  points         Int       @default(0)
+  completed      Boolean   @default(false)
+  taskVisibility String    @default("delegated")
+  assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])
+  projectObj     projects? @relation("ProjectTasks", fields: [projectId], references: [id])
 }
 
 model rewards {
-  id          Int        @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   name        String
   description String?
   price       Int
-  available   Boolean    @default(true)
+  available   Boolean     @default(true)
   purchases   purchases[] @relation("RewardPurchases")
 }
 
 model purchases {
-  id           Int      @id @default(autoincrement())
+  id           Int     @id @default(autoincrement())
   userId       Int
   rewardId     Int
   rewardName   String
   price        Int
   purchaseDate String
   status       String
-  user         users    @relation("UserPurchases", fields: [userId], references: [id])
-  reward       rewards  @relation("RewardPurchases", fields: [rewardId], references: [id])
+  reward       rewards @relation("RewardPurchases", fields: [rewardId], references: [id])
+  user         users   @relation("UserPurchases", fields: [userId], references: [id])
 }
 
 model lab_responsibilities {
-  id        Int      @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   userId    Int
   userName  String
   startTime String
   endTime   String?
   notes     String?
-  user      users    @relation("UserLabResponsibilities", fields: [userId], references: [id])
+  user      users   @relation("UserLabResponsibilities", fields: [userId], references: [id])
 }
 
 model daily_logs {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   userId    Int
+  projectId Int?
   date      DateTime
   note      String?
+  createdAt DateTime  @default(now())
+  project   projects? @relation("ProjectDailyLogs", fields: [projectId], references: [id])
+  user      users     @relation("UserDailyLogs", fields: [userId], references: [id])
+}
+
+model weekly_reports {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  userName  String
+  weekStart DateTime
+  weekEnd   DateTime
+  totalLogs Int      @default(0)
+  summary   String?
   createdAt DateTime @default(now())
-  user      users    @relation("UserDailyLogs", fields: [userId], references: [id])
+  user      users    @relation("UserWeeklyReports", fields: [userId], references: [id])
 }
 
 model user_schedules {
   id        Int      @id @default(autoincrement())
   userId    Int
-  dayOfWeek Int      // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-  startTime String   // Format: "HH:MM"
-  endTime   String   // Format: "HH:MM"
+  dayOfWeek Int
+  startTime String
+  endTime   String
   createdAt DateTime @default(now())
   user      users    @relation("UserSchedules", fields: [userId], references: [id])
+}
+
+model laboratory_schedules {
+  id        Int      @id @default(autoincrement())
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model work_sessions {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  userName  String
+  startTime DateTime  @default(now())
+  endTime   DateTime?
+  duration  Int?
+  activity  String?
+  location  String?
+  status    String    @default("active")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      users     @relation("UserWorkSessions", fields: [userId], references: [id], onDelete: Cascade)
 }

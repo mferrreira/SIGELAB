@@ -1,20 +1,21 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { UserService } from "@/lib/services/user-service"
+import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils"
 
 // GET: Obter um usuário específico
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = Number(params.id)
-    const user = await prisma.users.findUnique({ where: { id } })
-    if (!user) {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
-    }
-    // Não retornar informações sensíveis
-    const { name, email, role, points, completedTasks } = user
-    return NextResponse.json({ user: { id, name, email, role, points, completedTasks } }, { status: 200 })
-  } catch (error) {
+    const user = await UserService.getUser(id)
+    return createApiResponse({ user })
+  } catch (error: any) {
     console.error("Erro ao buscar usuário:", error)
-    return NextResponse.json({ error: "Erro ao buscar usuário" }, { status: 500 })
+    
+    if (error.message === "Usuário não encontrado") {
+      return createApiError(error.message, 404)
+    }
+    
+    return createApiError("Erro ao buscar usuário")
   }
 }
 
@@ -23,19 +24,29 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const id = Number(params.id)
     const body = await request.json()
-    const updatedUser = await prisma.users.update({
-      where: { id },
-      data: body,
-    })
-    // Não retornar informações sensíveis
-    const { name, email, role, points, completedTasks } = updatedUser
-    return NextResponse.json({ user: { id, name, email, role, points, completedTasks } }, { status: 200 })
+
+    const user = await UserService.updateUser(id, body)
+    return createApiResponse({ user })
   } catch (error: any) {
-    if (error.code === 'P2025') {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
-    }
     console.error("Erro ao atualizar usuário:", error)
-    return NextResponse.json({ error: "Erro ao atualizar usuário" }, { status: 500 })
+    
+    // Handle validation errors
+    if (error.message.includes("obrigatório") || error.message.includes("inválido") || error.message.includes("já está em uso")) {
+      return createApiError(error.message, 400)
+    }
+    
+    // Handle not found errors
+    if (error.message === "Usuário não encontrado") {
+      return createApiError(error.message, 404)
+    }
+    
+    // Handle Prisma errors
+    if (error.code) {
+      const { status, message } = handlePrismaError(error)
+      return createApiError(message, status)
+    }
+    
+    return createApiError("Erro ao atualizar usuário")
   }
 }
 
@@ -44,21 +55,32 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const id = Number(params.id)
     const body = await request.json()
+    
     if (body.action === "addPoints" && typeof body.points === "number") {
-      const updatedUser = await prisma.users.update({
-        where: { id },
-        data: { points: { increment: body.points } },
-      })
-      // Não retornar informações sensíveis
-      const { name, email, role, points, completedTasks } = updatedUser
-      return NextResponse.json({ user: { id, name, email, role, points, completedTasks } }, { status: 200 })
+      const user = await UserService.addPoints(id, body.points)
+      return createApiResponse({ user })
     }
-    return NextResponse.json({ error: "Ação não suportada" }, { status: 400 })
+    
+    return createApiError("Ação não suportada", 400)
   } catch (error: any) {
-    if (error.code === 'P2025') {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
-    }
     console.error("Erro ao processar ação no usuário:", error)
-    return NextResponse.json({ error: "Erro ao processar ação no usuário" }, { status: 500 })
+    
+    // Handle validation errors
+    if (error.message.includes("maiores que zero")) {
+      return createApiError(error.message, 400)
+    }
+    
+    // Handle not found errors
+    if (error.message === "Usuário não encontrado") {
+      return createApiError(error.message, 404)
+    }
+    
+    // Handle Prisma errors
+    if (error.code) {
+      const { status, message } = handlePrismaError(error)
+      return createApiError(message, status)
+    }
+    
+    return createApiError("Erro ao processar ação no usuário")
   }
 }

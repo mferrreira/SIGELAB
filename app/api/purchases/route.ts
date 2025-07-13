@@ -7,8 +7,49 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
     const purchases = userId
-      ? await prisma.purchases.findMany({ where: { userId: Number(userId) } })
-      : await prisma.purchases.findMany()
+      ? await prisma.purchases.findMany({ 
+          where: { userId: Number(userId) },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true
+              }
+            },
+            reward: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                price: true
+              }
+            }
+          },
+          orderBy: { id: 'desc' }
+        })
+      : await prisma.purchases.findMany({
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true
+              }
+            },
+            reward: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                price: true
+              }
+            }
+          },
+          orderBy: { id: 'desc' }
+        })
     return NextResponse.json({ purchases }, { status: 200 })
   } catch (error) {
     console.error("Erro ao buscar compras:", error)

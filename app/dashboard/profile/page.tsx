@@ -1,15 +1,18 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { AppHeader } from "@/components/app-header"
 import { useDailyLogs } from "@/lib/daily-log-context"
 import { useAuth } from "@/lib/auth-context"
 import { DailyLogForm } from "@/components/ui/daily-log-form"
 import { DailyLogList } from "@/components/ui/daily-log-list"
+import { UserApproval } from "@/components/user-approval"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, User, Trophy, Calendar } from "lucide-react"
+import { Plus, User, Trophy, Calendar, CalendarDays } from "lucide-react"
 import type { DailyLog, DailyLogFormData } from "@/lib/types"
+import { TimerCard } from "@/components/ui/timer-card"
+import { useWorkSessions } from "@/lib/work-session-context"
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -18,10 +21,38 @@ export default function ProfilePage() {
   const [showForm, setShowForm] = useState(false)
   const [editingLog, setEditingLog] = useState<DailyLog | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
+  const { sessions, getWeeklyHours } = useWorkSessions()
+  const [weeklyHours, setWeeklyHours] = useState<number>(0)
 
-  const today = new Date().toISOString().split("T")[0]
-  const hasTodayLog = logs.some((log) => log.date.toString().slice(0, 10) === today)
-  const todayLog = logs.find((log) => log.date.toString().slice(0, 10) === today)
+  const today = new Date()
+  const isoToday = today.toISOString().split("T")[0]
+
+  // Calculate week start (Monday) and end (Sunday)
+  const dayOfWeek = today.getDay()
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7))
+  monday.setHours(0, 0, 0, 0)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23, 59, 59, 999)
+
+  // Check if user has a completed session for today
+  const hasCompletedSessionToday =
+    Array.isArray(sessions) &&
+    sessions.filter(Boolean).some(
+      (s) =>
+        typeof s?.status === "string" &&
+        s.status === "completed" &&
+        s.startTime &&
+        new Date(s.startTime).toISOString().split("T")[0] === isoToday
+    )
+
+  useEffect(() => {
+    if (user) {
+      getWeeklyHours(user.id, monday.toISOString(), sunday.toISOString()).then(setWeeklyHours)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, sessions])
 
   const handleSubmit = async (formData: DailyLogFormData) => {
     if (!user) return
@@ -104,6 +135,27 @@ export default function ProfilePage() {
             </CardContent>
           </Card>
 
+          {/* Weekly Hours Summary Card */}
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4 flex items-center space-x-4">
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <CalendarDays className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-lg font-bold text-blue-900">{weeklyHours.toFixed(1)} h</div>
+                <div className="text-sm text-gray-700">Horas trabalhadas nesta semana</div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Timer Card */}
+          <TimerCard />
+
+          {/* User Approval Section - Only for admins and laboratorists */}
+          {(user.role === "administrador_laboratorio" || user.role === "laboratorista") && (
+            <UserApproval />
+          )}
+
           {/* Daily Log Section */}
           <Card>
             <CardHeader>
@@ -112,8 +164,8 @@ export default function ProfilePage() {
                   <Calendar className="h-5 w-5" />
                   <span>Registros Diários</span>
                 </CardTitle>
-                {!showForm && !hasTodayLog && (
-                  <Button onClick={() => setShowForm(true)}>
+                {!showForm && (
+                  <Button onClick={() => setShowForm(true)} disabled={!hasCompletedSessionToday}>
                     <Plus className="h-4 w-4 mr-2" />
                     Adicionar Registro
                   </Button>
@@ -136,17 +188,23 @@ export default function ProfilePage() {
                     <Card className="border-blue-200 bg-blue-50">
                       <CardContent className="p-4">
                         <h3 className="font-medium text-blue-900 mb-4">
-                          {editingLog ? "Editar Registro" : "Registro de Hoje"}
+                          {editingLog ? "Editar Registro" : "Novo Registro"}
                         </h3>
-                        <DailyLogForm
-                          initialNote={editingLog?.note || ""}
-                          onSubmit={handleSubmit}
-                          onCancel={handleCancel}
-                          isSubmitting={submitting}
-                          error={formError}
-                          userId={user.id}
-                          date={today}
-                        />
+                        {hasCompletedSessionToday ? (
+                          <DailyLogForm
+                            initialNote={editingLog?.note || ""}
+                            onSubmit={handleSubmit}
+                            onCancel={handleCancel}
+                            isSubmitting={submitting}
+                            error={formError}
+                            userId={user.id}
+                            date={isoToday}
+                          />
+                        ) : (
+                          <div className="text-blue-700 text-sm mt-2">
+                            Para registrar um log, inicie e finalize uma sessão de trabalho usando o timer acima.
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   )}

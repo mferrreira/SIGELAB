@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Trophy, ShoppingBag, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Settings } from "lucide-react"
+import { Trophy, ShoppingBag, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Settings, Shield } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   AlertDialog,
@@ -30,13 +30,14 @@ import {
 import { toast } from "@/components/ui/use-toast"
 import { ToastAction } from "@/components/ui/toast"
 import { Toaster } from "@/components/ui/toaster"
+import { PurchaseApproval } from "@/components/ui/purchase-approval"
 import type { Reward, Purchase } from "@/lib/types"
 
 export default function StorePage() {
   const { user, loading } = useAuth()
   const router = useRouter()
   const { users } = useUser()
-  const { rewards, purchases, purchaseReward, createReward, updateReward, deleteReward } = useReward()
+  const { rewards, purchases, purchaseReward, createReward, updateReward, deleteReward, fetchPurchases } = useReward()
 
   const [selectedReward, setSelectedReward] = useState<Reward | null>(null)
   const [confirmPurchaseOpen, setConfirmPurchaseOpen] = useState(false)
@@ -49,8 +50,8 @@ export default function StorePage() {
     available: true,
   })
 
-  // Check if user can manage store (admin or laboratorist)
-  const canManageStore = user?.role === "admin" || user?.role === "laboratorist"
+      // Check if user can manage store (administrador de laboratório or laboratorista)
+    const canManageStore = user?.role === "administrador_laboratorio" || user?.role === "laboratorista"
 
   useEffect(() => {
     // Redirecionar para login se não estiver autenticado
@@ -59,23 +60,18 @@ export default function StorePage() {
     }
   }, [user, loading, router])
 
-  if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Carregando...</p>
-      </div>
-    )
-  }
-
   // Encontrar usuário atual para obter pontos
-  const currentUserData = users.find((u) => u.id === user.id)
+  const currentUserData = users.find((u) => u.id === user?.id)
   const userPoints = currentUserData?.points || 0
 
   // Obter compras do usuário
-  const userPurchases = purchases.filter((p: Purchase) => p.userId === user.id)
+  const userPurchases = purchases.filter((p: Purchase) => p.userId === user?.id)
 
   // Filtrar recompensas disponíveis
   const availableRewards = rewards.filter((reward) => reward.available)
+
+  // Contar compras pendentes para aprovação
+  const pendingPurchasesCount = purchases.filter((p: Purchase) => p.status === "pending").length
 
   // Memoize formatted purchase dates
   const formattedPurchases = useMemo(() =>
@@ -84,6 +80,14 @@ export default function StorePage() {
       formattedDate: new Date(purchase.purchaseDate).toLocaleDateString("pt-BR"),
     }))
   , [userPurchases])
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Carregando...</p>
+      </div>
+    )
+  }
 
   // Função para comprar recompensa
   const handlePurchase = (reward: Reward) => {
@@ -246,10 +250,21 @@ export default function StorePage() {
               Minhas Compras
             </TabsTrigger>
             {canManageStore && (
-              <TabsTrigger value="manage" className="flex items-center gap-1">
-                <Settings className="h-4 w-4" />
-                Gerenciar
-              </TabsTrigger>
+              <>
+                <TabsTrigger value="approvals" className="flex items-center gap-1 relative">
+                  <Shield className="h-4 w-4" />
+                  Aprovações
+                  {pendingPurchasesCount > 0 && (
+                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
+                      {pendingPurchasesCount}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="manage" className="flex items-center gap-1">
+                  <Settings className="h-4 w-4" />
+                  Gerenciar
+                </TabsTrigger>
+              </>
             )}
           </TabsList>
 
@@ -327,6 +342,18 @@ export default function StorePage() {
               </div>
             )}
           </TabsContent>
+
+          {canManageStore && (
+            <TabsContent value="approvals">
+              <PurchaseApproval 
+                purchases={purchases} 
+                onPurchaseUpdate={() => {
+                  // Refresh purchases data
+                  fetchPurchases()
+                }} 
+              />
+            </TabsContent>
+          )}
 
           {canManageStore && (
             <TabsContent value="manage">

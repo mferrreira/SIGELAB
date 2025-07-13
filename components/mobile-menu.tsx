@@ -19,7 +19,8 @@ import {
   Clock,
   LogOut,
   Settings,
-  Home
+  Home,
+  FileText
 } from "lucide-react"
 import { ThemeToggle } from "@/components/theme-toggle"
 
@@ -54,7 +55,7 @@ export function MobileMenu() {
       href: "/dashboard/projetos",
       icon: FolderKanban,
       label: "Projetos",
-      show: user?.role === "manager" || user?.role === "laboratorist" || user?.role === "admin"
+              show: user?.role === "gerente_projeto" || user?.role === "laboratorista" || user?.role === "administrador_laboratorio"
     },
     {
       href: "/dashboard/leaderboard",
@@ -75,10 +76,16 @@ export function MobileMenu() {
       show: true
     },
     {
+      href: "/dashboard/weekly-reports",
+      icon: FileText,
+      label: "Relatórios Semanais",
+      show: user?.role === "administrador_laboratorio" || user?.role === "laboratorista"
+    },
+    {
       href: "/dashboard/admin",
       icon: User,
       label: "Admin Dashboard",
-      show: user?.role === "admin"
+              show: user?.role === "administrador_laboratorio"
     },
     {
       href: "/dashboard/profile",

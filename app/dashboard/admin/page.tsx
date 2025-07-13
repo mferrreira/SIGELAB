@@ -9,6 +9,7 @@ import { useTask } from "@/lib/task-context"
 import { useResponsibility } from "@/lib/responsibility-context"
 import { useDailyLogs } from "@/lib/daily-log-context"
 import { useSchedule } from "@/lib/schedule-context"
+import { useWorkSessions } from "@/lib/work-session-context"
 import { AppHeader } from "@/components/app-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -26,9 +27,20 @@ import {
   Activity,
   UserCheck,
   CalendarDays,
-  BarChart3
+  BarChart3,
+  Plus,
+  Edit,
+  Trash2,
+  AlertCircle
 } from "lucide-react"
-import type { User, Project, Task, LabResponsibility, DailyLog, UserSchedule } from "@/lib/types"
+import type { Project, Task, LabResponsibility, DailyLog, UserSchedule, User } from "@/lib/types"
+import { UsersAPI } from "@/lib/api-client"
+import { UserApproval } from "@/components/user-approval"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 export default function AdminDashboardPage() {
   const { user, loading } = useAuth()
@@ -38,9 +50,47 @@ export default function AdminDashboardPage() {
   const { tasks } = useTask()
   const { responsibilities } = useResponsibility()
   const { logs: dailyLogs } = useDailyLogs()
-  const { schedules } = useSchedule()
+  const { schedules, createSchedule, updateSchedule, deleteSchedule, fetchSchedules } = useSchedule()
+  const { sessions, getWeeklyHours } = useWorkSessions()
+  const [weeklyHoursByUser, setWeeklyHoursByUser] = useState<Record<number, number>>({})
+
+  // Calculate week start (Monday) and end (Sunday)
+  const today = new Date()
+  const dayOfWeek = today.getDay()
+  const monday = new Date(today)
+  monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7))
+  monday.setHours(0, 0, 0, 0)
+  const sunday = new Date(monday)
+  sunday.setDate(monday.getDate() + 6)
+  sunday.setHours(23, 59, 59, 999)
+
+  useEffect(() => {
+    async function fetchAllWeeklyHours() {
+      const result: Record<number, number> = {}
+      await Promise.all(
+        users.map(async (u) => {
+          result[u.id] = await getWeeklyHours(u.id, monday.toISOString(), sunday.toISOString())
+        })
+      )
+      setWeeklyHoursByUser(result)
+    }
+    if (users.length > 0) {
+      fetchAllWeeklyHours()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [users, sessions])
 
   const [selectedDate, setSelectedDate] = useState(new Date())
+  const [selectedUserId, setSelectedUserId] = useState<string>("")
+  const [scheduleManagementDialogOpen, setScheduleManagementDialogOpen] = useState(false)
+  const [addEditScheduleDialogOpen, setAddEditScheduleDialogOpen] = useState(false)
+  const [editingSchedule, setEditingSchedule] = useState<any>(null)
+  const [scheduleForm, setScheduleForm] = useState({
+    dayOfWeek: 1,
+    startTime: "09:00",
+    endTime: "10:00"
+  })
+  const [scheduleError, setScheduleError] = useState<string | null>(null)
 
   useEffect(() => {
     // Redirecionar para login se não estiver autenticado
@@ -57,8 +107,8 @@ export default function AdminDashboardPage() {
     )
   }
 
-  // Verificar se é admin
-  const isAdmin = user.role === "admin"
+  // Verificar se é administrador de laboratório
+  const isAdmin = user.role === "administrador_laboratorio"
   if (!isAdmin) {
     return (
       <div className="flex min-h-screen flex-col">
@@ -140,6 +190,110 @@ export default function AdminDashboardPage() {
     })
   }, [schedules])
 
+  // Horários do usuário selecionado
+  const selectedUserSchedules = useMemo(() => {
+    if (!selectedUserId) return []
+    return schedules.filter(s => s.userId === parseInt(selectedUserId))
+  }, [schedules, selectedUserId])
+
+  // Usuário selecionado
+  const selectedUser = useMemo(() => {
+    if (!selectedUserId) return null
+    return users.find(u => u.id === parseInt(selectedUserId))
+  }, [users, selectedUserId])
+
+  // Calcular horas agendadas vs permitidas
+  const scheduleStats = useMemo(() => {
+    if (!selectedUser) return null
+    
+    const totalMinutes = selectedUserSchedules.reduce((total, schedule) => {
+      const [startH, startM] = schedule.startTime.split(':').map(Number)
+      const [endH, endM] = schedule.endTime.split(':').map(Number)
+      const startMinutes = startH * 60 + startM
+      const endMinutes = endH * 60 + endM
+      return total + (endMinutes - startMinutes)
+    }, 0)
+    
+    const scheduledHours = totalMinutes / 60
+    const allowedHours = selectedUser.weekHours
+    const remainingHours = allowedHours - scheduledHours
+    
+    return {
+      scheduledHours: Math.round(scheduledHours * 100) / 100,
+      allowedHours,
+      remainingHours: Math.round(remainingHours * 100) / 100,
+      isOverLimit: scheduledHours > allowedHours
+    }
+  }, [selectedUserSchedules, selectedUser])
+
+  // Funções para gerenciar horários
+  const handleCreateSchedule = async () => {
+    if (!selectedUserId) return
+    
+    try {
+      setScheduleError(null)
+      await createSchedule({
+        userId: parseInt(selectedUserId),
+        ...scheduleForm
+      })
+      setAddEditScheduleDialogOpen(false)
+      setScheduleForm({ dayOfWeek: 1, startTime: "09:00", endTime: "10:00" })
+      await fetchSchedules(parseInt(selectedUserId))
+    } catch (err: any) {
+      setScheduleError(err.message || "Erro ao criar horário")
+    }
+  }
+
+  const handleUpdateSchedule = async () => {
+    if (!editingSchedule) return
+    
+    try {
+      setScheduleError(null)
+      await updateSchedule(editingSchedule.id, scheduleForm)
+      setAddEditScheduleDialogOpen(false)
+      setEditingSchedule(null)
+      setScheduleForm({ dayOfWeek: 1, startTime: "09:00", endTime: "10:00" })
+      await fetchSchedules(parseInt(selectedUserId))
+    } catch (err: any) {
+      setScheduleError(err.message || "Erro ao atualizar horário")
+    }
+  }
+
+  const handleDeleteSchedule = async (scheduleId: number) => {
+    if (!confirm("Tem certeza que deseja excluir este horário?")) return
+    
+    try {
+      await deleteSchedule(scheduleId)
+      await fetchSchedules(parseInt(selectedUserId))
+    } catch (err) {
+      console.error("Erro ao excluir horário:", err)
+    }
+  }
+
+  const openEditDialog = (schedule: any) => {
+    setEditingSchedule(schedule)
+    setScheduleForm({
+      dayOfWeek: schedule.dayOfWeek,
+      startTime: schedule.startTime,
+      endTime: schedule.endTime
+    })
+    setAddEditScheduleDialogOpen(true)
+  }
+
+  const openCreateDialog = () => {
+    setEditingSchedule(null)
+    setScheduleForm({ dayOfWeek: 1, startTime: "09:00", endTime: "10:00" })
+    setScheduleError(null)
+    setAddEditScheduleDialogOpen(true)
+  }
+
+  // Carregar horários quando usuário for selecionado
+  useEffect(() => {
+    if (selectedUserId) {
+      fetchSchedules(parseInt(selectedUserId))
+    }
+  }, [selectedUserId, fetchSchedules])
+
   // Usuários por projeto
   const usersByProject = useMemo(() => {
     return projects.map(project => {
@@ -164,7 +318,7 @@ export default function AdminDashboardPage() {
           <h1 className="text-3xl font-bold">Painel Administrativo</h1>
           <Badge variant="outline" className="text-sm">
             <UserCheck className="h-4 w-4 mr-1" />
-            Administrador
+            Administrador de Laboratório
           </Badge>
         </div>
 
@@ -223,14 +377,63 @@ export default function AdminDashboardPage() {
           </Card>
         </div>
 
+        {/* Weekly Work Hours Table */}
+        <Card className="mb-6 border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <CalendarDays className="h-5 w-5 text-blue-600" />
+              <span>Horas Trabalhadas por Usuário (Semana Atual)</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead className="text-right">Horas Trabalhadas</TableHead>
+                  <TableHead className="text-right">Horas Esperadas</TableHead>
+                  <TableHead className="text-right">Diferença</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((u) => {
+                  const actual = weeklyHoursByUser[u.id] || 0
+                  const expected = u.weekHours || 0
+                  const diff = actual - expected
+                  let diffColor = "text-gray-700"
+                  if (diff < 0) diffColor = "text-red-600 font-bold"
+                  if (diff >= 0 && expected > 0) diffColor = "text-green-600 font-bold"
+                  return (
+                    <TableRow key={u.id}>
+                      <TableCell>{u.name}</TableCell>
+                      <TableCell>{u.email}</TableCell>
+                      <TableCell className="text-right font-bold text-blue-900">
+                        {actual.toFixed(1)} h
+                      </TableCell>
+                      <TableCell className="text-right text-blue-700">
+                        {expected.toFixed(1)} h
+                      </TableCell>
+                      <TableCell className={`text-right ${diffColor}`}>
+                        {diff >= 0 ? "+" : ""}{diff.toFixed(1)} h
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+
         <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-            <TabsTrigger value="projects">Projetos</TabsTrigger>
-            <TabsTrigger value="responsibilities">Responsabilidades</TabsTrigger>
-            <TabsTrigger value="schedule">Horários</TabsTrigger>
-            <TabsTrigger value="users">Usuários</TabsTrigger>
-          </TabsList>
+                          <TabsList>
+                  <TabsTrigger value="overview">Visão Geral</TabsTrigger>
+                  <TabsTrigger value="projects">Projetos</TabsTrigger>
+                  <TabsTrigger value="responsibilities">Responsabilidades</TabsTrigger>
+                  <TabsTrigger value="schedule">Horários</TabsTrigger>
+                  <TabsTrigger value="logs">Logs de Atividade</TabsTrigger>
+                  <TabsTrigger value="users">Usuários</TabsTrigger>
+                </TabsList>
 
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -294,15 +497,29 @@ export default function AdminDashboardPage() {
                     
                     <div>
                       <h4 className="font-medium mb-2">Logs Recentes</h4>
-                      <div className="space-y-2">
+                      <div className="space-y-3">
                         {recentDailyLogs.slice(0, 3).map((log) => (
-                          <div key={log.id} className="flex justify-between items-center text-sm">
-                            <span>{users.find(u => u.id === log.userId)?.name}</span>
-                            <span className="text-muted-foreground">
-                              {new Date(log.date).toLocaleDateString('pt-BR')}
-                            </span>
+                          <div key={log.id} className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-medium text-sm">
+                                {users.find(u => u.id === log.userId)?.name}
+                              </span>
+                              <span className="text-muted-foreground text-xs">
+                                {new Date(log.date).toLocaleDateString('pt-BR')}
+                              </span>
+                            </div>
+                            {log.note && (
+                              <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
+                                {log.note}
+                              </p>
+                            )}
                           </div>
                         ))}
+                        {recentDailyLogs.length === 0 && (
+                          <div className="text-center text-muted-foreground text-sm py-4">
+                            Nenhum log de atividade recente
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -424,11 +641,154 @@ export default function AdminDashboardPage() {
           <TabsContent value="schedule" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <CalendarDays className="h-5 w-5" />
-                  Horários da Semana
-                </CardTitle>
-                <CardDescription>Agenda semanal dos membros do laboratório</CardDescription>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <CalendarDays className="h-5 w-5" />
+                      Horários da Semana
+                    </CardTitle>
+                    <CardDescription>Agenda semanal dos membros do laboratório</CardDescription>
+                  </div>
+                  <Dialog open={scheduleManagementDialogOpen} onOpenChange={setScheduleManagementDialogOpen}>
+                    <DialogTrigger asChild>
+                      <Button onClick={() => setScheduleManagementDialogOpen(true)} size="sm">
+                        <Plus className="h-4 w-4 mr-1" />
+                        Gerenciar Horários
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <Calendar className="h-5 w-5" />
+                          Gerenciar Horários dos Usuários
+                        </DialogTitle>
+                        <DialogDescription>Adicionar, editar e remover horários semanais dos membros</DialogDescription>
+                      </DialogHeader>
+                      <div className="space-y-6">
+                        {/* Seletor de Usuário */}
+                        <div className="space-y-2">
+                          <Label htmlFor="user-select">Selecionar Usuário</Label>
+                          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Escolha um usuário" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {users.filter(u => u.status === "active").map((user) => (
+                                <SelectItem key={user.id} value={user.id.toString()}>
+                                  {user.name} ({user.role}) - {user.weekHours}h/sem
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Estatísticas do Usuário Selecionado */}
+                        {selectedUser && scheduleStats && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <Card className="bg-blue-50 dark:bg-blue-950/30">
+                              <CardContent className="pt-4">
+                                <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                                  {scheduleStats.scheduledHours}h
+                                </div>
+                                <p className="text-xs text-muted-foreground">Agendadas</p>
+                              </CardContent>
+                            </Card>
+                            <Card className="bg-green-50 dark:bg-green-950/30">
+                              <CardContent className="pt-4">
+                                <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                                  {scheduleStats.allowedHours}h
+                                </div>
+                                <p className="text-xs text-muted-foreground">Permitidas</p>
+                              </CardContent>
+                            </Card>
+                            <Card className={scheduleStats.isOverLimit ? "bg-red-50 dark:bg-red-950/30" : "bg-gray-50 dark:bg-gray-950/30"}>
+                              <CardContent className="pt-4">
+                                <div className={`text-2xl font-bold ${scheduleStats.isOverLimit ? "text-red-600 dark:text-red-400" : "text-gray-600 dark:text-gray-400"}`}>
+                                  {scheduleStats.remainingHours}h
+                                </div>
+                                <p className="text-xs text-muted-foreground">Restantes</p>
+                              </CardContent>
+                            </Card>
+                          </div>
+                        )}
+
+                        {/* Alerta se exceder limite */}
+                        {selectedUser && scheduleStats && scheduleStats.isOverLimit && (
+                          <Alert variant="destructive">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>
+                              O usuário {selectedUser.name} excede o limite semanal em {Math.abs(scheduleStats.remainingHours)}h.
+                            </AlertDescription>
+                          </Alert>
+                        )}
+
+                        {/* Horários da Semana */}
+                        {selectedUser && (
+                          <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                              <h3 className="text-lg font-semibold">Horários de {selectedUser.name}</h3>
+                              <Button onClick={openCreateDialog} size="sm">
+                                <Plus className="h-4 w-4 mr-1" />
+                                Adicionar Horário
+                              </Button>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
+                              {['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day, dayIndex) => {
+                                const daySchedules = selectedUserSchedules.filter(s => s.dayOfWeek === dayIndex)
+                                
+                                return (
+                                  <div key={day} className="space-y-2">
+                                    <h4 className="font-medium text-center text-sm">{day}</h4>
+                                    <div className="space-y-1">
+                                      {daySchedules.map((schedule) => (
+                                        <div 
+                                          key={schedule.id} 
+                                          className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-xs relative group"
+                                        >
+                                          <div className="font-medium">{schedule.startTime} - {schedule.endTime}</div>
+                                          <div className="text-muted-foreground">
+                                            {((parseInt(schedule.endTime.split(':')[0]) * 60 + parseInt(schedule.endTime.split(':')[1])) - 
+                                              (parseInt(schedule.startTime.split(':')[0]) * 60 + parseInt(schedule.startTime.split(':')[1]))) / 60}h
+                                          </div>
+                                          <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="flex gap-1">
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 w-6 p-0"
+                                                onClick={() => openEditDialog(schedule)}
+                                              >
+                                                <Edit className="h-3 w-3" />
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-6 w-6 p-0 text-red-600 hover:text-red-700"
+                                                onClick={() => handleDeleteSchedule(schedule.id)}
+                                              >
+                                                <Trash2 className="h-3 w-3" />
+                                              </Button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                      {daySchedules.length === 0 && (
+                                        <div className="text-center text-muted-foreground text-xs py-2 border border-dashed rounded">
+                                          Vazio
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4">
@@ -460,7 +820,160 @@ export default function AdminDashboardPage() {
             </Card>
           </TabsContent>
 
+          <TabsContent value="logs" className="space-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Daily Logs */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="h-5 w-5" />
+                    Logs de Atividade
+                  </CardTitle>
+                  <CardDescription>Registros detalhados das atividades dos membros</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Usuário</TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Atividade</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {dailyLogs
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .slice(0, 10)
+                        .map((log) => {
+                          const user = users.find(u => u.id === log.userId)
+                          return (
+                            <TableRow key={log.id}>
+                              <TableCell className="font-medium">
+                                {user?.name || 'Usuário não encontrado'}
+                              </TableCell>
+                              <TableCell>
+                                {new Date(log.date).toLocaleDateString('pt-BR')}
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-xs">
+                                  {log.note ? (
+                                    <p className="text-sm line-clamp-2">{log.note}</p>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">Sem descrição</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="default">Registrado</Badge>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      {dailyLogs.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8">
+                            <div className="text-muted-foreground">
+                              <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>Nenhum log de atividade encontrado</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+
+              {/* Work Sessions */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="h-5 w-5" />
+                    Sessões de Trabalho
+                  </CardTitle>
+                  <CardDescription>Histórico de sessões de timer dos membros</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Usuário</TableHead>
+                        <TableHead>Duração</TableHead>
+                        <TableHead>Atividade</TableHead>
+                        <TableHead>Local</TableHead>
+                        <TableHead>Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sessions
+                        .filter(Boolean)
+                        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+                        .slice(0, 10)
+                        .map((session) => {
+                          const user = users.find(u => u.id === session.userId)
+                          const startTime = new Date(session.startTime)
+                          const endTime = session.endTime ? new Date(session.endTime) : null
+                          const duration = endTime 
+                            ? Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60))
+                            : null
+                          
+                          return (
+                            <TableRow key={session.id}>
+                              <TableCell className="font-medium">
+                                {user?.name || 'Usuário não encontrado'}
+                              </TableCell>
+                              <TableCell>
+                                {duration ? `${duration} min` : '-'}
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-xs">
+                                  {session.activity ? (
+                                    <p className="text-sm line-clamp-2">{session.activity}</p>
+                                  ) : (
+                                    <span className="text-muted-foreground text-sm">Trabalho geral</span>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {session.location ? (
+                                  <Badge variant="outline">{session.location}</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">Não especificado</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <Badge 
+                                  variant={session.status === "completed" ? "default" : 
+                                         session.status === "active" ? "secondary" : "outline"}
+                                >
+                                  {session.status === "completed" ? "Concluída" :
+                                   session.status === "active" ? "Ativa" : "Pausada"}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      {sessions.filter(Boolean).length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8">
+                            <div className="text-muted-foreground">
+                              <Clock className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>Nenhuma sessão de trabalho encontrada</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
           <TabsContent value="users" className="space-y-4">
+            {/* User Approval Component - Always render to maintain hook order */}
+            <UserApproval />
             <Card>
               <CardHeader>
                 <CardTitle>Usuários e Progresso</CardTitle>
@@ -472,6 +985,7 @@ export default function AdminDashboardPage() {
                     <TableRow>
                       <TableHead>Nome</TableHead>
                       <TableHead>Função</TableHead>
+                      <TableHead>Horas Semanais</TableHead>
                       <TableHead>Pontos</TableHead>
                       <TableHead>Tarefas Concluídas</TableHead>
                       <TableHead>Status</TableHead>
@@ -487,6 +1001,10 @@ export default function AdminDashboardPage() {
                           <TableCell className="font-medium">{user.name}</TableCell>
                           <TableCell>
                             <Badge variant="outline">{user.role}</Badge>
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium">{user.weekHours}</span>
+                            <span className="text-muted-foreground text-xs ml-1">h/sem</span>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
@@ -512,6 +1030,74 @@ export default function AdminDashboardPage() {
           </TabsContent>
         </Tabs>
       </main>
+      
+      {/* Dialog para Adicionar/Editar Horário */}
+      <Dialog open={addEditScheduleDialogOpen} onOpenChange={setAddEditScheduleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingSchedule ? "Editar Horário" : "Adicionar Horário"}
+            </DialogTitle>
+            <DialogDescription>
+              Configure o horário para {selectedUser?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="dayOfWeek">Dia da Semana</Label>
+              <Select 
+                value={scheduleForm.dayOfWeek.toString()} 
+                onValueChange={(value) => setScheduleForm(prev => ({ ...prev, dayOfWeek: parseInt(value) }))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Domingo</SelectItem>
+                  <SelectItem value="1">Segunda-feira</SelectItem>
+                  <SelectItem value="2">Terça-feira</SelectItem>
+                  <SelectItem value="3">Quarta-feira</SelectItem>
+                  <SelectItem value="4">Quinta-feira</SelectItem>
+                  <SelectItem value="5">Sexta-feira</SelectItem>
+                  <SelectItem value="6">Sábado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startTime">Horário de Início</Label>
+                <Input
+                  type="time"
+                  value={scheduleForm.startTime}
+                  onChange={(e) => setScheduleForm(prev => ({ ...prev, startTime: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endTime">Horário de Fim</Label>
+                <Input
+                  type="time"
+                  value={scheduleForm.endTime}
+                  onChange={(e) => setScheduleForm(prev => ({ ...prev, endTime: e.target.value }))}
+                />
+              </div>
+            </div>
+            {scheduleError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{scheduleError}</AlertDescription>
+              </Alert>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setAddEditScheduleDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={editingSchedule ? handleUpdateSchedule : handleCreateSchedule}>
+                {editingSchedule ? "Atualizar" : "Adicionar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 } 

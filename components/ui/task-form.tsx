@@ -20,6 +20,7 @@ interface TaskFormProps {
   isSubmitting: boolean
   error: string | null
   projectId?: string
+  open?: boolean // Add open prop
 }
 
 /**
@@ -118,9 +119,10 @@ interface SelectFieldProps {
   onValueChange: (value: string) => void
   placeholder?: string
   options: Array<{ value: string; label: string }>
+  error?: string
 }
 
-function SelectField({ label, value, onValueChange, placeholder, options }: SelectFieldProps) {
+function SelectField({ label, value, onValueChange, placeholder, options, error }: SelectFieldProps) {
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
@@ -136,6 +138,9 @@ function SelectField({ label, value, onValueChange, placeholder, options }: Sele
           ))}
         </SelectContent>
       </Select>
+      {error && (
+        <p className="text-xs text-red-600">{error}</p>
+      )}
     </div>
   )
 }
@@ -175,30 +180,30 @@ export function TaskForm({
   isSubmitting,
   error,
   projectId,
+  open,
 }: TaskFormProps) {
-  const [formData, setFormData] = useState<TaskFormData>({
+  const [formData, setFormData] = useState<TaskFormData & { taskVisibility?: string }>({
     title: "",
     description: "",
-    status: "todo",
+    status: "to-do",
     priority: "medium",
     assignedTo: "",
     project: "",
     dueDate: "",
     points: 10,
     completed: false,
+    taskVisibility: "delegated",
   })
-
   const [isPastDate, setIsPastDate] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({})
 
   const checkIfPastDate = useCallback((dateString: string | null) => {
     if (!dateString) {
       setIsPastDate(false)
       return
     }
-
     const today = new Date()
     today.setHours(0, 0, 0, 0)
-
     const selectedDate = new Date(dateString)
     setIsPastDate(selectedDate < today)
   }, [])
@@ -206,46 +211,54 @@ export function TaskForm({
   // Reset form when task changes
   useEffect(() => {
     if (task) {
-      setFormData({
+      const formDataToSet = {
         title: task.title,
         description: task.description || "",
-        status: task.status as TaskFormData["status"],
-        priority: task.priority as TaskFormData["priority"],
+        status: (task.status as TaskFormData["status"]) || "to-do",
+        priority: (task.priority as TaskFormData["priority"]) || "medium",
         assignedTo: task.assignedTo?.toString() || "",
         project: task.projectId?.toString() || "",
         dueDate: task.dueDate || "",
         points: task.points,
         completed: task.completed || false,
-      })
+        taskVisibility: task.taskVisibility || (task.assignedTo ? "delegated" : "public"),
+      }
+      setFormData(formDataToSet)
       checkIfPastDate(task.dueDate || null)
     } else {
       setFormData({
         title: "",
         description: "",
-        status: "todo",
+        status: "to-do",
         priority: "medium",
-        assignedTo: currentUser?.role === "responsible" ? currentUser.id.toString() : "",
+        assignedTo: currentUser?.role === "gerente_projeto" ? currentUser.id.toString() : "",
         project: projectId || "",
         dueDate: "",
         points: 10,
         completed: false,
+        taskVisibility: "delegated",
       })
       setIsPastDate(false)
     }
-  }, [task, currentUser, projectId, checkIfPastDate])
+    setFieldErrors({})
+  }, [task, currentUser, projectId, checkIfPastDate, users, projects, open])
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
-
     if (name === "dueDate") {
       checkIfPastDate(value)
     }
-
     setFormData((prev) => ({ ...prev, [name]: value }))
   }, [checkIfPastDate])
 
   const handleSelectChange = useCallback((name: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    setFormData((prev) => {
+      // If changing visibility to public, clear assignedTo
+      if (name === "taskVisibility" && value === "public") {
+        return { ...prev, [name]: value, assignedTo: "" }
+      }
+      return { ...prev, [name]: value }
+    })
   }, [])
 
   const handleNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -255,33 +268,49 @@ export function TaskForm({
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
+    // Validation
+    const errors: { [key: string]: string } = {}
+    if (!formData.title.trim()) errors.title = "Título é obrigatório."
+    if (formData.taskVisibility !== "public" && !formData.assignedTo) errors.assignedTo = "Selecione um responsável."
+    if (!formData.project) errors.project = "Selecione um projeto."
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) return
     onSubmit(formData)
   }, [formData, onSubmit])
 
   // Options for select fields
   const statusOptions = [
-    { value: "todo" as const, label: "A Fazer" },
+    { value: "to-do" as const, label: "A Fazer" },
     { value: "in-progress" as const, label: "Em Andamento" },
     { value: "in-review" as const, label: "Em Revisão" },
     { value: "adjust" as const, label: "Ajustes" },
     { value: "done" as const, label: "Concluído" },
   ]
-
   const priorityOptions = [
     { value: "low" as const, label: "Baixa" },
     { value: "medium" as const, label: "Média" },
     { value: "high" as const, label: "Alta" },
   ]
-
-  const userOptions = users.map((user) => ({
-    value: user.id.toString(),
-    label: user.name,
-  }))
-
+  const visibilityOptions = [
+    { value: "delegated", label: "Delegada (Atribuir a um voluntário)" },
+    { value: "public", label: "Pública (Todos os voluntários do projeto)" },
+  ]
+  // Only show volunteers for task delegation
+  const userOptions = users
+    .filter((user) => user.role === "voluntario")
+    .map((user) => ({
+      value: user.id.toString(),
+      label: user.name,
+    }))
   const projectOptions = projects.map((project) => ({
     value: project.id.toString(),
     label: project.name,
   }))
+
+  // Delay rendering if editing a task and options are not loaded
+  if (task && (users.length === 0 || projects.length === 0)) {
+    return <div className="p-6 text-center text-muted-foreground">Carregando opções...</div>;
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -291,7 +320,6 @@ export function TaskForm({
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
       <FormField
         label="Título"
         id="title"
@@ -300,8 +328,8 @@ export function TaskForm({
         onChange={handleChange}
         required
         placeholder="Digite o título da tarefa"
+        error={fieldErrors.title}
       />
-
       <FormField
         label="Descrição"
         id="description"
@@ -311,15 +339,14 @@ export function TaskForm({
         placeholder="Digite a descrição da tarefa"
         rows={3}
       />
-
       <div className="grid grid-cols-2 gap-4">
         <SelectField
           label="Status"
           value={formData.status}
           onValueChange={(value) => handleSelectChange("status", value)}
           options={statusOptions}
+          error={fieldErrors.status}
         />
-
         <SelectField
           label="Prioridade"
           value={formData.priority}
@@ -330,22 +357,33 @@ export function TaskForm({
 
       <div className="grid grid-cols-2 gap-4">
         <SelectField
-          label="Responsável"
-          value={formData.assignedTo}
-          onValueChange={(value) => handleSelectChange("assignedTo", value)}
-          placeholder="Selecione um responsável"
-          options={userOptions}
+          label="Visibilidade"
+          value={formData.taskVisibility || "delegated"}
+          onValueChange={(value) => handleSelectChange("taskVisibility", value)}
+          options={visibilityOptions}
         />
-
         <SelectField
           label="Projeto"
           value={formData.project}
           onValueChange={(value) => handleSelectChange("project", value)}
           placeholder="Selecione um projeto"
           options={projectOptions}
+          error={fieldErrors.project}
         />
       </div>
-
+      {/* Only show assignee if delegated */}
+      {formData.taskVisibility !== "public" && (
+        <div className="grid grid-cols-2 gap-4">
+          <SelectField
+            label="Responsável"
+            value={formData.assignedTo}
+            onValueChange={(value) => handleSelectChange("assignedTo", value)}
+            placeholder="Selecione um responsável"
+            options={userOptions}
+            error={fieldErrors.assignedTo}
+          />
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <FormField
           label="Data de Vencimento"
@@ -356,7 +394,6 @@ export function TaskForm({
           type="date"
           error={isPastDate ? "A data selecionada já passou" : undefined}
         />
-
         <NumberField
           label="Pontos"
           id="points"
@@ -366,7 +403,6 @@ export function TaskForm({
           min={0}
         />
       </div>
-
       <FormActions
         isSubmitting={isSubmitting}
         onCancel={onCancel}

@@ -1,7 +1,17 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { LabResponsibility, ActiveResponsibility } from "@/lib/types"
+import type { LabResponsibility } from "@/lib/types"
+
+// Define ActiveResponsibility type locally since it's not in types.ts
+interface ActiveResponsibility {
+  id: number
+  userId: number
+  userName: string
+  startTime: string
+  duration: number
+  userRole?: string
+}
 import { ResponsibilitiesAPI } from "@/lib/api-client"
 import { useAuth } from "@/lib/auth-context"
 
@@ -14,8 +24,8 @@ interface ResponsibilityContextType {
   fetchActiveResponsibility: () => Promise<void>
   startResponsibility: (notes?: string) => Promise<void>
   endResponsibility: () => Promise<void>
-  updateNotes: (id: string, notes: string) => Promise<void>
-  deleteResponsibility: (id: string) => Promise<void>
+  updateNotes: (id: number, notes: string) => Promise<void>
+  deleteResponsibility: (id: number) => Promise<void>
 }
 
 const ResponsibilityContext = createContext<ResponsibilityContextType | undefined>(undefined)
@@ -125,11 +135,12 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
   const endResponsibility = async () => {
     try {
       if (!activeResponsibility) throw new Error("Não há responsabilidade ativa")
+      if (!user) throw new Error("Usuário não autenticado")
 
       setLoading(true)
       setError(null)
 
-      const { responsibility } = await ResponsibilitiesAPI.end(activeResponsibility.id)
+      const { responsibility } = await ResponsibilitiesAPI.end(activeResponsibility.id, user.id)
 
       // Atualizar a lista de responsabilidades
       setResponsibilities((prev) => prev.map((r) => (r.id === responsibility.id ? responsibility : r)))
@@ -145,7 +156,7 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateNotes = async (id: string, notes: string) => {
+  const updateNotes = async (id: number, notes: string) => {
     try {
       setLoading(true)
       setError(null)
@@ -163,7 +174,7 @@ export function ResponsibilityProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const deleteResponsibility = async (id: string) => {
+  const deleteResponsibility = async (id: number) => {
     try {
       setLoading(true)
       setError(null)

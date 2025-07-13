@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Info } from "lucide-react"
 import type { DailyLogFormData } from "@/lib/types"
 
 interface DailyLogFormProps {
@@ -52,6 +52,13 @@ export function DailyLogForm({
         </Alert>
       )}
 
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Você pode adicionar múltiplos registros por dia. Cada registro será incluído no relatório semanal.
+        </AlertDescription>
+      </Alert>
+
       <div className="grid gap-2">
         <Label htmlFor="note">Registro do dia</Label>
         <Textarea
@@ -69,7 +76,7 @@ export function DailyLogForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting || !note.trim()}>
-          {isSubmitting ? "Salvando..." : "Salvar"}
+          {isSubmitting ? "Salvando..." : "Adicionar Registro"}
         </Button>
       </div>
     </form>

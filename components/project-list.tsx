@@ -33,7 +33,7 @@ export function ProjectList() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (projectId: string) => {
+  const handleDelete = async (projectId: number) => {
     if (confirm("Tem certeza que deseja excluir este projeto?")) {
       try {
         await deleteProject(projectId)
@@ -81,7 +81,7 @@ export function ProjectList() {
             Gerencie os projetos do laboratório
           </p>
         </div>
-        {user && (
+        {user && (user.role === "laboratorista" || user.role === "administrador_laboratorio") && (
           <Button onClick={handleCreateNew}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Projeto
@@ -95,9 +95,12 @@ export function ProjectList() {
             <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhum projeto encontrado</h3>
             <p className="text-muted-foreground text-center mb-4">
-              Comece criando seu primeiro projeto para organizar as atividades do laboratório.
+              {user?.role === "gerente_projeto" 
+                ? "Você ainda não foi adicionado a nenhum projeto."
+                : "Comece criando seu primeiro projeto para organizar as atividades do laboratório."
+              }
             </p>
-            {user && (
+            {user && (user.role === "laboratorista" || user.role === "administrador_laboratorio") && (
               <Button onClick={handleCreateNew}>
                 <Plus className="mr-2 h-4 w-4" />
                 Criar Primeiro Projeto
@@ -134,7 +137,7 @@ export function ProjectList() {
                     Criado por: {project.createdBy}
                   </div>
                   
-                  {user && (
+                  {user && (user.role === "laboratorista" || user.role === "administrador_laboratorio") && (
                     <div className="flex space-x-2">
                       <Button
                         variant="outline"

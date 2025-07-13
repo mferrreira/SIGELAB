@@ -16,7 +16,6 @@ interface RewardContextType {
   updateReward: (id: number, reward: Partial<Reward>) => Promise<Reward>
   deleteReward: (id: number) => Promise<void>
   purchaseReward: (userId: number, rewardId: number) => Promise<Purchase | null>
-  updatePurchaseStatus: (id: number, status: Purchase["status"]) => Promise<Purchase>
 }
 
 const RewardContext = createContext<RewardContextType | undefined>(undefined)
@@ -62,7 +61,10 @@ export function RewardProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (user) {
       fetchRewards()
-      fetchPurchases(Number(user.id))
+      // Se o usuário pode gerenciar a loja, buscar todas as compras para aprovação
+      // Caso contrário, buscar apenas as compras do usuário
+      const canManageStore = user.role === "administrador_laboratorio" || user.role === "laboratorista"
+      fetchPurchases(canManageStore ? undefined : Number(user.id))
     } else {
       setRewards([])
       setPurchases([])
@@ -140,22 +142,7 @@ export function RewardProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updatePurchaseStatus = async (id: number, status: Purchase["status"]) => {
-    try {
-      setLoading(true)
-      setError(null)
 
-      const { purchase } = await PurchasesAPI.updateStatus(id, status)
-      setPurchases((prevPurchases) => prevPurchases.map((p) => (p.id === id ? purchase : p)))
-      return purchase
-    } catch (err) {
-      setError("Erro ao atualizar status da compra")
-      console.error(err)
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }
 
   return (
     <RewardContext.Provider
@@ -170,7 +157,6 @@ export function RewardProvider({ children }: { children: ReactNode }) {
         updateReward,
         deleteReward,
         purchaseReward,
-        updatePurchaseStatus,
       }}
     >
       {children}

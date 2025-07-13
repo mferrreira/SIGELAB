@@ -1,27 +1,25 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { ScheduleService } from "@/lib/services/schedule-service"
+import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils"
 
 // GET: Obter um horário específico
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = parseInt(params.id)
     if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
+      return createApiError("ID inválido", 400)
     }
 
-    const schedule = await prisma.user_schedules.findUnique({
-      where: { id },
-      include: { user: true },
-    })
-
-    if (!schedule) {
-      return NextResponse.json({ error: "Horário não encontrado" }, { status: 404 })
-    }
-
-    return NextResponse.json({ schedule }, { status: 200 })
-  } catch (error) {
+    const schedule = await ScheduleService.getSchedule(id)
+    return createApiResponse({ schedule })
+  } catch (error: any) {
     console.error("Erro ao buscar horário:", error)
-    return NextResponse.json({ error: "Erro ao buscar horário" }, { status: 500 })
+    
+    if (error.message === "Horário não encontrado") {
+      return createApiError(error.message, 404)
+    }
+    
+    return createApiError("Erro ao buscar horário")
   }
 }
 
@@ -30,29 +28,39 @@ export async function PUT(request: Request, { params }: { params: { id: string }
   try {
     const id = parseInt(params.id)
     if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
+      return createApiError("ID inválido", 400)
     }
 
     const body = await request.json()
     const { dayOfWeek, startTime, endTime } = body
 
-    const updatedSchedule = await prisma.user_schedules.update({
-      where: { id },
-      data: {
-        dayOfWeek: dayOfWeek !== undefined ? parseInt(dayOfWeek) : undefined,
-        startTime,
-        endTime,
-      },
-      include: { user: true },
+    const schedule = await ScheduleService.updateSchedule(id, {
+      dayOfWeek: dayOfWeek !== undefined ? parseInt(dayOfWeek) : undefined,
+      startTime,
+      endTime,
     })
 
-    return NextResponse.json({ schedule: updatedSchedule }, { status: 200 })
+    return createApiResponse({ schedule })
   } catch (error: any) {
-    if (error.code === 'P2025') {
-      return NextResponse.json({ error: "Horário não encontrado" }, { status: 404 })
-    }
     console.error("Erro ao atualizar horário:", error)
-    return NextResponse.json({ error: "Erro ao atualizar horário" }, { status: 500 })
+    
+    // Handle validation errors
+    if (error.message.includes("obrigatório") || error.message.includes("inválido")) {
+      return createApiError(error.message, 400)
+    }
+    
+    // Handle not found errors
+    if (error.message === "Horário não encontrado") {
+      return createApiError(error.message, 404)
+    }
+    
+    // Handle Prisma errors
+    if (error.code) {
+      const { status, message } = handlePrismaError(error)
+      return createApiError(message, status)
+    }
+    
+    return createApiError("Erro ao atualizar horário")
   }
 }
 
@@ -61,16 +69,25 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
   try {
     const id = parseInt(params.id)
     if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 })
+      return createApiError("ID inválido", 400)
     }
 
-    await prisma.user_schedules.delete({ where: { id } })
-    return NextResponse.json({ success: true }, { status: 200 })
+    await ScheduleService.deleteSchedule(id)
+    return createApiResponse({ success: true })
   } catch (error: any) {
-    if (error.code === 'P2025') {
-      return NextResponse.json({ error: "Horário não encontrado" }, { status: 404 })
-    }
     console.error("Erro ao excluir horário:", error)
-    return NextResponse.json({ error: "Erro ao excluir horário" }, { status: 500 })
+    
+    // Handle not found errors
+    if (error.message === "Horário não encontrado") {
+      return createApiError(error.message, 404)
+    }
+    
+    // Handle Prisma errors
+    if (error.code) {
+      const { status, message } = handlePrismaError(error)
+      return createApiError(message, status)
+    }
+    
+    return createApiError("Erro ao excluir horário")
   }
 } 

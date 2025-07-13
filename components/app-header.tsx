@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { KanbanSquare, User, FolderKanban, Trophy, ShoppingBag, Clock } from "lucide-react"
+import { KanbanSquare, User, FolderKanban, Trophy, ShoppingBag, Clock, FileText } from "lucide-react"
 import { useUser } from "@/lib/user-context"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { MobileMenu } from "@/components/mobile-menu"
@@ -27,6 +27,8 @@ export function AppHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4">
+          {/* Mobile Menu */}
+          <MobileMenu />
           <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <KanbanSquare className="h-6 w-6 text-primary" />
             <span className="font-semibold text-lg hidden sm:inline">Gerenciador de Tarefas</span>
@@ -36,7 +38,7 @@ export function AppHeader() {
           {/* Desktop Navigation - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-2">
             {/* Mostrar link para projetos apenas para gerentes */}
-            {user?.role === "manager" && (
+            {user?.role === "gerente_projeto" && (
               <Link
                 href="/dashboard/projetos"
                 className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
@@ -74,7 +76,7 @@ export function AppHeader() {
             </Link>
 
             {/* Future pages for laboratorists and admins */}
-            {(user?.role === "laboratorist" || user?.role === "admin") && (
+            {(user?.role === "laboratorista" || user?.role === "administrador_laboratorio") && (
               <Link
                 href="/dashboard/projetos"
                 className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
@@ -83,13 +85,25 @@ export function AppHeader() {
                 Projetos
               </Link>
             )}
-            {user?.role === "admin" && (
+            
+            {/* Weekly Reports for admins and laboratorists */}
+            {(user?.role === "administrador_laboratorio" || user?.role === "laboratorista") && (
+              <Link
+                href="/dashboard/weekly-reports"
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
+              >
+                <FileText className="h-4 w-4" />
+                Relatórios Semanais
+              </Link>
+            )}
+            
+            {user?.role === "administrador_laboratorio" && (
               <Link
                 href="/dashboard/admin"
                 className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
               >
                 <User className="h-4 w-4" />
-                Admin Dashboard
+                Painel Administrativo
               </Link>
             )}
             {/* Useful future pages for all users */}
@@ -104,8 +118,7 @@ export function AppHeader() {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Mobile Menu */}
-          <MobileMenu />
+
           
           {/* Desktop Controls */}
           <div className="hidden md:flex items-center gap-4">
@@ -133,7 +146,7 @@ export function AppHeader() {
                     <span>{user?.name}</span>
                     <span className="text-xs text-muted-foreground">{user?.email}</span>
                     <span className="text-xs font-normal mt-1 capitalize">
-                      {user?.role === "manager" ? "Gerente" : "Usuário"}
+                      {user?.role === "gerente_projeto" ? "Gerente de Projeto" : "Usuário"}
                     </span>
                     {currentUserData && (
                       <span className="text-xs font-medium mt-1 bg-gradient-to-r from-amber-400 to-orange-400 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">

@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Clock, User } from "lucide-react"
 import { useResponsibility } from "@/lib/responsibility-context"
+import { useAuth } from "@/lib/auth-context"
 
 // Função para formatar duração em hh:mm:ss
 function formatDuration(seconds: number): string {
@@ -21,6 +22,7 @@ function formatDuration(seconds: number): string {
 
 export function LabResponsibilityStatus() {
   const { activeResponsibility, loading, error, fetchActiveResponsibility } = useResponsibility()
+  const { user } = useAuth()
   const [formattedStartTime, setFormattedStartTime] = useState("")
 
   // Buscar responsabilidade ativa ao montar o componente
@@ -63,7 +65,7 @@ export function LabResponsibilityStatus() {
       <CardContent className="p-4">
         {activeResponsibility ? (
           <div className="flex flex-col">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-3">
               <Badge variant="default" className="bg-green-500">
                 Laboratório em uso
               </Badge>
@@ -71,21 +73,48 @@ export function LabResponsibilityStatus() {
                 Desde {formattedStartTime}
               </span>
             </div>
-            <div className="flex items-center gap-2 mb-2">
-              <User className="h-4 w-4 text-primary" />
-              <span className="font-medium">{activeResponsibility.userName}</span>
+            
+            {/* Current Responsible Person - More Prominent */}
+            <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 mb-3 border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center gap-2 mb-1">
+                <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Responsável Atual:</span>
+              </div>
+              <div className="text-lg font-semibold text-blue-900 dark:text-blue-100">
+                {activeResponsibility.userName}
+                {user && activeResponsibility.userId === user.id && (
+                  <span className="ml-2 text-sm text-blue-600 dark:text-blue-400">(Você)</span>
+                )}
+              </div>
+              {activeResponsibility.userRole && (
+                <div className="mt-1">
+                  <Badge variant="secondary" className="text-xs">
+                          {activeResponsibility.userRole === "administrador_laboratorio" ? "Administrador de Laboratório" :
+        activeResponsibility.userRole === "laboratorista" ? "Laboratorista" :
+        activeResponsibility.userRole === "gerente_projeto" ? "Gerente de Projeto" :
+        activeResponsibility.userRole === "voluntario" ? "Voluntário" :
+                     activeResponsibility.userRole}
+                  </Badge>
+                </div>
+              )}
             </div>
+            
+            {/* Duration */}
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
-              <span className="font-mono text-lg">{formatDuration(activeResponsibility.duration)}</span>
+              <span className="text-sm text-muted-foreground">Duração:</span>
+              <span className="font-mono text-lg font-semibold">{formatDuration(activeResponsibility.duration)}</span>
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-2">
-            <Badge variant="outline" className="mb-2">
+          <div className="flex flex-col items-center justify-center py-4">
+            <Badge variant="outline" className="mb-3">
               Laboratório disponível
             </Badge>
-            <p className="text-sm text-muted-foreground">Ninguém está responsável pelo laboratório no momento.</p>
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground mb-1">Ninguém está responsável pelo laboratório no momento.</p>
+              <p className="text-xs text-muted-foreground">O laboratório está livre para uso.</p>
+            </div>
           </div>
         )}
       </CardContent>

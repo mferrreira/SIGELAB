@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15
+    container_name: jogos-postgres
+    environment:
+      POSTGRES_DB: jogos
+      POSTGRES_USER: jogos
+      POSTGRES_PASSWORD: jogos123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - jogos-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U jogos -d jogos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Next.js Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jogos-app
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://jogos:jogos123@postgres:5432/jogos
+      - NEXTAUTH_URL=http://localhost:3000
+      - NEXTAUTH_SECRET=your-secret-key-here
+      - NODE_ENV=production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - jogos-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  jogos-network:
+    driver: bridge 

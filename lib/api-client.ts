@@ -16,13 +16,14 @@ async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T> {
     throw new Error(data.error || "Ocorreu um erro na requisição")
   }
 
-  return data
+  // Return the data property if it exists, otherwise return the whole response
+  return data.data || data
 }
 
 // API de Tarefas
 export const TasksAPI = {
   // Obter todas as tarefas
-  getAll: () => fetchAPI<{ tasks: any[] }>("/api/tasks"),
+  getAll: (params?: string) => fetchAPI<{ tasks: any[] }>(`/api/tasks${params || ""}`),
 
   // Obter uma tarefa específica
   getById: (id: number) => fetchAPI<{ task: any }>(`/api/tasks/${id}`),
@@ -82,6 +83,43 @@ export const UsersAPI = {
     fetchAPI<{ user: any }>(`/api/users/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ action: "addPoints", points }),
+    }),
+
+  // Obter usuários pendentes
+  getPendingUsers: () => fetchAPI<{ pendingUsers: any[] }>("/api/users/approve"),
+
+  // Aprovar usuário
+  approveUser: (userId: number) =>
+    fetchAPI<{ user: any; message: string }>("/api/users/approve", {
+      method: "POST",
+      body: JSON.stringify({ userId, action: "approve" }),
+    }),
+
+  // Rejeitar usuário
+  rejectPendingUser: (userId: number) =>
+    fetchAPI<{ user: any; message: string }>("/api/users/approve", {
+      method: "POST",
+      body: JSON.stringify({ userId, action: "reject" }),
+    }),
+
+  // Laboratory Schedule API
+  getLaboratorySchedules: () => fetchAPI<{ schedules: any[] }>("/api/laboratory-schedule"),
+
+  createLaboratorySchedule: (schedule: any) =>
+    fetchAPI<{ schedule: any }>("/api/laboratory-schedule", {
+      method: "POST",
+      body: JSON.stringify(schedule),
+    }),
+
+  updateLaboratorySchedule: (id: number, schedule: any) =>
+    fetchAPI<{ schedule: any }>(`/api/laboratory-schedule/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(schedule),
+    }),
+
+  deleteLaboratorySchedule: (id: number) =>
+    fetchAPI<{ message: string }>(`/api/laboratory-schedule/${id}`, {
+      method: "DELETE",
     }),
 }
 
@@ -161,11 +199,18 @@ export const PurchasesAPI = {
       body: JSON.stringify(purchase),
     }),
 
-  // Atualizar o status de uma compra
-  updateStatus: (id: number, status: string) =>
+  // Aprovar uma compra
+  approve: (id: number) =>
     fetchAPI<{ purchase: any }>(`/api/purchases/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ action: "approve" }),
+    }),
+
+  // Negar uma compra
+  deny: (id: number) =>
+    fetchAPI<{ purchase: any }>(`/api/purchases/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ action: "deny" }),
     }),
 }
 
@@ -191,10 +236,10 @@ export const ResponsibilitiesAPI = {
     }),
 
   // Encerrar uma responsabilidade
-  end: (id: number) =>
+  end: (id: number, userId?: number) =>
     fetchAPI<{ responsibility: any }>(`/api/responsibilities/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ action: "end" }),
+      body: JSON.stringify({ action: "end", userId }),
     }),
 
   // Atualizar notas de uma responsabilidade
@@ -214,11 +259,12 @@ export const ResponsibilitiesAPI = {
 // API de Logs Diários
 export const DailyLogsAPI = {
   // Obter todos os logs
-  getAll: (userId?: number, date?: string) => {
+  getAll: (userId?: number, date?: string, projectId?: number) => {
     let url = "/api/daily_logs"
     const params = new URLSearchParams()
     if (userId) params.append("userId", userId.toString())
     if (date) params.append("date", date)
+    if (projectId) params.append("projectId", projectId.toString())
     if (params.toString()) url += `?${params.toString()}`
     return fetchAPI<{ logs: any[] }>(url)
   },
@@ -275,6 +321,86 @@ export const SchedulesAPI = {
   // Excluir um horário
   delete: (id: number) =>
     fetchAPI<{ success: boolean }>(`/api/schedules/${id}`, {
+      method: "DELETE",
+    }),
+}
+
+// API de Relatórios Semanais
+export const WeeklyReportsAPI = {
+  // Obter todos os relatórios semanais
+  getAll: (userId?: number, weekStart?: string, weekEnd?: string) => {
+    let url = "/api/weekly-reports"
+    const params = new URLSearchParams()
+    if (userId) params.append("userId", userId.toString())
+    if (weekStart) params.append("weekStart", weekStart)
+    if (weekEnd) params.append("weekEnd", weekEnd)
+    if (params.toString()) url += `?${params.toString()}`
+    return fetchAPI<{ weeklyReports: any[] }>(url)
+  },
+
+  // Obter um relatório específico
+  getById: (id: number) => fetchAPI<{ weeklyReport: any }>(`/api/weekly-reports/${id}`),
+
+  // Gerar relatório semanal (busca logs e cria relatório)
+  generate: (userId: number, weekStart: string, weekEnd: string) =>
+    fetchAPI<{ weeklyReport: any }>("/api/weekly-reports/generate", {
+      method: "POST",
+      body: JSON.stringify({ userId, weekStart, weekEnd }),
+    }),
+
+  // Criar um novo relatório semanal
+  create: (report: any) =>
+    fetchAPI<{ weeklyReport: any }>("/api/weekly-reports", {
+      method: "POST",
+      body: JSON.stringify(report),
+    }),
+
+  // Atualizar um relatório semanal
+  update: (id: number, report: any) =>
+    fetchAPI<{ weeklyReport: any }>(`/api/weekly-reports/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(report),
+    }),
+
+  // Excluir um relatório semanal
+  delete: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/api/weekly-reports/${id}`, {
+      method: "DELETE",
+    }),
+}
+
+// API de Sessões de Trabalho
+export const WorkSessionsAPI = {
+  // Obter todas as sessões
+  getAll: (userId?: number, status?: string) => {
+    let url = "/api/work-sessions"
+    const params = new URLSearchParams()
+    if (userId) params.append("userId", userId.toString())
+    if (status) params.append("status", status)
+    if (params.toString()) url += `?${params.toString()}`
+    return fetchAPI<{ data: any[] }>(url)
+  },
+
+  // Obter uma sessão específica
+  getById: (id: number) => fetchAPI<{ data: any }>(`/api/work-sessions/${id}`),
+
+  // Iniciar uma nova sessão
+  start: (session: any) =>
+    fetchAPI<{ data: any }>("/api/work-sessions", {
+      method: "POST",
+      body: JSON.stringify(session),
+    }),
+
+  // Atualizar uma sessão
+  update: (id: number, session: any) =>
+    fetchAPI<{ data: any }>(`/api/work-sessions/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(session),
+    }),
+
+  // Excluir uma sessão
+  delete: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/api/work-sessions/${id}`, {
       method: "DELETE",
     }),
 }

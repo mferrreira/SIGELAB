@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { ScheduleService } from "@/lib/services/schedule-service"
+import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils"
 
 // GET: Obter todos os horários ou filtrar por usuário
 export async function GET(request: Request) {
@@ -7,24 +8,14 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
 
-    let schedules
-    if (userId) {
-      schedules = await prisma.user_schedules.findMany({
-        where: { userId: parseInt(userId) },
-        include: { user: true },
-        orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
-      })
-    } else {
-      schedules = await prisma.user_schedules.findMany({
-        include: { user: true },
-        orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
-      })
-    }
+    const schedules = await ScheduleService.getUserSchedules(
+      userId ? parseInt(userId) : undefined
+    )
 
-    return NextResponse.json({ schedules }, { status: 200 })
+    return createApiResponse({ schedules })
   } catch (error) {
     console.error("Erro ao buscar horários:", error)
-    return NextResponse.json({ error: "Erro ao buscar horários" }, { status: 500 })
+    return createApiError("Erro ao buscar horários")
   }
 }
 
@@ -34,30 +25,28 @@ export async function POST(request: Request) {
     const body = await request.json()
     const { userId, dayOfWeek, startTime, endTime } = body
 
-    // Validar dados
-    if (!userId || dayOfWeek === undefined || !startTime || !endTime) {
-      return NextResponse.json({ error: "Dados incompletos" }, { status: 400 })
-    }
-
-    // Verificar se o usuário existe
-    const user = await prisma.users.findUnique({ where: { id: parseInt(userId) } })
-    if (!user) {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
-    }
-
-    const schedule = await prisma.user_schedules.create({
-      data: {
-        userId: parseInt(userId),
-        dayOfWeek: parseInt(dayOfWeek),
-        startTime,
-        endTime,
-      },
-      include: { user: true },
+    const schedule = await ScheduleService.createSchedule({
+      userId: parseInt(userId),
+      dayOfWeek: parseInt(dayOfWeek),
+      startTime,
+      endTime,
     })
 
-    return NextResponse.json({ schedule }, { status: 201 })
-  } catch (error) {
+    return createApiResponse({ schedule }, 201)
+  } catch (error: any) {
     console.error("Erro ao criar horário:", error)
-    return NextResponse.json({ error: "Erro ao criar horário" }, { status: 500 })
+    
+    // Handle validation errors
+    if (error.message.includes("obrigatório") || error.message.includes("inválido")) {
+      return createApiError(error.message, 400)
+    }
+    
+    // Handle Prisma errors
+    if (error.code) {
+      const { status, message } = handlePrismaError(error)
+      return createApiError(message, status)
+    }
+    
+    return createApiError("Erro ao criar horário")
   }
 } 

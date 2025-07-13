@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { users as User } from "@prisma/client"
+import type { User } from "@/lib/types"
 import { UsersAPI } from "@/lib/api-client"
 import { useAuth } from "@/lib/auth-context"
 
@@ -10,8 +10,8 @@ interface UserContextType {
   loading: boolean
   error: string | null
   fetchUsers: () => Promise<void>
-  updateUser: (id: string, userData: Partial<User>) => Promise<User>
-  addPointsToUser: (id: string, points: number) => Promise<User>
+  updateUser: (id: number, userData: Partial<User>) => Promise<User>
+  addPointsToUser: (id: number, points: number) => Promise<User>
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
@@ -45,7 +45,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchUsers])
 
-  const updateUser = async (id: string, userData: Partial<User>) => {
+  const updateUser = async (id: number, userData: Partial<User>) => {
     try {
       setLoading(true)
       setError(null)
@@ -62,7 +62,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const addPointsToUser = async (id: string, points: number) => {
+  const addPointsToUser = async (id: number, points: number) => {
     try {
       setLoading(true)
       setError(null)

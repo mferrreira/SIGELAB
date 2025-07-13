@@ -121,7 +121,10 @@ export default function LeaderboardPage() {
                       <div>
                         <p className="font-medium">{rankedUser.name}</p>
                         <p className="text-xs text-muted-foreground capitalize">
-                          {rankedUser.role === "responsible" ? "Gerente" : "Usuário"}
+                          {rankedUser.role === "gerente_projeto" ? "Gerente de Projeto" : 
+                 rankedUser.role === "laboratorista" ? "Laboratorista" :
+                 rankedUser.role === "administrador_laboratorio" ? "Administrador de Laboratório" :
+                 rankedUser.role === "voluntario" ? "Voluntário" : "Usuário"}
                         </p>
                       </div>
                     </div>

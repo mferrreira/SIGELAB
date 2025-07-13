@@ -11,6 +11,9 @@ import { RewardProvider } from "@/lib/reward-context"
 import { ResponsibilityProvider } from "@/lib/responsibility-context"
 import { DailyLogProvider } from "@/lib/daily-log-context"
 import { ScheduleProvider } from "@/lib/schedule-context"
+import { LaboratoryScheduleProvider } from "@/lib/laboratory-schedule-context"
+import { WeeklyReportProvider } from "@/lib/weekly-report-context"
+import { WorkSessionProvider } from "@/lib/work-session-context"
 import { SessionProvider } from "next-auth/react"
 
 export default function ClientLayout({
@@ -28,7 +31,15 @@ export default function ClientLayout({
                 <RewardProvider>
                   <ResponsibilityProvider>
                     <DailyLogProvider>
-                      <ScheduleProvider>{children}</ScheduleProvider>
+                      <ScheduleProvider>
+                        <LaboratoryScheduleProvider>
+                          <WorkSessionProvider>
+                            <WeeklyReportProvider>
+                              {children}
+                            </WeeklyReportProvider>
+                          </WorkSessionProvider>
+                        </LaboratoryScheduleProvider>
+                      </ScheduleProvider>
                     </DailyLogProvider>
                   </ResponsibilityProvider>
                 </RewardProvider>

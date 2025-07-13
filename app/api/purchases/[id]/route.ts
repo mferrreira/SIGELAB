@@ -1,43 +1,170 @@
 import { NextResponse } from "next/server"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/prisma"
+import { createApiResponse, createApiError } from "@/lib/utils"
 
 // GET: Obter uma compra específica
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const id = params.id
-    const purchase = await prisma.purchases.findUnique({ where: { id } })
-    if (!purchase) {
-      return NextResponse.json({ error: "Compra não encontrada" }, { status: 404 })
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return createApiError("Não autenticado", 401)
     }
-    return NextResponse.json({ purchase }, { status: 200 })
+
+    const id = parseInt(params.id)
+    if (!id) {
+      return createApiError("ID inválido", 400)
+    }
+
+    const purchase = await prisma.purchases.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true
+          }
+        },
+        reward: {
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            price: true
+          }
+        }
+      }
+    })
+
+    if (!purchase) {
+      return createApiError("Compra não encontrada", 404)
+    }
+
+    return createApiResponse({ purchase })
   } catch (error) {
     console.error("Erro ao buscar compra:", error)
-    return NextResponse.json({ error: "Erro ao buscar compra" }, { status: 500 })
+    return createApiError("Erro interno do servidor", 500)
   }
 }
 
-// PATCH: Atualizar o status de uma compra
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+// PATCH: Aprovar ou negar uma compra
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const id = params.id
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return createApiError("Não autenticado", 401)
+    }
+
+    // Cast session user to include custom fields
+    const sessionUser = session?.user as any
+
+    // Only laboratorists and admins can approve/deny purchases
+    if (!["laboratorista", "administrador_laboratorio"].includes(sessionUser.role)) {
+      return createApiError("Sem permissão para aprovar/negar compras", 403)
+    }
+
+    const id = parseInt(params.id)
+    if (!id) {
+      return createApiError("ID inválido", 400)
+    }
+
     const body = await request.json()
-    if (!body.status) {
-      return NextResponse.json({ error: "Status é obrigatório" }, { status: 400 })
+    const { action } = body
+
+    if (!action || !["approve", "deny"].includes(action)) {
+      return createApiError("Ação inválida. Use 'approve' ou 'deny'", 400)
     }
-    const validStatuses = ["pending", "approved", "rejected", "used"]
-    if (!validStatuses.includes(body.status)) {
-      return NextResponse.json({ error: "Status inválido" }, { status: 400 })
-    }
-    const updatedPurchase = await prisma.purchases.update({
+
+    // Get the purchase with user and reward info
+    const purchase = await prisma.purchases.findUnique({
       where: { id },
-      data: { status: body.status },
+      include: {
+        user: true,
+        reward: true
+      }
     })
-    return NextResponse.json({ purchase: updatedPurchase }, { status: 200 })
-  } catch (error: any) {
-    if (error.code === 'P2025') {
-      return NextResponse.json({ error: "Compra não encontrada" }, { status: 404 })
+
+    if (!purchase) {
+      return createApiError("Compra não encontrada", 404)
     }
-    console.error("Erro ao atualizar status da compra:", error)
-    return NextResponse.json({ error: "Erro ao atualizar status da compra" }, { status: 500 })
+
+    if (purchase.status !== "pending") {
+      return createApiError("Compra já foi processada", 400)
+    }
+
+    let updatedPurchase
+
+    if (action === "approve") {
+      // Approve the purchase - no need to refund points since they were already deducted
+      updatedPurchase = await prisma.purchases.update({
+        where: { id },
+        data: { status: "approved" },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true
+            }
+          },
+          reward: {
+            select: {
+              id: true,
+              name: true,
+              description: true,
+              price: true
+            }
+          }
+        }
+      })
+    } else {
+      // Deny the purchase - refund the points
+      updatedPurchase = await prisma.$transaction(async (tx) => {
+        // Refund points to user
+        await tx.users.update({
+          where: { id: purchase.userId },
+          data: { points: { increment: purchase.price } }
+        })
+
+        // Update purchase status
+        return await tx.purchases.update({
+          where: { id },
+          data: { status: "denied" },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                role: true
+              }
+            },
+            reward: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                price: true
+              }
+            }
+          }
+        })
+      })
+    }
+
+    return createApiResponse({ purchase: updatedPurchase })
+  } catch (error) {
+    console.error("Erro ao processar compra:", error)
+    return createApiError("Erro interno do servidor", 500)
   }
 }

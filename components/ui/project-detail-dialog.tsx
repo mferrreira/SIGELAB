@@ -21,6 +21,8 @@ import {
 import { useTask } from "@/lib/task-context"
 import { TaskDialog } from "@/components/task-dialog"
 import type { Project, Task } from "@/lib/types"
+import { useAuth } from "@/lib/auth-context"
+import { ProjectMembersManager } from "@/components/ui/project-members-manager"
 
 interface ProjectDetailDialogProps {
   project: Project | null
@@ -38,6 +40,7 @@ export function ProjectDetailDialog({
   onDeleteProject 
 }: ProjectDetailDialogProps) {
   const { tasks, createTask } = useTask()
+  const { user } = useAuth()
   const [isTaskDialogOpen, setIsTaskDialogOpen] = useState(false)
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
 
@@ -45,9 +48,11 @@ export function ProjectDetailDialog({
 
   const projectTasks = tasks.filter(task => task.projectId === project.id)
   const totalTasks = projectTasks.length
-  const completedTasks = projectTasks.filter(task => task.status === "completed").length
-  const pendingTasks = projectTasks.filter(task => task.status === "pending").length
-  const inProgressTasks = projectTasks.filter(task => task.status === "in_progress").length
+  const completedTasks = projectTasks.filter(task => task.status === "done").length
+  const pendingTasks = projectTasks.filter(task => task.status === "to-do").length
+  const inProgressTasks = projectTasks.filter(task => 
+    task.status === "in-progress" || task.status === "in-review" || task.status === "adjust"
+  ).length
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
 
   const statusColors = {
@@ -63,15 +68,19 @@ export function ProjectDetailDialog({
   }
 
   const taskStatusColors = {
-    pending: "bg-yellow-100 text-yellow-800",
-    in_progress: "bg-blue-100 text-blue-800",
-    completed: "bg-green-100 text-green-800",
+    "to-do": "bg-yellow-100 text-yellow-800",
+    "in-progress": "bg-blue-100 text-blue-800",
+    "in-review": "bg-purple-100 text-purple-800",
+    "adjust": "bg-orange-100 text-orange-800",
+    "done": "bg-green-100 text-green-800",
   }
 
   const taskStatusLabels = {
-    pending: "Pendente",
-    in_progress: "Em Progresso",
-    completed: "Concluída",
+    "to-do": "A Fazer",
+    "in-progress": "Em Progresso",
+    "in-review": "Em Revisão",
+    "adjust": "Ajustes",
+    "done": "Concluída",
   }
 
   const handleCreateTask = () => {
@@ -107,22 +116,26 @@ export function ProjectDetailDialog({
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onEditProject(project)}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onDeleteProject(project.id)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </Button>
+                {user && (user.role === "laboratorista" || user.role === "administrador_laboratorio") && (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onEditProject(project)}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDeleteProject(project.id)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </DialogHeader>
@@ -207,10 +220,12 @@ export function ProjectDetailDialog({
                     <CheckCircle2 className="h-5 w-5" />
                     Tarefas do Projeto
                   </CardTitle>
-                  <Button onClick={handleCreateTask} size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nova Tarefa
-                  </Button>
+                  {user && ["gerente_projeto", "laboratorista", "administrador_laboratorio"].includes(user.role) && (
+                    <Button onClick={handleCreateTask} size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Nova Tarefa
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
               <CardContent>
@@ -221,10 +236,12 @@ export function ProjectDetailDialog({
                     <p className="text-muted-foreground mb-4">
                       Este projeto ainda não possui tarefas. Crie a primeira tarefa para começar.
                     </p>
-                    <Button onClick={handleCreateTask}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Criar Primeira Tarefa
-                    </Button>
+                    {user && ["gerente_projeto", "laboratorista", "administrador_laboratorio"].includes(user.role) && (
+                      <Button onClick={handleCreateTask}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Criar Primeira Tarefa
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -239,6 +256,11 @@ export function ProjectDetailDialog({
                             <Badge className={taskStatusColors[task.status as keyof typeof taskStatusColors]}>
                               {taskStatusLabels[task.status as keyof typeof taskStatusLabels]}
                             </Badge>
+                            {task.taskVisibility === "public" && (
+                              <Badge className="bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700">
+                                Pública
+                              </Badge>
+                            )}
                           </div>
                           {task.description && (
                             <p className="text-sm text-muted-foreground line-clamp-2">
@@ -313,6 +335,10 @@ export function ProjectDetailDialog({
                 </div>
               </CardContent>
             </Card>
+            {/* Project Membership Management (only for allowed roles) */}
+            {user && ["gerente_projeto", "laboratorista", "administrador_laboratorio"].includes(user.role) && (
+              <ProjectMembersManager projectId={project.id} />
+            )}
           </div>
         </DialogContent>
       </Dialog>

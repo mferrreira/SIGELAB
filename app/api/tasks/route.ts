@@ -1,19 +1,23 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { TaskService } from "@/lib/services/task-service"
+import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils"
 
-// GET: Obter todas as tarefas
-export async function GET() {
+// GET: Obter tarefas filtradas por usuário e papel
+export async function GET(request: Request) {
   try {
-    const tasks = await prisma.tasks.findMany({
-      include: {
-        assignee: true,
-        projectObj: true,
-      },
-    })
-    return NextResponse.json({ tasks }, { status: 200 })
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get("userId")
+    const role = searchParams.get("role")
+    
+    const tasks = await TaskService.getTasks(
+      userId ? parseInt(userId) : undefined,
+      role || undefined
+    )
+
+    return createApiResponse({ tasks })
   } catch (error) {
     console.error("Erro ao buscar tarefas:", error)
-    return NextResponse.json({ error: "Erro ao buscar tarefas" }, { status: 500 })
+    return createApiError("Erro ao buscar tarefas")
   }
 }
 
@@ -21,30 +25,35 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    if (!body.title) {
-      return NextResponse.json({ error: "Título é obrigatório" }, { status: 400 })
+    const { title, description, status, priority, assignedTo, projectId, dueDate, points, taskVisibility } = body
+
+    const task = await TaskService.createTask({
+      title,
+      description,
+      status,
+      priority,
+      assignedTo: assignedTo ? parseInt(assignedTo) : undefined,
+      projectId: projectId ? parseInt(projectId) : undefined,
+      dueDate,
+      points: parseInt(points) || 0,
+      taskVisibility,
+    })
+
+    return createApiResponse({ task }, 201)
+  } catch (error: any) {
+    console.error("Erro ao criar tarefa:", error)
+    
+    // Handle validation errors
+    if (error.message.includes("obrigatório") || error.message.includes("inválido") || error.message.includes("não encontrado")) {
+      return createApiError(error.message, 400)
     }
     
-    const task = await prisma.tasks.create({
-      data: {
-        title: body.title,
-        description: body.description || "",
-        status: body.status || "todo",
-        priority: body.priority || "medium",
-        assignedTo: body.assignedTo ? parseInt(body.assignedTo) : null,
-        projectId: body.project ? parseInt(body.project) : null,
-        dueDate: body.dueDate || "",
-        points: body.points || 0,
-        completed: false,
-      },
-      include: {
-        assignee: true,
-        projectObj: true,
-      },
-    })
-    return NextResponse.json({ task }, { status: 201 })
-  } catch (error) {
-    console.error("Erro ao criar tarefa:", error)
-    return NextResponse.json({ error: "Erro ao criar tarefa" }, { status: 500 })
+    // Handle Prisma errors
+    if (error.code) {
+      const { status, message } = handlePrismaError(error)
+      return createApiError(message, status)
+    }
+    
+    return createApiError("Erro ao criar tarefa")
   }
 }

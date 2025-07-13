@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
 // GET: Obter um projeto específico
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: { id: number } }) {
   try {
     const id = params.id
     const project = await prisma.projects.findUnique({ where: { id } })
@@ -17,7 +17,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // PUT: Atualizar um projeto
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: { id: number } }) {
   try {
     const id = params.id
     const body = await request.json()
@@ -36,7 +36,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // DELETE: Excluir um projeto
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, { params }: { params: { id: number } }) {
   try {
     const id = params.id
     await prisma.projects.delete({ where: { id } })

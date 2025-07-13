@@ -22,7 +22,7 @@ interface TaskDialogProps {
 const transformFormData = (formData: TaskFormData) => ({
   ...formData,
   assignedTo: formData.assignedTo ? parseInt(formData.assignedTo) : null,
-  project: formData.project ? parseInt(formData.project) : null,
+  projectId: formData.project ? parseInt(formData.project) : null,
 })
 
 /**
@@ -84,6 +84,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
         </DialogHeader>
 
         <TaskForm
+          key={open ? (task?.id ?? 'new') : 'closed'}
           task={task}
           users={users}
           projects={projects}
@@ -93,6 +94,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
           isSubmitting={isSubmitting}
           error={error}
           projectId={projectId}
+          open={open}
         />
       </DialogContent>
     </Dialog>

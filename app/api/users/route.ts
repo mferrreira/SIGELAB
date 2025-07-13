@@ -1,23 +1,18 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
-import bcrypt from "bcryptjs"
-import crypto from "crypto"
+import { UserService } from "@/lib/services/user-service"
+import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils"
 
 // GET: Obter todos os usuários ou apenas pendentes
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url)
     const status = url.searchParams.get("status")
-    let users
-    if (status) {
-      users = await prisma.users.findMany({ where: { status } })
-    } else {
-      users = await prisma.users.findMany()
-    }
-    return NextResponse.json({ users }, { status: 200 })
+
+    const users = await UserService.getUsers(status || undefined)
+    return createApiResponse({ users })
   } catch (error) {
     console.error("Erro ao buscar usuários:", error)
-    return NextResponse.json({ error: "Erro ao buscar usuários" }, { status: 500 })
+    return createApiError("Erro ao buscar usuários")
   }
 }
 
@@ -25,38 +20,32 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const email = body.email?.toLowerCase()
-    if (!body.name || !email || !body.role || !body.password) {
-      return NextResponse.json({ error: "Nome, email, senha e função são obrigatórios" }, { status: 400 })
-    }
-    const validRoles = ["admin", "laboratorist", "responsible", "volunteer"]
-    if (!validRoles.includes(body.role)) {
-      return NextResponse.json({ error: "Função inválida" }, { status: 400 })
-    }
-    // Check if user already exists by email
-    let existingUser = null
-    try {
-      existingUser = await prisma.users.findUnique({ where: { email } })
-    } catch (e) {
-      console.error("Erro ao buscar usuário existente:", e)
-    }
-    if (existingUser) {
-      return NextResponse.json({ error: "Email já está em uso" }, { status: 400 })
-    }
-    const hashedPassword = await bcrypt.hash(body.password, 10)
-    const user = await prisma.users.create({
-      data: {
-        name: body.name,
-        email,
-        role: body.role,
-        password: hashedPassword,
-        // points, completedTasks, and status will use their defaults
-      },
+    const { name, email, role, password, weekHours } = body
+
+    const user = await UserService.createUser({
+      name,
+      email: email?.toLowerCase(),
+      role,
+      password,
+      weekHours,
     })
-    return NextResponse.json({ user }, { status: 201 })
-  } catch (error) {
+
+    return createApiResponse({ user }, 201)
+  } catch (error: any) {
     console.error("Erro ao criar usuário:", error)
-    return NextResponse.json({ error: "Erro ao criar usuário" }, { status: 500 })
+    
+    // Handle validation errors
+    if (error.message.includes("obrigatório") || error.message.includes("inválido") || error.message.includes("já está em uso")) {
+      return createApiError(error.message, 400)
+    }
+    
+    // Handle Prisma errors
+    if (error.code) {
+      const { status, message } = handlePrismaError(error)
+      return createApiError(message, status)
+    }
+    
+    return createApiError("Erro ao criar usuário")
   }
 }
 
@@ -65,20 +54,27 @@ export async function PATCH(request: Request) {
   try {
     const body = await request.json()
     const { id, action } = body
+
     if (!id || !["approve", "reject"].includes(action)) {
-      return NextResponse.json({ error: "ID e ação são obrigatórios" }, { status: 400 })
+      return createApiError("ID e ação são obrigatórios", 400)
     }
-    const status = action === "approve" ? "active" : "rejected"
-    const user = await prisma.users.update({
-      where: { id: Number(id) },
-      data: { status },
-    })
-    return NextResponse.json({ user }, { status: 200 })
+
+    const user = await UserService.updateUserStatus(Number(id), action as "approve" | "reject")
+    return createApiResponse({ user })
   } catch (error: any) {
-    if (error.code === 'P2025') {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
-    }
     console.error("Erro ao atualizar status do usuário:", error)
-    return NextResponse.json({ error: "Erro ao atualizar status do usuário" }, { status: 500 })
+    
+    // Handle not found errors
+    if (error.message === "Usuário não encontrado") {
+      return createApiError(error.message, 404)
+    }
+    
+    // Handle Prisma errors
+    if (error.code) {
+      const { status, message } = handlePrismaError(error)
+      return createApiError(message, status)
+    }
+    
+    return createApiError("Erro ao atualizar status do usuário")
   }
 }

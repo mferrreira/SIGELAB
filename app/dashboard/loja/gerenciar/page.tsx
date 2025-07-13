@@ -54,7 +54,7 @@ export default function ManageRewardsPage() {
       router.push("/login")
       return false
     }
-    if (!loading && user && user.role !== "responsible") {
+    if (!loading && user && user.role !== "gerente_projeto") {
       router.push("/dashboard")
       return false
     }
@@ -73,7 +73,7 @@ export default function ManageRewardsPage() {
     )
   }
 
-  if (user && user.role !== "responsible") {
+      if (user && user.role !== "gerente_projeto") {
     return (
       <div className="flex min-h-screen flex-col">
         <AppHeader />

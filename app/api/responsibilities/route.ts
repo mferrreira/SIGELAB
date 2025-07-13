@@ -10,9 +10,12 @@ export async function GET(request: Request) {
     const active = searchParams.get("active")
 
     if (active === "true") {
-      // Obter apenas a responsabilidade ativa (sem endTime)
+      // Obter apenas a responsabilidade ativa (sem endTime) com informações do usuário
       const activeResponsibility = await prisma.lab_responsibilities.findFirst({
         where: { endTime: null },
+        include: {
+          user: true,
+        },
         orderBy: { startTime: "desc" },
       })
       if (activeResponsibility) {
@@ -23,6 +26,7 @@ export async function GET(request: Request) {
           activeResponsibility: {
             ...activeResponsibility,
             duration,
+            userRole: activeResponsibility.user?.role || "unknown",
           },
         }, { status: 200 })
       } else {
@@ -58,6 +62,20 @@ export async function POST(request: Request) {
     if (!body.userId || !body.userName) {
       return NextResponse.json({ error: "ID do usuário e nome são obrigatórios" }, { status: 400 })
     }
+
+    // Verificar se o usuário tem permissão para iniciar responsabilidade
+    const user = await prisma.users.findUnique({
+      where: { id: Number(body.userId) }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
+    }
+
+    if (user.role !== "administrador_laboratorio" && user.role !== "laboratorista") {
+      return NextResponse.json({ error: "Apenas administradores de laboratório e laboratoristas podem iniciar responsabilidades" }, { status: 403 })
+    }
+
     const responsibility = await prisma.lab_responsibilities.create({
       data: {
         userId: Number(body.userId),

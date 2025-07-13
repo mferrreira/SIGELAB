@@ -49,12 +49,14 @@ export default function ProjetosPage() {
   })
 
   // Get project statistics
-  const getProjectStats = (projectId: string) => {
+  const getProjectStats = (projectId: number) => {
     const projectTasks = tasks.filter(task => task.projectId === projectId)
     const totalTasks = projectTasks.length
-    const completedTasks = projectTasks.filter(task => task.status === "completed").length
-    const pendingTasks = projectTasks.filter(task => task.status === "pending").length
-    const inProgressTasks = projectTasks.filter(task => task.status === "in_progress").length
+    const completedTasks = projectTasks.filter(task => task.status === "done").length
+    const pendingTasks = projectTasks.filter(task => task.status === "to-do").length
+    const inProgressTasks = projectTasks.filter(task => 
+      task.status === "in-progress" || task.status === "in-review" || task.status === "adjust"
+    ).length
     
     return {
       total: totalTasks,
@@ -72,7 +74,7 @@ export default function ProjetosPage() {
     completed: projects.filter(p => p.status === "completed").length,
     archived: projects.filter(p => p.status === "archived").length,
     totalTasks: tasks.length,
-    completedTasks: tasks.filter(t => t.status === "completed").length
+    completedTasks: tasks.filter(t => t.status === "done").length
   }
 
   const handleProjectClick = (project: Project) => {
@@ -108,6 +110,20 @@ export default function ProjetosPage() {
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Faça login para acessar os projetos</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  // Only allow access to laboratorista, administrador_laboratorio, gerente_projeto
+  if (!["laboratorista", "administrador_laboratorio", "gerente_projeto"].includes(user.role)) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <AppHeader />
+        <main className="flex-1 container mx-auto p-4 md:p-6">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>
           </div>
         </main>
       </div>
@@ -238,7 +254,7 @@ export default function ProjetosPage() {
                 {filteredProjects.map((project) => {
                   const stats = getProjectStats(project.id)
                                      return (
-                     <Card key={project.id} className="hover:shadow-lg transition-shadow cursor-pointer"
+                     <Card key={String(project.id)} className="hover:shadow-lg transition-shadow cursor-pointer"
                            onClick={() => handleProjectClick(project)}>
                       <CardHeader>
                         <div className="flex justify-between items-start">

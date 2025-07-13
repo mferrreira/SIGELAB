@@ -10,7 +10,7 @@ interface AuthContextType {
   loading: boolean
   error: string | null
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string, role: "admin" | "laboratorist" | "responsible" | "volunteer") => Promise<void>
+  register: (name: string, email: string, password: string, role: "administrador_laboratorio" | "laboratorista" | "gerente_projeto" | "voluntario", weekHours: number) => Promise<void>
   logout: () => void
 }
 
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   // O registro permanece igual
-  const register = async (name: string, email: string, password: string, role: "admin" | "laboratorist" | "responsible" | "volunteer") => {
+  const register = async (name: string, email: string, password: string, role: "administrador_laboratorio" | "laboratorista" | "gerente_projeto" | "voluntario", weekHours: number) => {
     const normalizedEmail = email.toLowerCase()
     // Verificar se o usuário já existe
     const { users } = await UsersAPI.getAll()
@@ -48,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: normalizedEmail,
       role,
       password,
+      weekHours,
     })
     // Não fazer login automaticamente após o registro
     // O usuário precisa fazer login explicitamente

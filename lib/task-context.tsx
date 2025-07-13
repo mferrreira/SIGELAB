@@ -29,15 +29,19 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
 
-      const { tasks } = await TasksAPI.getAll()
+      // Pass user info for role-based filtering
+      const params = user ? `?userId=${user.id}&role=${user.role}` : ""
+      
+      const response = await TasksAPI.getAll(params)
+      const tasks = response?.tasks || []
       setTasks(tasks)
     } catch (err) {
+      console.error("Task context - Error fetching tasks:", err)
       setError("Erro ao carregar tarefas")
-      console.error(err)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user])
 
   useEffect(() => {
     if (user) {
@@ -52,9 +56,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
 
-      const { task } = await TasksAPI.create(taskData)
-      setTasks((prevTasks) => [...prevTasks, task])
-      return task
+      const response = await TasksAPI.create(taskData)
+      const task = response?.task
+      if (task) {
+        setTasks((prevTasks) => [...prevTasks, task])
+        return task
+      }
+      throw new Error("Erro ao criar tarefa: resposta inválida")
     } catch (err) {
       setError("Erro ao criar tarefa")
       console.error(err)
@@ -69,9 +77,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
 
-      const { task } = await TasksAPI.update(id, taskData)
-      setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
-      return task
+      const response = await TasksAPI.update(id, taskData)
+      const task = response?.task
+      if (task) {
+        setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
+        return task
+      }
+      throw new Error("Erro ao atualizar tarefa: resposta inválida")
     } catch (err) {
       setError("Erro ao atualizar tarefa")
       console.error(err)
@@ -86,9 +98,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
 
-      const { task } = await TasksAPI.complete(id)
-      setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
-      return task
+      const response = await TasksAPI.complete(id)
+      const task = response?.task
+      if (task) {
+        setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
+        return task
+      }
+      throw new Error("Erro ao completar tarefa: resposta inválida")
     } catch (err) {
       setError("Erro ao completar tarefa")
       console.error(err)

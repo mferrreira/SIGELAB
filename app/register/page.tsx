@@ -18,7 +18,8 @@ export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState("volunteer")
+  const [role, setRole] = useState("voluntario")
+  const [weekHours, setWeekHours] = useState(0)
   const [error, setError] = useState("")
   const { register } = useAuth()
   const router = useRouter()
@@ -28,7 +29,9 @@ export default function RegisterPage() {
     setError("")
 
     try {
-      await register(name, email, password, role as "admin" | "laboratorist" | "responsible" | "volunteer")
+      await register(name, email, password, role as "administrador_laboratorio" | "laboratorista" | "gerente_projeto" | "voluntario", weekHours)
+      // Show success message and redirect to login
+      alert("Conta criada com sucesso! Sua solicitação será analisada por um administrador ou laboratorista. Você receberá um email quando sua conta for aprovada.")
       router.push("/login")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao registrar")
@@ -41,6 +44,13 @@ export default function RegisterPage() {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold">Criar uma conta</CardTitle>
           <CardDescription>Digite suas informações para criar uma conta</CardDescription>
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Após o registro, sua conta será analisada por um administrador ou laboratorista. 
+              Você receberá uma notificação quando sua conta for aprovada.
+            </AlertDescription>
+          </Alert>
         </CardHeader>
         <CardContent>
           {error && (
@@ -88,12 +98,25 @@ export default function RegisterPage() {
                   <SelectValue placeholder="Selecione a função" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="volunteer">Voluntário</SelectItem>
-                  <SelectItem value="responsible">Responsável</SelectItem>
-                  <SelectItem value="laboratorist">Laboratorista</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="voluntario">Voluntário</SelectItem>
+                  <SelectItem value="gerente_projeto">Gerente de Projeto</SelectItem>
+                  <SelectItem value="laboratorista">Laboratorista</SelectItem>
+                  <SelectItem value="administrador_laboratorio">Administrador de Laboratório</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="weekHours">Horas Semanais no Laboratório</Label>
+              <Input
+                id="weekHours"
+                type="number"
+                min="0"
+                max="168"
+                placeholder="Ex: 20"
+                value={weekHours}
+                onChange={(e) => setWeekHours(parseInt(e.target.value) || 0)}
+                required
+              />
             </div>
             <Button type="submit" className="w-full">
               Registrar

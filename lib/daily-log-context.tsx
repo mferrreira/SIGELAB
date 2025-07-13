@@ -8,7 +8,9 @@ interface DailyLogContextType {
   loading: boolean;
   error: string | null;
   fetchLogs: (userId?: number, date?: string) => Promise<void>;
-  createLog: (log: { userId: number; date: string; note?: string }) => Promise<DailyLog>;
+  fetchAllLogs: (date?: string) => Promise<void>;
+  fetchProjectLogs: (projectId: number, date?: string) => Promise<void>;
+  createLog: (log: { userId: number; date: string; note?: string; projectId?: number }) => Promise<DailyLog>;
   updateLog: (id: number, data: { note?: string; date?: string }) => Promise<DailyLog>;
   deleteLog: (id: number) => Promise<void>;
 }
@@ -29,6 +31,34 @@ export function DailyLogProvider({ children }: { children: ReactNode }) {
       setLogs(logs);
     } catch (err) {
       setError("Erro ao carregar logs diários");
+      setLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchAllLogs = useCallback(async (date?: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { logs } = await DailyLogsAPI.getAll(undefined, date);
+      setLogs(logs);
+    } catch (err) {
+      setError("Erro ao carregar logs diários");
+      setLogs([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const fetchProjectLogs = useCallback(async (projectId: number, date?: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { logs } = await DailyLogsAPI.getAll(undefined, date, projectId);
+      setLogs(logs);
+    } catch (err) {
+      setError("Erro ao carregar logs do projeto");
       setLogs([]);
     } finally {
       setLoading(false);
@@ -88,7 +118,7 @@ export function DailyLogProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <DailyLogContext.Provider value={{ logs, loading, error, fetchLogs, createLog, updateLog, deleteLog }}>
+    <DailyLogContext.Provider value={{ logs, loading, error, fetchLogs, fetchAllLogs, fetchProjectLogs, createLog, updateLog, deleteLog }}>
       {children}
     </DailyLogContext.Provider>
   );

@@ -3,27 +3,21 @@
 import { useState, useEffect, useMemo } from "react"
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { KanbanColumn } from "@/components/ui/kanban-column"
+import { KanbanHeader } from "@/components/ui/kanban-header"
 import { TaskDialog } from "@/components/task-dialog"
-import { Button } from "@/components/ui/button"
-import { Plus, AlertTriangle, Filter, Loader2, CheckCircle } from "lucide-react"
+import { Loader2, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/lib/auth-context"
 import { useTask } from "@/lib/task-context"
 import type { Task } from "@/lib/types"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuCheckboxItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
 
 const COLUMNS = [
-  { id: "todo", title: "A Fazer" },
-  { id: "in-progress", title: "Em Andamento" },
-  { id: "in-review", title: "Em Revisão" },
-  { id: "adjust", title: "Ajustes" },
-  { id: "done", title: "Concluído" },
+  { id: "to-do", status: "to-do" },
+  { id: "in-progress", status: "in-progress" },
+  { id: "in-review", status: "in-review" },
+  { id: "adjust", status: "adjust" },
+  { id: "done", status: "done" },
 ]
 
 export function KanbanBoard() {
@@ -45,74 +39,113 @@ export function KanbanBoard() {
 
   // Update optimistic tasks when tasks change
   useEffect(() => {
-    setOptimisticTasks(tasks)
+    setOptimisticTasks(tasks || [])
   }, [tasks])
 
   // Memoize overdue status for each task
   const overdueStatusMap = useMemo(() => {
     const map: { [id: string]: boolean } = {}
-    optimisticTasks.forEach((task) => {
-      map[task.id] = isTaskOverdue(task)
-    })
+    if (optimisticTasks && Array.isArray(optimisticTasks) && optimisticTasks.length > 0) {
+      optimisticTasks.forEach((task) => {
+        if (task && task.id) {
+          map[task.id] = isTaskOverdue(task)
+        }
+      })
+    }
     return map
   }, [optimisticTasks])
 
-  // Filter tasks based on user role and overdue filter
+  // Filter tasks based on overdue filter only (role-based filtering is now handled by backend)
   const filteredTasks = useMemo(() => {
-    return optimisticTasks
-      .filter((task) => (user?.role === "responsible" ? true : task.assignedTo === user?.id))
-      .filter((task) => (showOverdueOnly ? overdueStatusMap[task.id] : true))
-  }, [optimisticTasks, user, showOverdueOnly, overdueStatusMap])
+    if (!optimisticTasks || !Array.isArray(optimisticTasks)) {
+      return []
+    }
+    return optimisticTasks.filter((task) => (showOverdueOnly ? overdueStatusMap[task.id] : true))
+  }, [optimisticTasks, showOverdueOnly, overdueStatusMap])
 
   // Count overdue tasks
   const overdueTasksCount = useMemo(() => {
-    return optimisticTasks
-      .filter((task) => (user?.role === "responsible" ? true : task.assignedTo === user?.id))
-      .filter((task) => overdueStatusMap[task.id]).length
-  }, [optimisticTasks, user, overdueStatusMap])
+    if (!optimisticTasks || !Array.isArray(optimisticTasks)) {
+      return 0
+    }
+    return optimisticTasks.filter((task) => overdueStatusMap[task.id]).length
+  }, [optimisticTasks, overdueStatusMap])
+
+  // Check if user can create tasks
+  const canCreateTasks = Boolean(user && ["gerente_projeto", "laboratorista", "administrador_laboratorio"].includes(user.role))
 
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result
 
+    // Early return if no destination or same position
     if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
       return
     }
 
+    // Prevent default behavior that might cause page reload
+    if (result.reason === 'DROP') {
+      // Add a small delay to ensure the drop animation completes
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+
     try {
       setIsUpdating(true)
+      if (!optimisticTasks || !Array.isArray(optimisticTasks)) {
+        console.error("optimisticTasks is not available")
+        return
+      }
       const taskToUpdate = optimisticTasks.find((task) => task.id.toString() === draggableId)
       
       if (taskToUpdate) {
         const previousStatus = taskToUpdate.status
-        const newStatus = destination.droppableId
+        const newStatus = destination.droppableId as "to-do" | "in-progress" | "in-review" | "adjust" | "done"
         
         // Optimistically update the UI immediately
         const updatedTask = { ...taskToUpdate, status: newStatus }
-        setOptimisticTasks(prev => 
-          prev.map(task => 
+        setOptimisticTasks(prev => {
+          if (!prev || !Array.isArray(prev)) {
+            return [updatedTask]
+          }
+          return prev.map(task => 
             task.id === taskToUpdate.id ? updatedTask : task
           )
-        )
+        })
 
-        // Then update the backend
-        const result = await updateTask(taskToUpdate.id, { status: newStatus })
+        // Prepare update data
+        const updateData: any = { status: newStatus }
         
-        // Show success message if points were awarded
-        if (newStatus === "done" && previousStatus !== "done" && taskToUpdate.points > 0 && taskToUpdate.assignedTo) {
-          toast({
-            title: "🎉 Tarefa Concluída!",
-            description: `${taskToUpdate.points} pontos foram adicionados ao perfil do responsável.`,
-            variant: "default",
-          })
+        // For public tasks being moved to done, assign to the current user if they're a volunteer
+        if (newStatus === "done" && taskToUpdate.taskVisibility === "public" && !taskToUpdate.assignedTo && user?.role === "voluntario") {
+          updateData.assignedTo = user.id.toString()
         }
         
-        // Refresh tasks to ensure consistency
-        await fetchTasks()
+        // Then update the backend
+        await updateTask(taskToUpdate.id, updateData)
+        
+        // Show success message if points were awarded
+        if (newStatus === "done" && previousStatus !== "done" && taskToUpdate.points > 0) {
+          const userToAward = taskToUpdate.assignedTo || (taskToUpdate.taskVisibility === "public" && user?.role === "voluntario" ? user.id : null)
+          if (userToAward) {
+            toast({
+              title: "🎉 Tarefa Concluída!",
+              description: `${taskToUpdate.points} pontos foram adicionados ao perfil do responsável.`,
+              variant: "default",
+            })
+          }
+        }
+        
+        // Don't refresh tasks here - the optimistic update is sufficient
+        // Only refresh if there's an error
       }
     } catch (error) {
       console.error("Erro ao atualizar status da tarefa:", error)
-      // Revert optimistic update on error
+      // Revert optimistic update on error by refreshing tasks
       await fetchTasks()
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar status da tarefa. Tente novamente.",
+        variant: "destructive",
+      })
     } finally {
       setIsUpdating(false)
     }
@@ -147,72 +180,50 @@ export function KanbanBoard() {
 
   return (
     <div className="space-y-6">
-      {/* Header with controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center space-x-4">
-          <h2 className="text-lg font-semibold">Quadro Kanban</h2>
-          {overdueTasksCount > 0 && (
-            <div className="flex items-center text-orange-600">
-              <AlertTriangle className="h-4 w-4 mr-1" />
-              <span className="text-sm hidden sm:inline">{overdueTasksCount} tarefa(s) atrasada(s)</span>
-              <span className="text-sm sm:hidden">{overdueTasksCount}</span>
-            </div>
-          )}
-        </div>
+      <KanbanHeader
+        overdueCount={overdueTasksCount}
+        showOverdueOnly={showOverdueOnly}
+        onOverdueFilterChange={setShowOverdueOnly}
+        canCreateTasks={canCreateTasks}
+        onCreateTask={handleAddTask}
+        isUpdating={isUpdating}
+      />
 
-        <div className="flex items-center space-x-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <Filter className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Filtros</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuCheckboxItem
-                checked={showOverdueOnly}
-                onCheckedChange={setShowOverdueOnly}
-              >
-                Mostrar apenas atrasadas
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Button onClick={handleAddTask} disabled={isUpdating}>
-            <Plus className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Nova Tarefa</span>
-            <span className="sm:hidden">Nova</span>
-          </Button>
-        </div>
-      </div>
-
-      {/* Kanban Board */}
       <DragDropContext onDragEnd={handleDragEnd}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-          {COLUMNS.map((column) => (
-            <KanbanColumn
-              key={column.id}
-              id={column.id}
-              title={column.title}
-              tasks={filteredTasks.filter((task) => task.status === column.id)}
-              onEdit={handleEditTask}
-            />
-          ))}
+        <div 
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => e.preventDefault()}
+        >
+          {COLUMNS.map((column) => {
+            const columnTasks = filteredTasks.filter((task) => task.status === column.status)
+            return (
+              <KanbanColumn
+                key={column.id}
+                status={column.status}
+                tasks={columnTasks}
+                onEdit={handleEditTask}
+                onAddTask={handleAddTask}
+                canAddTask={canCreateTasks}
+              />
+            )
+          })}
         </div>
       </DragDropContext>
 
-      <TaskDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} task={editingTask} />
+      <TaskDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        task={editingTask}
+      />
     </div>
   )
 }
 
-// Helper function to check if a task is overdue
 function isTaskOverdue(task: Task): boolean {
   if (!task.dueDate) return false
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
   const dueDate = new Date(task.dueDate)
-  return today > dueDate && task.status !== "done"
+  const today = new Date()
+  today.setHours(23, 59, 59, 999) // End of today
+  return dueDate < today && task.status !== "done"
 }

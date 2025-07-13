@@ -15,9 +15,10 @@ function getAllSlots() {
   return slots;
 }
 
-function getVisibleSlots(events: { time: string }[]) {
+function getVisibleSlots(events: { time: string }[], labSchedules?: { startTime: string; endTime: string }[]) {
   const eventSlots = events.map(e => e.time);
-  return Array.from(new Set([...DEFAULT_SLOTS, ...eventSlots])).sort();
+  const labSlots = labSchedules ? labSchedules.flatMap(s => [s.startTime, s.endTime]) : [];
+  return Array.from(new Set([...DEFAULT_SLOTS, ...eventSlots, ...labSlots])).sort();
 }
 
 function addMinutes(time: string, minutes: number) {
@@ -29,12 +30,15 @@ function addMinutes(time: string, minutes: number) {
 export interface DayViewEvent {
   time: string; // "HH:mm"
   note?: string;
-  type?: "log" | "responsibility";
+  type?: "log" | "responsibility" | "laboratory";
+  userName?: string;
+  projectName?: string;
 }
 
 interface DayViewCalendarProps {
   date: Date;
   events: DayViewEvent[];
+  labSchedules?: { startTime: string; endTime: string }[];
   onAddEvent: (time: string) => void;
   onDateChange: (date: Date) => void;
 }
@@ -42,10 +46,11 @@ interface DayViewCalendarProps {
 const typeColor: Record<string, string> = {
   log: "bg-blue-500",
   responsibility: "bg-green-500",
+  laboratory: "bg-purple-500",
 };
 
-const DayViewCalendar: React.FC<DayViewCalendarProps> = ({ date, events, onAddEvent, onDateChange }) => {
-  const visibleSlots = useMemo(() => getVisibleSlots(events), [events]);
+const DayViewCalendar: React.FC<DayViewCalendarProps> = ({ date, events, labSchedules, onAddEvent, onDateChange }) => {
+  const visibleSlots = useMemo(() => getVisibleSlots(events, labSchedules), [events, labSchedules]);
 
   const handlePrevDay = () => {
     const prev = new Date(date);
@@ -74,7 +79,21 @@ const DayViewCalendar: React.FC<DayViewCalendarProps> = ({ date, events, onAddEv
               {event ? (
                 <div className="flex-1 flex items-center gap-2">
                   <span className={`inline-block w-2.5 h-2.5 rounded-full ${typeColor[event.type ?? "log"]}`} />
-                  <span className="text-gray-900 dark:text-gray-100">{event.note || (event.type === "responsibility" ? "Responsabilidade" : "Log diário")}</span>
+                  <div className="flex-1">
+                    <span className="text-gray-900 dark:text-gray-100">
+                      {event.note || (
+                        event.type === "responsibility" ? "Responsabilidade" : 
+                        event.type === "laboratory" ? "Horário do Laboratório" : 
+                        "Log diário"
+                      )}
+                    </span>
+                    {event.userName && event.type !== "laboratory" && (
+                      <div className="text-xs text-muted-foreground">
+                        {event.userName}
+                        {event.projectName && ` • ${event.projectName}`}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <button

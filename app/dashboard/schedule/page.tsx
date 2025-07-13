@@ -56,8 +56,8 @@ export default function SchedulePage() {
     )
   }
 
-  // Verificar se é admin ou se está visualizando seus próprios horários
-  const isAdmin = user.role === "admin"
+      // Verificar se é administrador de laboratório ou se está visualizando seus próprios horários
+    const isAdmin = user.role === "administrador_laboratorio"
   const userSchedules = isAdmin ? schedules : schedules.filter(s => s.userId === user.id)
 
   const openDialog = (schedule?: any) => {

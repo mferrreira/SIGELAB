@@ -23,6 +23,12 @@ export const authOptions: AuthOptions = {
         if (!isValid) {
           throw new Error("Senha incorreta.")
         }
+        
+        // Check if user is approved
+        if (user.status !== "active") {
+          throw new Error("Sua conta ainda não foi aprovada. Entre em contato com um administrador ou laboratorista.")
+        }
+        
         // Remove sensitive info
         const { password, ...safeUser } = user
         return safeUser as any // Type assertion to allow extra fields for JWT
