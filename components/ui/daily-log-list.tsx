@@ -15,7 +15,7 @@ interface DailyLogListProps {
   isSubmitting: boolean
 }
 
-export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting }: DailyLogListProps) {
+export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting, showAuthor = false }: DailyLogListProps & { showAuthor?: boolean }) {
   const [expandedLogs, setExpandedLogs] = useState<Set<number>>(new Set())
 
   const toggleExpanded = (logId: number) => {
@@ -63,11 +63,14 @@ export function DailyLogList({ logs, currentUser, onEdit, onDelete, isSubmitting
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar className="h-4 w-4 text-blue-500" />
                   <span className="font-medium text-blue-900">
-                    {formatDate(log.date)}
+                    {formatDate(log.createdAt || log.date)}
                   </span>
                   <Badge variant="outline" className="text-xs">
-                    {formatTime(log.date)}
+                    {formatTime(log.createdAt || log.date)}
                   </Badge>
+                  {showAuthor && log.user && (
+                    <span className="ml-2 text-xs text-muted-foreground">{log.user.name} ({log.user.email})</span>
+                  )}
                 </div>
 
                 <div className="text-gray-700">

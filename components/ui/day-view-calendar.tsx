@@ -30,9 +30,9 @@ function addMinutes(time: string, minutes: number) {
 export interface DayViewEvent {
   time: string; // "HH:mm"
   note?: string;
-  type?: "log" | "responsibility" | "laboratory";
   userName?: string;
   projectName?: string;
+  type?: "log" | "responsibility" | "laboratory" | "event";
 }
 
 interface DayViewCalendarProps {
@@ -81,11 +81,7 @@ const DayViewCalendar: React.FC<DayViewCalendarProps> = ({ date, events, labSche
                   <span className={`inline-block w-2.5 h-2.5 rounded-full ${typeColor[event.type ?? "log"]}`} />
                   <div className="flex-1">
                     <span className="text-gray-900 dark:text-gray-100">
-                      {event.note || (
-                        event.type === "responsibility" ? "Responsabilidade" : 
-                        event.type === "laboratory" ? "Horário do Laboratório" : 
-                        "Log diário"
-                      )}
+                      {event.note}
                     </span>
                     {event.userName && event.type !== "laboratory" && (
                       <div className="text-xs text-muted-foreground">

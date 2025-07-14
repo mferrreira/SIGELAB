@@ -10,6 +10,16 @@ export class WorkSessionModel {
   }
 
   async create(data: any) {
+    // Prevent overlapping sessions: check for active session
+    const activeSession = await prisma.work_sessions.findFirst({
+      where: {
+        userId: data.userId,
+        endTime: null,
+      },
+    });
+    if (activeSession) {
+      return activeSession;
+    }
     if (!data.startTime) {
       data.startTime = new Date().toISOString();
     }
@@ -26,5 +36,12 @@ export class WorkSessionModel {
 
   async findByUserId(userId: number) {
     return prisma.work_sessions.findMany({ where: { userId } });
+  }
+
+  async findActiveSessions() {
+    return prisma.work_sessions.findMany({
+      where: { endTime: null },
+      include: { user: true },
+    });
   }
 } 

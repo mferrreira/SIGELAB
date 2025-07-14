@@ -28,4 +28,8 @@ export class WorkSessionController {
   async getSessionsByUser(userId: number) {
     return this.workSessionModel.findByUserId(userId);
   }
+
+  async getActiveSessions() {
+    return this.workSessionModel.findActiveSessions();
+  }
 } 

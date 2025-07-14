@@ -403,4 +403,20 @@ export const WorkSessionsAPI = {
     fetchAPI<{ success: boolean }>(`/api/work-sessions/${id}`, {
       method: "DELETE",
     }),
+
+  getActiveSessions: async () => {
+    const result = await fetchAPI<{ data: any[] }>(`/api/work-sessions?active=true`)
+    return Array.isArray(result) ? result : result.data
+  },
+}
+
+// API de Eventos do Laboratório
+export const LabEventsAPI = {
+  getEventsByDate: (day: number, month: number, year: number) =>
+    fetchAPI<{ events: any[] }>(`/api/lab-events?day=${day}&month=${month}&year=${year}`),
+  createEvent: (event: { date: string; note: string }) =>
+    fetchAPI<{ event: any }>(`/api/lab-events`, {
+      method: "POST",
+      body: JSON.stringify(event),
+    }),
 }

@@ -6,7 +6,9 @@ export class DailyLogModel {
   }
 
   async findAll() {
-    return prisma.daily_logs.findMany();
+    return prisma.daily_logs.findMany({
+      include: { user: true }
+    });
   }
 
   async create(data: any) {

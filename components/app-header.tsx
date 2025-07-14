@@ -87,7 +87,7 @@ export function AppHeader() {
             )}
             
             {/* Weekly Reports for admins and laboratorists */}
-            {(user?.role === "administrador_laboratorio" || user?.role === "laboratorista") && (
+            {user?.role === "administrador_laboratorio" && (
               <Link
                 href="/dashboard/weekly-reports"
                 className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"

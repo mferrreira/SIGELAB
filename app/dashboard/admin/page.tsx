@@ -41,6 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { WorkSessionsAPI } from "@/contexts/api-client"
 
 export default function AdminDashboardPage() {
   const { user, loading } = useAuth()
@@ -53,8 +54,6 @@ export default function AdminDashboardPage() {
   const { schedules, createSchedule, updateSchedule, deleteSchedule, fetchSchedules } = useSchedule()
   const { sessions, getWeeklyHours } = useWorkSessions()
   const [weeklyHoursByUser, setWeeklyHoursByUser] = useState<Record<number, number>>({})
-
-  // Calculate week start (Monday) and end (Sunday)
   const today = new Date()
   const dayOfWeek = today.getDay()
   const monday = new Date(today)
@@ -63,7 +62,6 @@ export default function AdminDashboardPage() {
   const sunday = new Date(monday)
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23, 59, 59, 999)
-
   useEffect(() => {
     async function fetchAllWeeklyHours() {
       const result: Record<number, number> = {}
@@ -79,7 +77,6 @@ export default function AdminDashboardPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users, sessions])
-
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedUserId, setSelectedUserId] = useState<string>("")
   const [scheduleManagementDialogOpen, setScheduleManagementDialogOpen] = useState(false)
@@ -91,39 +88,14 @@ export default function AdminDashboardPage() {
     endTime: "10:00"
   })
   const [scheduleError, setScheduleError] = useState<string | null>(null)
-
   useEffect(() => {
     // Redirecionar para login se não estiver autenticado
     if (!loading && !user) {
       router.push("/login")
     }
   }, [user, loading, router])
-
-  if (loading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Carregando...</p>
-      </div>
-    )
-  }
-
   // Verificar se é administrador de laboratório
-  const isAdmin = user.role === "administrador_laboratorio"
-  if (!isAdmin) {
-    return (
-      <div className="flex min-h-screen flex-col">
-        <AppHeader />
-        <main className="flex-1 container mx-auto p-4 md:p-6">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Acesso Negado</h1>
-            <p className="text-muted-foreground">Você não tem permissão para acessar o painel administrativo.</p>
-          </div>
-        </main>
-      </div>
-    )
-  }
-
-  // Estatísticas gerais
+  const isAdmin = user?.role === "administrador_laboratorio"
   const stats = useMemo(() => {
     const totalUsers = users.length
     const totalProjects = projects.length
@@ -132,7 +104,6 @@ export default function AdminDashboardPage() {
     const activeResponsibilities = responsibilities.filter(r => !r.endTime).length
     const totalPoints = users.reduce((sum, u) => sum + u.points, 0)
     const avgCompletionRate = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0
-
     return {
       totalUsers,
       totalProjects,
@@ -143,14 +114,11 @@ export default function AdminDashboardPage() {
       avgCompletionRate
     }
   }, [users, projects, tasks, responsibilities])
-
-  // Projetos com progresso
   const projectsWithProgress = useMemo(() => {
     return projects.map(project => {
       const projectTasks = tasks.filter(t => t.projectId === project.id)
       const completedTasks = projectTasks.filter(t => t.completed).length
       const progress = projectTasks.length > 0 ? (completedTasks / projectTasks.length) * 100 : 0
-      
       return {
         ...project,
         totalTasks: projectTasks.length,
@@ -159,26 +127,19 @@ export default function AdminDashboardPage() {
       }
     })
   }, [projects, tasks])
-
-  // Responsabilidades recentes
   const recentResponsibilities = useMemo(() => {
     return responsibilities
       .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
       .slice(0, 10)
   }, [responsibilities])
-
-  // Logs diários recentes
   const recentDailyLogs = useMemo(() => {
     return dailyLogs
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10)
   }, [dailyLogs])
-
-  // Horários da semana
   const weekSchedule = useMemo(() => {
     const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
     const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`)
-    
     return days.map((day, dayIndex) => {
       const daySchedules = schedules.filter(s => s.dayOfWeek === dayIndex)
       return {
@@ -189,23 +150,16 @@ export default function AdminDashboardPage() {
       }
     })
   }, [schedules])
-
-  // Horários do usuário selecionado
   const selectedUserSchedules = useMemo(() => {
     if (!selectedUserId) return []
     return schedules.filter(s => s.userId === parseInt(selectedUserId))
   }, [schedules, selectedUserId])
-
-  // Usuário selecionado
   const selectedUser = useMemo(() => {
     if (!selectedUserId) return null
     return users.find(u => u.id === parseInt(selectedUserId))
   }, [users, selectedUserId])
-
-  // Calcular horas agendadas vs permitidas
   const scheduleStats = useMemo(() => {
     if (!selectedUser) return null
-    
     const totalMinutes = selectedUserSchedules.reduce((total, schedule) => {
       const [startH, startM] = schedule.startTime.split(':').map(Number)
       const [endH, endM] = schedule.endTime.split(':').map(Number)
@@ -213,11 +167,9 @@ export default function AdminDashboardPage() {
       const endMinutes = endH * 60 + endM
       return total + (endMinutes - startMinutes)
     }, 0)
-    
     const scheduledHours = totalMinutes / 60
     const allowedHours = selectedUser.weekHours
     const remainingHours = allowedHours - scheduledHours
-    
     return {
       scheduledHours: Math.round(scheduledHours * 100) / 100,
       allowedHours,
@@ -309,6 +261,42 @@ export default function AdminDashboardPage() {
       }
     })
   }, [projects, tasks, users])
+
+  // Active sessions for admin
+  const [activeSessions, setActiveSessions] = useState<any[]>([])
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    async function fetchActive() {
+      const result = await WorkSessionsAPI.getActiveSessions()
+      console.log('Fetched activeSessions (raw):', result)
+      setActiveSessions(result)
+    }
+    fetchActive()
+    interval = setInterval(fetchActive, 30000)
+    return () => clearInterval(interval)
+  }, [])
+
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p>Carregando...</p>
+      </div>
+    )
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <AppHeader />
+        <main className="flex-1 container mx-auto p-4 md:p-6">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Acesso Negado</h1>
+            <p className="text-muted-foreground">Você não tem permissão para acessar o painel administrativo.</p>
+          </div>
+        </main>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -402,8 +390,17 @@ export default function AdminDashboardPage() {
                   const expected = u.weekHours || 0
                   const diff = actual - expected
                   let diffColor = "text-gray-700"
-                  if (diff < 0) diffColor = "text-red-600 font-bold"
-                  if (diff >= 0 && expected > 0) diffColor = "text-green-600 font-bold"
+                  let diffText = ''
+                  if (diff < 0) {
+                    diffColor = "text-red-600 font-bold"
+                    diffText = `${Math.abs(diff).toFixed(1)}h restantes`
+                  } else if (diff > 0) {
+                    diffColor = "text-green-600 font-bold"
+                    diffText = `+${diff.toFixed(1)}h extra`
+                  } else {
+                    diffColor = "text-blue-600 font-bold"
+                    diffText = 'Meta semanal atingida!'
+                  }
                   return (
                     <TableRow key={u.id}>
                       <TableCell>{u.name}</TableCell>
@@ -415,7 +412,7 @@ export default function AdminDashboardPage() {
                         {expected.toFixed(1)} h
                       </TableCell>
                       <TableCell className={`text-right ${diffColor}`}>
-                        {diff >= 0 ? "+" : ""}{diff.toFixed(1)} h
+                        {diffText}
                       </TableCell>
                     </TableRow>
                   )
@@ -437,6 +434,46 @@ export default function AdminDashboardPage() {
 
           <TabsContent value="overview" className="space-y-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Card: Usuários em Sessão */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCheck className="h-5 w-5" />
+                    Usuários em Sessão
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(Array.isArray(activeSessions) ? activeSessions : []).length === 0 ? (
+                    <div className="text-muted-foreground text-sm">Nenhum usuário em sessão no momento.</div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Usuário</TableHead>
+                          <TableHead>Início</TableHead>
+                          <TableHead>Duração</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {(Array.isArray(activeSessions) ? activeSessions : []).map(session => {
+                          const start = new Date(session.startTime)
+                          const now = new Date()
+                          const diffMs = now.getTime() - start.getTime()
+                          const diffH = Math.floor(diffMs / (1000 * 60 * 60))
+                          const diffM = Math.floor((diffMs / (1000 * 60)) % 60)
+                          return (
+                            <TableRow key={session.id}>
+                              <TableCell>{session.user?.name || session.userName}</TableCell>
+                              <TableCell>{start.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                              <TableCell>{diffH > 0 ? `${diffH}h ` : ''}{diffM}min</TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
               {/* Projetos com Progresso */}
               <Card>
                 <CardHeader>

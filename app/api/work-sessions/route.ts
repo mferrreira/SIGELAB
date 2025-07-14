@@ -8,8 +8,11 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const userId = url.searchParams.get("userId");
     const managerId = url.searchParams.get("managerId");
+    const active = url.searchParams.get("active");
     let sessions;
-    if (managerId) {
+    if (active === "true") {
+      sessions = await workSessionController.getActiveSessions();
+    } else if (managerId) {
       // Find all projects managed by this user
       const projects = await prisma.projects.findMany({ where: { createdBy: Number(managerId) } });
       const projectIds = projects.map(p => p.id);

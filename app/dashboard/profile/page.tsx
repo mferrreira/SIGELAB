@@ -97,6 +97,15 @@ export default function ProfilePage() {
     setFormError(null)
   }
 
+  // Sort logs by latest add (createdAt descending)
+  const userLogs = logs
+    .filter((log) => log.userId === user?.id)
+    .sort((a, b) => {
+      const dateA = new Date(a.createdAt || a.date).getTime();
+      const dateB = new Date(b.createdAt || b.date).getTime();
+      return dateB - dateA;
+    });
+
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -144,6 +153,14 @@ export default function ProfilePage() {
               <div>
                 <div className="text-lg font-bold text-blue-900">{weeklyHours.toFixed(1)} h</div>
                 <div className="text-sm text-gray-700">Horas trabalhadas nesta semana</div>
+                <div className="text-sm mt-1">
+                  {user.weekHours !== undefined && (() => {
+                    const remaining = user.weekHours - weeklyHours;
+                    if (remaining > 0) return `${remaining.toFixed(1)}h restantes`;
+                    if (remaining < 0) return `+${Math.abs(remaining).toFixed(1)}h extra`;
+                    return 'Meta semanal atingida!';
+                  })()}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -198,7 +215,7 @@ export default function ProfilePage() {
                             isSubmitting={submitting}
                             error={formError}
                             userId={user.id}
-                            date={isoToday}
+                            date={new Date().toISOString()}
                           />
                         ) : (
                           <div className="text-blue-700 text-sm mt-2">
@@ -211,11 +228,12 @@ export default function ProfilePage() {
 
                   {/* Logs List */}
                   <DailyLogList
-                    logs={logs.slice(0, 10)}
+                    logs={userLogs}
                     currentUser={user}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     isSubmitting={submitting}
+                    showAuthor={user.role === 'administrador_laboratorio'}
                   />
                 </div>
               )}

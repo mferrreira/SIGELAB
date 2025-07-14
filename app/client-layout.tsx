@@ -15,6 +15,7 @@ import { LaboratoryScheduleProvider } from "@/contexts/laboratory-schedule-conte
 import { WeeklyReportProvider } from "@/contexts/weekly-report-context"
 import { WorkSessionProvider } from "@/contexts/work-session-context"
 import { SessionProvider } from "next-auth/react"
+import { LabEventsProvider, useLabEvents } from "@/contexts/lab-events-context"
 
 export default function ClientLayout({
   children,
@@ -25,7 +26,8 @@ export default function ClientLayout({
     <SessionProvider>
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
         <AuthProvider>
-          <UserProvider>
+          <LabEventsProvider>
+           <UserProvider>
             <ProjectProvider>
               <TaskProvider>
                 <RewardProvider>
@@ -46,6 +48,7 @@ export default function ClientLayout({
               </TaskProvider>
             </ProjectProvider>
           </UserProvider>
+         </LabEventsProvider>
         </AuthProvider>
       </ThemeProvider>
     </SessionProvider>

@@ -27,6 +27,7 @@ model users {
   schedules            user_schedules[]       @relation("UserSchedules")
   weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
   work_sessions        work_sessions[]        @relation("UserWorkSessions")
+  lab_events           lab_events[]           @relation("UserLabEvents")
 }
 
 model projects {
@@ -166,4 +167,14 @@ model kanban_boards {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   // Optionally, add relations to projects or tasks here
+}
+
+model lab_events {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  userName  String
+  date      DateTime // Date and time of the event
+  note      String
+  createdAt DateTime @default(now())
+  user      users    @relation("UserLabEvents", fields: [userId], references: [id])
 }

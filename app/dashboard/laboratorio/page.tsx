@@ -7,6 +7,7 @@ import { AppHeader } from "@/components/app-header"
 import { useResponsibility } from "@/contexts/responsibility-context"
 import { useDailyLogs } from "@/contexts/daily-log-context"
 import { useLaboratorySchedule } from "@/contexts/laboratory-schedule-context"
+import { useLabEvents } from "@/contexts/lab-events-context";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
@@ -39,6 +40,7 @@ export default function LabResponsibilityPage() {
 
   const { logs: dailyLogs, loading: logsLoading, createLog, fetchAllLogs, fetchProjectLogs, fetchLogs } = useDailyLogs()
   const { schedules: labSchedules, getSchedulesByDay } = useLaboratorySchedule()
+  const { events: labEvents, fetchEvents, createEvent, loading: eventsLoading, error: eventsError } = useLabEvents();
 
   const [date, setDate] = useState<Date | null>(null)
   const [isStarting, setIsStarting] = useState(false)
@@ -83,6 +85,12 @@ export default function LabResponsibilityPage() {
   useEffect(() => {
     setDate(new Date())
   }, [])
+
+  useEffect(() => {
+    if (date) {
+      fetchEvents(date)
+    }
+  }, [date, fetchEvents])
 
   // Quando o mês muda, buscar responsabilidades para o novo período
   useEffect(() => {
@@ -190,58 +198,44 @@ export default function LabResponsibilityPage() {
   // Build events for the selected day
   const events = useMemo(() => {
     const currentDate = date || new Date()
-    const dayOfWeek = currentDate.getDay() // 0 = Sunday, 1 = Monday, etc.
-    
     // Get laboratory schedules for this day
+    const dayOfWeek = currentDate.getDay()
     const daySchedules = getSchedulesByDay(dayOfWeek)
-    
     // Create laboratory schedule events
     const labScheduleEvents = daySchedules.map(schedule => ({
       time: schedule.startTime,
       note: schedule.notes || `Horário do laboratório: ${schedule.startTime} - ${schedule.endTime}`,
       type: "laboratory" as const
     }))
-    
-    // Add end time events for laboratory schedules
     const labEndEvents = daySchedules.map(schedule => ({
       time: schedule.endTime,
       note: `Fim do horário: ${schedule.startTime} - ${schedule.endTime}`,
       type: "laboratory" as const
     }))
-    
-    // ALL user events (logs and responsibilities from everyone)
-    const logs = dailyLogs
-      .filter(log => isSameDay(new Date(log.date), currentDate))
-      .map(log => ({ 
-        time: new Date(log.date).toTimeString().slice(0,5), 
-        note: log.note || undefined, 
-        type: "log" as const,
-        userName: log.user?.name || "Usuário",
-        projectName: log.project?.name
-      }))
-    
-    const resps = responsibilities
-      .filter(resp => {
-        const start = parseISO(resp.startTime)
-        return isSameDay(start, currentDate)
+    // Lab public events
+    const publicEvents = labEvents
+      .filter(event => {
+        const eventDate = new Date(event.date)
+        return eventDate.toDateString() === currentDate.toDateString()
       })
-      .map(resp => ({ 
-        time: new Date(resp.startTime).toTimeString().slice(0,5), 
-        note: resp.notes || undefined, 
-        type: "responsibility" as const,
-        userName: resp.userName
+      .map(event => ({
+        time: new Date(event.date).toTimeString().slice(0,5),
+        note: event.note,
+        type: "event" as const,
+        userName: event.userName
       }))
-    
-    return [...labScheduleEvents, ...labEndEvents, ...logs, ...resps]
-  }, [dailyLogs, responsibilities, date, getSchedulesByDay])
+    return [...labScheduleEvents, ...labEndEvents, ...publicEvents]
+  }, [labEvents, date, getSchedulesByDay])
 
   // Handle add event
-  const handleAddEvent = (time: string) => {
-    setEventDialogTime(time)
-    setEventDialogType("log")
-    setEventDialogNote("")
-    setEditingEvent(null)
-    setShowEventDialog(true)
+  const handleAddEvent = async (time: string, note: string) => {
+    if (!user) return
+    const eventDate = new Date(date || new Date())
+    const [h, m] = time.split(":").map(Number)
+    eventDate.setHours(h, m, 0, 0)
+    await createEvent({ date: eventDate.toISOString(), note })
+    await fetchEvents(eventDate)
+    setShowEventDialog(false)
   }
 
   // Handle edit event (optional, for future inline editing)
@@ -256,21 +250,11 @@ export default function LabResponsibilityPage() {
   // Save event (log or responsibility)
   const handleSaveEvent = async () => {
     if (!user) return
-
-    if (eventDialogType === "log") {
-      // Save as daily log
-      const logDate = new Date(date || new Date())
-      const [h, m] = eventDialogTime.split(":").map(Number)
-      logDate.setHours(h, m, 0, 0)
-      await createLog({ userId: user.id, date: logDate.toISOString(), note: eventDialogNote })
-    } else {
-      // Save as responsibility (start at selected time, end null, notes)
-      const start = new Date(date || new Date())
-      const [h, m] = eventDialogTime.split(":").map(Number)
-      start.setHours(h, m, 0, 0)
-      await startResponsibility(eventDialogNote)
-      // Optionally, update the responsibility's startTime to the selected time (if your API allows)
-    }
+    const eventDate = new Date(date || new Date())
+    const [h, m] = eventDialogTime.split(":").map(Number)
+    eventDate.setHours(h, m, 0, 0)
+    await createEvent({ date: eventDate.toISOString(), note: eventDialogNote })
+    await fetchEvents(eventDate)
     setShowEventDialog(false)
   }
 
@@ -405,8 +389,11 @@ export default function LabResponsibilityPage() {
                 <DayViewCalendar
                   date={date || new Date()}
                   events={events}
-                  labSchedules={getSchedulesByDay((date || new Date()).getDay())}
-                  onAddEvent={handleAddEvent}
+                  labSchedules={labSchedules}
+                  onAddEvent={(slot) => {
+                    setEventDialogTime(slot)
+                    setShowEventDialog(true)
+                  }}
                   onDateChange={handleDateChange}
                 />
               </CardContent>
@@ -512,18 +499,7 @@ export default function LabResponsibilityPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Horário</label>
-                <Input value={eventDialogTime} disabled className="w-32" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                <select
-                  className="w-full border rounded p-2"
-                  value={eventDialogType}
-                  onChange={e => setEventDialogType(e.target.value as any)}
-                >
-                  <option value="log">Log diário</option>
-                  <option value="responsibility">Responsabilidade</option>
-                </select>
+                <Input type="time" value={eventDialogTime} onChange={e => setEventDialogTime(e.target.value)} className="w-32" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nota</label>
@@ -550,6 +526,31 @@ export default function LabResponsibilityPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {showEventDialog && (
+          <Dialog open={showEventDialog} onOpenChange={setShowEventDialog}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Evento Público</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <Input
+                  type="time"
+                  value={eventDialogTime}
+                  onChange={e => setEventDialogTime(e.target.value)}
+                />
+                <Textarea
+                  placeholder="Descrição do evento"
+                  value={eventDialogNote}
+                  onChange={e => setEventDialogNote(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowEventDialog(false)}>Cancelar</Button>
+                <Button onClick={() => handleAddEvent(eventDialogTime, eventDialogNote)} disabled={!eventDialogNote.trim()}>Adicionar</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
       </main>
     </div>
   )
