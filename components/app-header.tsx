@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/contexts/auth-context"
 import { ModernButton } from "@/components/ui/modern-button"
 import {
   DropdownMenu,
@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { KanbanSquare, User, FolderKanban, Trophy, ShoppingBag, Clock, FileText } from "lucide-react"
-import { useUser } from "@/lib/user-context"
+import { useUser } from "@/contexts/user-context"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { MobileMenu } from "@/components/mobile-menu"
 

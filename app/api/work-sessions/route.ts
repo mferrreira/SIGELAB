@@ -1,118 +1,63 @@
-import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { prisma } from "@/lib/prisma"
+import { WorkSessionController } from "@/backend/controllers/WorkSessionController"
+import { prisma } from "@/lib/prisma";
 
-export async function GET(request: NextRequest) {
+const workSessionController = new WorkSessionController();
+
+export async function GET(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    const url = new URL(request.url);
+    const userId = url.searchParams.get("userId");
+    const managerId = url.searchParams.get("managerId");
+    let sessions;
+    if (managerId) {
+      // Find all projects managed by this user
+      const projects = await prisma.projects.findMany({ where: { createdBy: Number(managerId) } });
+      const projectIds = projects.map(p => p.id);
+      // Find all users in these projects
+      const members = await prisma.project_members.findMany({ where: { projectId: { in: projectIds } } });
+      const userIds = members.map(m => m.userId);
+      // Get all sessions for these users
+      sessions = await prisma.work_sessions.findMany({ where: { userId: { in: userIds } } });
+    } else if (userId) {
+      sessions = await workSessionController.getSessionsByUser(Number(userId));
+    } else {
+      sessions = await workSessionController.getAllSessions();
     }
-
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-    const status = searchParams.get("status")
-
-    const where: any = {}
-    
-    if (userId) {
-      where.userId = parseInt(userId)
-    }
-    
-    if (status) {
-      where.status = status
-    }
-
-    const sessions = await prisma.work_sessions.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-      orderBy: {
-        startTime: "desc",
-      },
-    })
-
-    return NextResponse.json({ data: sessions })
-  } catch (error) {
-    console.error("Erro ao buscar sessões de trabalho:", error)
-    return NextResponse.json(
-      { error: "Erro interno do servidor" },
-      { status: 500 }
-    )
+    return new Response(JSON.stringify({ data: sessions }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error: any) {
+    console.error('Erro ao buscar sessões de trabalho:', error);
+    return new Response(JSON.stringify({ error: 'Erro ao buscar sessões de trabalho', details: error?.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
-
-    const body = await request.json()
-    const { userId, activity, location } = body
-
-    // Check if user already has an active session
-    const existingActiveSession = await prisma.work_sessions.findFirst({
-      where: {
-        userId: parseInt(userId),
-        status: "active",
-      },
-    })
-
-    if (existingActiveSession) {
-      return NextResponse.json(
-        { error: "Você já tem uma sessão ativa" },
-        { status: 400 }
-      )
-    }
-
-    // Get user info
-    const user = await prisma.users.findUnique({
-      where: { id: parseInt(userId) },
-      select: { name: true },
-    })
-
+    const data = await request.json();
+    // Look up the user's name
+    const user = await prisma.users.findUnique({ where: { id: data.userId } });
     if (!user) {
-      return NextResponse.json(
-        { error: "Usuário não encontrado" },
-        { status: 404 }
-      )
+      return new Response(JSON.stringify({ error: "Usuário não encontrado" }), { status: 404 });
     }
-
-    const newSession = await prisma.work_sessions.create({
-      data: {
-        userId: parseInt(userId),
-        userName: user.name,
-        activity: activity || null,
-        location: location || null,
-        status: "active",
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
-      },
-    })
-
-    return NextResponse.json({ data: newSession }, { status: 201 })
-  } catch (error) {
-    console.error("Erro ao criar sessão de trabalho:", error)
-    return NextResponse.json(
-      { error: "Erro interno do servidor" },
-      { status: 500 }
-    )
+    // Add userName to the data
+    const session = await workSessionController.createSession({
+      ...data,
+      userName: user.name,
+    });
+    return new Response(JSON.stringify({ data: session }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error: any) {
+    console.error('Erro ao criar sessão de trabalho:', error);
+    return new Response(JSON.stringify({ error: 'Erro ao criar sessão de trabalho', details: error?.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 } 

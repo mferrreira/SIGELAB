@@ -13,7 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import type { Task } from "@/lib/types"
+import type { Task } from "@/contexts/types"
 
 interface TaskCardProps {
   task: Task

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Edit, Trash2, Calendar } from "lucide-react"
-import type { DailyLog, User } from "@/lib/types"
+import type { DailyLog, User } from "@/contexts/types"
 
 interface DailyLogListProps {
   logs: DailyLog[]

@@ -3,9 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { useWorkSessions } from "@/lib/work-session-context"
-import { useDailyLogs } from "@/lib/daily-log-context"
-import { useAuth } from "@/lib/auth-context"
+import { useWorkSessions } from "@/contexts/work-session-context"
+import { useDailyLogs } from "@/contexts/daily-log-context"
+import { useAuth } from "@/contexts/auth-context"
 import { Loader2, Play, StopCircle, Clock, MapPin } from "lucide-react"
 import {
   Dialog,

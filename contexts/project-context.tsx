@@ -1,9 +1,9 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { Project } from "@/lib/types"
-import { ProjectsAPI } from "@/lib/api-client"
-import { useAuth } from "@/lib/auth-context"
+import type { Project } from "@/contexts/types"
+import { ProjectsAPI } from "@/contexts/api-client"
+import { useAuth } from "@/contexts/auth-context"
 
 interface ProjectContextType {
   projects: Project[]

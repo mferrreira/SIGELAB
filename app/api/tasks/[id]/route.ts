@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server"
-import { TaskService } from "@/lib/services/task-service"
-import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils"
+import { VolunteerController } from "@/backend/controllers/VolunteerController"
+import { prisma } from "@/lib/prisma"
+
+const volunteerController = new VolunteerController();
 
 // GET: Obter uma tarefa específica
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = parseInt(params.id)
-    const task = await TaskService.getTask(id)
-    return createApiResponse({ task })
-  } catch (error: any) {
-    console.error("Erro ao buscar tarefa:", error)
-    
-    if (error.message === "Tarefa não encontrada") {
-      return createApiError(error.message, 404)
+    const task = await prisma.tasks.findUnique({
+      where: { id },
+      include: { assignee: true, projectObj: true },
+    })
+    if (!task) {
+      return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
     }
-    
-    return createApiError("Erro ao buscar tarefa")
+    return NextResponse.json({ task })
+  } catch (error) {
+    console.error("Erro ao buscar tarefa:", error)
+    return NextResponse.json({ error: "Erro ao buscar tarefa" }, { status: 500 })
   }
 }
 
@@ -24,47 +27,29 @@ export async function PUT(request: Request, context: { params: { id: string } })
   try {
     const { params } = context
     const id = parseInt(params.id)
-    const body = await request.json()
+    let body = await request.json()
 
-    // Prepare update data, removing fields not in the Prisma model
-    const updateData: any = { ...body }
-    delete updateData.assignedTo
-    delete updateData.project
-
-    // Handle assignee relation
-    if (body.assignedTo) {
-      updateData.assignedTo = parseInt(body.assignedTo)
-    } else if (body.assignedTo === null) {
-      updateData.assignedTo = null
+    // Remove invalid fields for Prisma update
+    const allowedFields = [
+      "title", "description", "status", "priority", "assignedTo", "projectId", "dueDate", "points", "completed", "taskVisibility"
+    ];
+    const data: any = {}
+    for (const key of allowedFields) {
+      if (body[key] !== undefined) data[key] = body[key]
     }
 
-    // Handle projectObj relation
-    if (body.project) {
-      updateData.projectId = parseInt(body.project)
-    }
-
-    const task = await TaskService.updateTask(id, updateData)
-    return createApiResponse({ task })
+    // Use Prisma directly for now
+    const task = await prisma.tasks.update({
+      where: { id },
+      data,
+    })
+    return NextResponse.json({ task })
   } catch (error: any) {
+    if (error.code === 'P2025') {
+      return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
+    }
     console.error("Erro ao atualizar tarefa:", error)
-    
-    // Handle validation errors
-    if (error.message.includes("obrigatório") || error.message.includes("inválido") || error.message.includes("não encontrado")) {
-      return createApiError(error.message, 400)
-    }
-    
-    // Handle not found errors
-    if (error.message === "Tarefa não encontrada") {
-      return createApiError(error.message, 404)
-    }
-    
-    // Handle Prisma errors
-    if (error.code) {
-      const { status, message } = handlePrismaError(error)
-      return createApiError(message, status)
-    }
-    
-    return createApiError("Erro ao atualizar tarefa")
+    return NextResponse.json({ error: "Erro ao atualizar tarefa" }, { status: 500 })
   }
 }
 
@@ -72,22 +57,54 @@ export async function PUT(request: Request, context: { params: { id: string } })
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = parseInt(params.id)
-    await TaskService.deleteTask(id)
-    return createApiResponse({ success: true })
+    await prisma.tasks.delete({ where: { id } })
+    return NextResponse.json({ success: true })
   } catch (error: any) {
+    if (error.code === 'P2025') {
+      return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
+    }
     console.error("Erro ao excluir tarefa:", error)
-    
-    // Handle not found errors
-    if (error.message === "Tarefa não encontrada") {
-      return createApiError(error.message, 404)
+    return NextResponse.json({ error: "Erro ao excluir tarefa" }, { status: 500 })
+  }
+}
+
+// PATCH: Marcar tarefa como concluída e adicionar pontos ao voluntário
+export async function PATCH(request: Request, context: { params: { id: string } }) {
+  try {
+    const { params } = context
+    const id = parseInt(params.id)
+    const body = await request.json()
+    const userId = body.userId
+
+    // Find the task
+    const task = await prisma.tasks.findUnique({ where: { id } })
+    if (!task) {
+      return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
     }
-    
-    // Handle Prisma errors
-    if (error.code) {
-      const { status, message } = handlePrismaError(error)
-      return createApiError(message, status)
+    if (task.completed) {
+      return NextResponse.json({ task }) // Already completed
     }
-    
-    return createApiError("Erro ao excluir tarefa")
+
+    // Mark as completed
+    const updatedTask = await prisma.tasks.update({
+      where: { id },
+      data: { status: "done", completed: true },
+    })
+
+    // Add points to the user who completed the task (userId from request)
+    if (userId && task.points && task.points > 0) {
+      await prisma.users.update({
+        where: { id: userId },
+        data: {
+          points: { increment: task.points },
+          completedTasks: { increment: 1 },
+        },
+      })
+    }
+
+    return NextResponse.json({ task: { ...updatedTask, completed: true, status: "done" } })
+  } catch (error) {
+    console.error("Erro ao completar tarefa:", error)
+    return NextResponse.json({ error: "Erro ao completar tarefa" }, { status: 500 })
   }
 }

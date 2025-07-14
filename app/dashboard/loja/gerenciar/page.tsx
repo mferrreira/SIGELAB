@@ -4,10 +4,10 @@ import type React from "react"
 
 import { useEffect, useState, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/contexts/auth-context"
 import { AppHeader } from "@/components/app-header"
-import { useReward } from "@/lib/reward-context"
-import { useUser } from "@/lib/user-context"
+import { useReward } from "@/contexts/reward-context"
+import { useUser } from "@/contexts/user-context"
 import type { rewards as Reward, purchases as Purchase } from "@prisma/client"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
@@ -153,7 +153,7 @@ export default function ManageRewardsPage() {
     // updatePurchaseStatus(purchaseId, status) // This line was removed from context
   }
 
-  const getUserName = (userId: string) => {
+  const getUserName = (userId: number) => {
     const user = users.find((u) => u.id === userId)
     return user?.name || "Usuário desconhecido"
   }
@@ -166,7 +166,7 @@ export default function ManageRewardsPage() {
         formattedDate: new Date(purchase.purchaseDate).toLocaleDateString("pt-BR"),
       })),
     [purchases],
-  ) as Array<Purchase & { formattedDate: string }>
+  ) as Array<Purchase>
 
   const pendingPurchases = purchases.filter((p) => p.status === "pending")
 
@@ -236,7 +236,7 @@ export default function ManageRewardsPage() {
                             <Button variant="ghost" size="icon" onClick={() => handleEdit(reward)}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="ghost" size="icon" onClick={() => handleDelete(reward.id)}>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete(reward.id.toString())}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -281,7 +281,7 @@ export default function ManageRewardsPage() {
                               variant="outline"
                               size="sm"
                               className="flex items-center gap-1"
-                              onClick={() => handleUpdatePurchaseStatus(purchase.id, "approved")}
+                              onClick={() => handleUpdatePurchaseStatus(purchase.id.toString(), "approved")}
                             >
                               <CheckCircle className="h-4 w-4" />
                               Aprovar
@@ -290,7 +290,7 @@ export default function ManageRewardsPage() {
                               variant="outline"
                               size="sm"
                               className="flex items-center gap-1"
-                              onClick={() => handleUpdatePurchaseStatus(purchase.id, "rejected")}
+                              onClick={() => handleUpdatePurchaseStatus(purchase.id.toString(), "rejected")}
                             >
                               <XCircle className="h-4 w-4" />
                               Rejeitar
@@ -349,7 +349,7 @@ export default function ManageRewardsPage() {
                                 variant="outline"
                                 size="sm"
                                 className="flex items-center gap-1"
-                                onClick={() => handleUpdatePurchaseStatus(purchase.id, "used")}
+                                onClick={() => handleUpdatePurchaseStatus(purchase.id.toString(), "used")}
                               >
                                 <CheckCircle className="h-4 w-4" />
                                 Marcar como Utilizado
@@ -374,14 +374,20 @@ export default function ManageRewardsPage() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Nome da Recompensa</Label>
-                  <Input id="name" name="name" value={formData.name} onChange={handleChange} required />
+                  <Input
+                    id="name"
+                    name="name"
+                    value={formData.name ?? ""}
+                    onChange={handleChange}
+                    required
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea
                     id="description"
                     name="description"
-                    value={formData.description}
+                    value={formData.description ?? ""}
                     onChange={handleChange}
                     rows={3}
                   />
@@ -393,7 +399,7 @@ export default function ManageRewardsPage() {
                     name="price"
                     type="number"
                     min="1"
-                    value={formData.price}
+                    value={formData.price ?? 0}
                     onChange={handleChange}
                     required
                   />

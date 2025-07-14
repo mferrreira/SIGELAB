@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth-context"
-import { UsersAPI } from "@/lib/api-client"
+import { useAuth } from "@/contexts/auth-context"
+import { UsersAPI } from "@/contexts/api-client"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/contexts/use-toast"
 import { UserCheck, UserX, Clock, Users } from "lucide-react"
 
 interface PendingUser {

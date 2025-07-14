@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Calendar, FileText, User, CalendarDays, X, Download, Clock, Loader2 } from "lucide-react"
-import type { WeeklyReport, DailyLog } from "@/lib/types"
+import type { WeeklyReport, DailyLog } from "@/contexts/types"
 import { Label } from "@/components/ui/label"
 
 interface WeeklyReportDetailProps {

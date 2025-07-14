@@ -1,9 +1,9 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { Reward, Purchase } from "@/lib/types"
-import { RewardsAPI, PurchasesAPI } from "@/lib/api-client"
-import { useAuth } from "@/lib/auth-context"
+import type { Reward, Purchase } from "@/contexts/types"
+import { RewardsAPI, PurchasesAPI } from "@/contexts/api-client"
+import { useAuth } from "@/contexts/auth-context"
 
 interface RewardContextType {
   rewards: Reward[]

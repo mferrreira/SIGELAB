@@ -1,9 +1,9 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { UserSchedule, UserScheduleFormData } from "@/lib/types"
-import { SchedulesAPI } from "@/lib/api-client"
-import { useAuth } from "@/lib/auth-context"
+import type { UserSchedule, UserScheduleFormData } from "@/contexts/types"
+import { SchedulesAPI } from "@/contexts/api-client"
+import { useAuth } from "@/contexts/auth-context"
 
 interface ScheduleContextType {
   schedules: UserSchedule[]

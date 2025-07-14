@@ -5,8 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
 import { Trash2, UserPlus } from "lucide-react"
-import { useUser } from "@/lib/user-context"
-import { useAuth } from "@/lib/auth-context"
+import { useUser } from "@/contexts/user-context"
+import { useAuth } from "@/contexts/auth-context"
 
 interface ProjectMembersManagerProps {
   projectId: number

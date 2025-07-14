@@ -1,8 +1,8 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
-import type { User } from "@/lib/types"
-import { UsersAPI } from "@/lib/api-client"
+import type { User } from "@/contexts/types"
+import { UsersAPI } from "@/contexts/api-client"
 import { useSession, signIn, signOut } from "next-auth/react"
 
 interface AuthContextType {

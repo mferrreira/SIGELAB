@@ -158,3 +158,12 @@ model work_sessions {
   updatedAt DateTime  @updatedAt
   user      users     @relation("UserWorkSessions", fields: [userId], references: [id], onDelete: Cascade)
 }
+
+model kanban_boards {
+  id        Int      @id @default(autoincrement())
+  name      String
+  labId     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // Optionally, add relations to projects or tasks here
+}

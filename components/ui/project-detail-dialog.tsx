@@ -18,10 +18,10 @@ import {
   Trash2,
   Plus
 } from "lucide-react"
-import { useTask } from "@/lib/task-context"
+import { useTask } from "@/contexts/task-context"
 import { TaskDialog } from "@/components/task-dialog"
-import type { Project, Task } from "@/lib/types"
-import { useAuth } from "@/lib/auth-context"
+import type { Project, Task } from "@/contexts/types"
+import { useAuth } from "@/contexts/auth-context"
 import { ProjectMembersManager } from "@/components/ui/project-members-manager"
 
 interface ProjectDetailDialogProps {

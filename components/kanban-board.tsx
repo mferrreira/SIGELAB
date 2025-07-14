@@ -6,11 +6,11 @@ import { KanbanColumn } from "@/components/ui/kanban-column"
 import { KanbanHeader } from "@/components/ui/kanban-header"
 import { TaskDialog } from "@/components/task-dialog"
 import { Loader2, AlertTriangle } from "lucide-react"
-import { useAuth } from "@/lib/auth-context"
-import { useTask } from "@/lib/task-context"
-import type { Task } from "@/lib/types"
+import { useAuth } from "@/contexts/auth-context"
+import { useTask } from "@/contexts/task-context"
+import type { Task } from "@/contexts/types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/contexts/use-toast"
 
 const COLUMNS = [
   { id: "to-do", status: "to-do" },
@@ -22,7 +22,7 @@ const COLUMNS = [
 
 export function KanbanBoard() {
   const { user } = useAuth()
-  const { tasks, loading, error, fetchTasks, updateTask } = useTask()
+  const { tasks, loading, error, fetchTasks, updateTask, completeTask } = useTask()
   const { toast } = useToast()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
@@ -120,7 +120,11 @@ export function KanbanBoard() {
         }
         
         // Then update the backend
-        await updateTask(taskToUpdate.id, updateData)
+        if (newStatus === "done") {
+          await completeTask(taskToUpdate.id, user?.id)
+        } else {
+          await updateTask(taskToUpdate.id, updateData, user?.id)
+        }
         
         // Show success message if points were awarded
         if (newStatus === "done" && previousStatus !== "done" && taskToUpdate.points > 0) {

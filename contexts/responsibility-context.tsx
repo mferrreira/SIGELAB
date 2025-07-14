@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { LabResponsibility } from "@/lib/types"
+import type { LabResponsibility } from "@/contexts/types"
 
 // Define ActiveResponsibility type locally since it's not in types.ts
 interface ActiveResponsibility {
@@ -12,8 +12,8 @@ interface ActiveResponsibility {
   duration: number
   userRole?: string
 }
-import { ResponsibilitiesAPI } from "@/lib/api-client"
-import { useAuth } from "@/lib/auth-context"
+import { ResponsibilitiesAPI } from "@/contexts/api-client"
+import { useAuth } from "@/contexts/auth-context"
 
 interface ResponsibilityContextType {
   responsibilities: LabResponsibility[]

@@ -1,10 +1,10 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { WorkSessionsAPI } from "@/lib/api-client"
-import { useAuth } from "@/lib/auth-context"
-import { useToast } from "@/hooks/use-toast"
-import type { WorkSession, WorkSessionFormData, WorkSessionContextType } from "@/lib/types"
+import { WorkSessionsAPI } from "@/contexts/api-client"
+import { useAuth } from "@/contexts/auth-context"
+import { useToast } from "@/contexts/use-toast"
+import type { WorkSession, WorkSessionFormData, WorkSessionContextType } from "@/contexts/types"
 
 const WorkSessionContext = createContext<WorkSessionContextType | undefined>(undefined)
 
@@ -31,7 +31,6 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
     
     try {
       const response = await WorkSessionsAPI.getAll(userId, status)
-      console.log('DEBUG fetchSessions response:', response)
       const fetchedSessions = Array.isArray(response) ? response : []
       setSessions(fetchedSessions)
       
@@ -250,26 +249,21 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
   }
 
   const getWeeklyHours = async (userId: number, weekStart: string, weekEnd: string): Promise<number> => {
-    try {
-      const weekStartDate = new Date(weekStart)
-      const weekEndDate = new Date(weekEnd)
-      
-      const weekSessions = sessions.filter(session => {
-        const sessionDate = new Date(session.startTime)
-        return session.userId === userId && 
-               session.status === "completed" &&
-               session.duration &&
-               sessionDate >= weekStartDate && 
-               sessionDate <= weekEndDate
-      })
-      
-      const totalMinutes = weekSessions.reduce((total, session) => total + (session.duration || 0), 0)
-      return Math.round(totalMinutes / 60 * 10) / 10 // Round to 1 decimal place
-    } catch (err) {
-      console.error("Erro ao calcular horas semanais:", err)
-      return 0
-    }
-  }
+    // Defensive: filter out undefined/null sessions and those without startTime
+    const weekSessions = sessions.filter(session => {
+      if (!session || !session.startTime) return false;
+      const sessionDate = new Date(session.startTime);
+      return (
+        session.userId === userId &&
+        session.status === "completed" &&
+        session.duration &&
+        sessionDate >= new Date(weekStart) &&
+        sessionDate <= new Date(weekEnd)
+      );
+    });
+    const totalMinutes = weekSessions.reduce((sum, session) => sum + (session.duration || 0), 0);
+    return totalMinutes / 60;
+  };
 
   const value: WorkSessionContextType = {
     sessions,

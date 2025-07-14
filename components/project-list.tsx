@@ -1,14 +1,14 @@
 "use client"
 
 import { useState } from "react"
-import { useProject } from "@/lib/project-context"
-import { useAuth } from "@/lib/auth-context"
+import { useProject } from "@/contexts/project-context"
+import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProjectDialog } from "./project-dialog"
 import { Plus, Edit, Trash2, Calendar } from "lucide-react"
-import type { Project } from "@/lib/types"
+import type { Project } from "@/contexts/types"
 
 const statusColors = {
   active: "bg-green-100 text-green-800",

@@ -36,17 +36,17 @@ export const TasksAPI = {
     }),
 
   // Atualizar uma tarefa
-  update: (id: number, task: any) =>
+  update: (id: number, task: any, userId?: number) =>
     fetchAPI<{ task: any }>(`/api/tasks/${id}`, {
       method: "PUT",
-      body: JSON.stringify(task),
+      body: JSON.stringify(userId ? { ...task, userId } : task),
     }),
 
   // Marcar uma tarefa como concluída
-  complete: (id: number) =>
+  complete: (id: number, userId?: number) =>
     fetchAPI<{ task: any }>(`/api/tasks/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ action: "complete" }),
+      body: JSON.stringify(userId ? { action: "complete", userId } : { action: "complete" }),
     }),
 
   // Excluir uma tarefa

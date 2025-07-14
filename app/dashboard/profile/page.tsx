@@ -2,17 +2,17 @@
 
 import { useState, useEffect } from "react"
 import { AppHeader } from "@/components/app-header"
-import { useDailyLogs } from "@/lib/daily-log-context"
-import { useAuth } from "@/lib/auth-context"
+import { useDailyLogs } from "@/contexts/daily-log-context"
+import { useAuth } from "@/contexts/auth-context"
 import { DailyLogForm } from "@/components/ui/daily-log-form"
 import { DailyLogList } from "@/components/ui/daily-log-list"
 import { UserApproval } from "@/components/user-approval"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Plus, User, Trophy, Calendar, CalendarDays } from "lucide-react"
-import type { DailyLog, DailyLogFormData } from "@/lib/types"
+import type { DailyLog, DailyLogFormData } from "@/contexts/types"
 import { TimerCard } from "@/components/ui/timer-card"
-import { useWorkSessions } from "@/lib/work-session-context"
+import { useWorkSessions } from "@/contexts/work-session-context"
 
 export default function ProfilePage() {
   const { user } = useAuth()

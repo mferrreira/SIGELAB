@@ -1,9 +1,10 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { Task } from "@/lib/types"
-import { TasksAPI } from "@/lib/api-client"
-import { useAuth } from "@/lib/auth-context"
+import type { Task } from "@/contexts/types"
+import { TasksAPI } from "@/contexts/api-client"
+import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/contexts/user-context"
 
 interface TaskContextType {
   tasks: Task[]
@@ -23,6 +24,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
+  const { fetchUsers } = useUser();
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -72,12 +74,11 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const updateTask = async (id: number, taskData: Partial<Task>) => {
+  const updateTask = async (id: number, taskData: Partial<Task>, userId?: number) => {
     try {
       setLoading(true)
       setError(null)
-
-      const response = await TasksAPI.update(id, taskData)
+      const response = await TasksAPI.update(id, { ...taskData, userId })
       const task = response?.task
       if (task) {
         setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
@@ -93,15 +94,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const completeTask = async (id: number) => {
+  const completeTask = async (id: number, userId?: number) => {
     try {
       setLoading(true)
       setError(null)
-
-      const response = await TasksAPI.complete(id)
+      const response = await TasksAPI.complete(id, userId)
       const task = response?.task
       if (task) {
         setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
+        await fetchUsers(); // Refresh users after completing a task
         return task
       }
       throw new Error("Erro ao completar tarefa: resposta inválida")

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
-import { useSchedule } from "@/lib/schedule-context"
-import { useUser } from "@/lib/user-context"
+import { useAuth } from "@/contexts/auth-context"
+import { useSchedule } from "@/contexts/schedule-context"
+import { useUser } from "@/contexts/user-context"
 import { AppHeader } from "@/components/app-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge"
 import { CalendarDays, Plus, Edit, Trash2, Clock } from "lucide-react"
 import { toast } from "@/components/ui/use-toast"
 import { Toaster } from "@/components/ui/toaster"
-import type { UserScheduleFormData } from "@/lib/types"
+import type { UserScheduleFormData } from "@/contexts/types"
 
 export default function SchedulePage() {
   const { user, loading } = useAuth()

@@ -2,12 +2,12 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { TaskForm } from "@/components/ui/task-form"
-import { useUser } from "@/lib/user-context"
-import { useProject } from "@/lib/project-context"
-import { useTask } from "@/lib/task-context"
-import { useAuth } from "@/lib/auth-context"
+import { useUser } from "@/contexts/user-context"
+import { useProject } from "@/contexts/project-context"
+import { useTask } from "@/contexts/task-context"
+import { useAuth } from "@/contexts/auth-context"
 import { useState, useCallback } from "react"
-import type { Task, TaskFormData } from "@/lib/types"
+import type { Task, TaskFormData } from "@/contexts/types"
 
 interface TaskDialogProps {
   open: boolean

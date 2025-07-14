@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useAuth } from "@/lib/auth-context"
-import { useUser } from "@/lib/user-context"
+import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/contexts/user-context"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"

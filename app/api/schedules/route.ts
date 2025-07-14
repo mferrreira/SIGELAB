@@ -1,52 +1,27 @@
 import { NextResponse } from "next/server"
-import { ScheduleService } from "@/lib/services/schedule-service"
-import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils"
+import { UserScheduleController } from "@/backend/controllers/UserScheduleController"
+import { handlePrismaError, createApiResponse, createApiError } from "@/contexts/utils"
+
+const userScheduleController = new UserScheduleController();
 
 // GET: Obter todos os horários ou filtrar por usuário
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-
-    const schedules = await ScheduleService.getUserSchedules(
-      userId ? parseInt(userId) : undefined
-    )
-
-    return createApiResponse({ schedules })
-  } catch (error) {
-    console.error("Erro ao buscar horários:", error)
-    return createApiError("Erro ao buscar horários")
+    const schedules = await userScheduleController.getAllSchedules();
+    return new Response(JSON.stringify({ schedules }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error: any) {
+    console.error('Erro ao buscar horários:', error);
+    return new Response(JSON.stringify({ error: 'Erro ao buscar horários', details: error?.message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 }
 
 // POST: Criar um novo horário
 export async function POST(request: Request) {
-  try {
-    const body = await request.json()
-    const { userId, dayOfWeek, startTime, endTime } = body
-
-    const schedule = await ScheduleService.createSchedule({
-      userId: parseInt(userId),
-      dayOfWeek: parseInt(dayOfWeek),
-      startTime,
-      endTime,
-    })
-
-    return createApiResponse({ schedule }, 201)
-  } catch (error: any) {
-    console.error("Erro ao criar horário:", error)
-    
-    // Handle validation errors
-    if (error.message.includes("obrigatório") || error.message.includes("inválido")) {
-      return createApiError(error.message, 400)
-    }
-    
-    // Handle Prisma errors
-    if (error.code) {
-      const { status, message } = handlePrismaError(error)
-      return createApiError(message, status)
-    }
-    
-    return createApiError("Erro ao criar horário")
-  }
+  return userScheduleController.createSchedule(request);
 } 

@@ -4,8 +4,8 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, Clock, User } from "lucide-react"
-import { useResponsibility } from "@/lib/responsibility-context"
-import { useAuth } from "@/lib/auth-context"
+import { useResponsibility } from "@/contexts/responsibility-context"
+import { useAuth } from "@/contexts/auth-context"
 
 // Função para formatar duração em hh:mm:ss
 function formatDuration(seconds: number): string {
@@ -25,7 +25,6 @@ export function LabResponsibilityStatus() {
   const { user } = useAuth()
   const [formattedStartTime, setFormattedStartTime] = useState("")
 
-  // Buscar responsabilidade ativa ao montar o componente
   useEffect(() => {
     fetchActiveResponsibility()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -74,7 +73,6 @@ export function LabResponsibilityStatus() {
               </span>
             </div>
             
-            {/* Current Responsible Person - More Prominent */}
             <div className="bg-blue-50 dark:bg-blue-950/20 rounded-lg p-3 mb-3 border border-blue-200 dark:border-blue-800">
               <div className="flex items-center gap-2 mb-1">
                 <User className="h-4 w-4 text-blue-600 dark:text-blue-400" />
@@ -99,7 +97,6 @@ export function LabResponsibilityStatus() {
               )}
             </div>
             
-            {/* Duration */}
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-primary" />
               <span className="text-sm text-muted-foreground">Duração:</span>

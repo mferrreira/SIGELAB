@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/contexts/auth-context"
 import { KanbanBoard } from "@/components/kanban-board"
 import { AppHeader } from "@/components/app-header"
 

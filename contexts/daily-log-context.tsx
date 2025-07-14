@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
-import { DailyLogsAPI } from "@/lib/api-client";
-import { useAuth } from "@/lib/auth-context";
-import type { DailyLog } from "@/lib/types";
+import { DailyLogsAPI } from "@/contexts/api-client";
+import { useAuth } from "@/contexts/auth-context";
+import type { DailyLog } from "@/contexts/types";
 
 interface DailyLogContextType {
   logs: DailyLog[];

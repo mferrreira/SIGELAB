@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth-context"
-import { useProject } from "@/lib/project-context"
-import { useTask } from "@/lib/task-context"
+import { useAuth } from "@/contexts/auth-context"
+import { useProject } from "@/contexts/project-context"
+import { useTask } from "@/contexts/task-context"
 import { AppHeader } from "@/components/app-header"
 import { ProjectList } from "@/components/project-list"
 import { ProjectDetailDialog } from "@/components/ui/project-detail-dialog"
@@ -26,7 +26,7 @@ import {
   AlertCircle,
   Archive
 } from "lucide-react"
-import type { Project } from "@/lib/types"
+import type { Project } from "@/contexts/types"
 
 export default function ProjetosPage() {
   const { user } = useAuth()

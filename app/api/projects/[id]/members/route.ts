@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
+import { ProjectManagerController } from "@/backend/controllers/ProjectManagerController"
 import { prisma } from "@/lib/prisma"
+
+const projectManagerController = new ProjectManagerController();
 
 // GET: List all members of a project
 export async function GET(request: Request, { params }: { params: { id: number } }) {
@@ -25,13 +28,7 @@ export async function POST(request: Request, { params }: { params: { id: number 
     if (!userId || !role) {
       return NextResponse.json({ error: "userId e role são obrigatórios" }, { status: 400 })
     }
-    const member = await prisma.project_members.create({
-      data: {
-        projectId,
-        userId: Number(userId),
-        role,
-      },
-    })
+    const member = await projectManagerController.assignUserToProject(projectId.toString(), userId.toString(), role)
     return NextResponse.json({ member }, { status: 201 })
   } catch (error: any) {
     if (error.code === 'P2002') {

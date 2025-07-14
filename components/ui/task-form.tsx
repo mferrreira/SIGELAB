@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import type { Task, TaskFormData, User, Project } from "@/lib/types"
+import type { Task, TaskFormData, User, Project } from "@/contexts/types"
 
 interface TaskFormProps {
   task?: Task | null

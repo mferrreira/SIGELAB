@@ -17,9 +17,9 @@ import {
   Loader2,
   AlertTriangle
 } from "lucide-react"
-import { PurchasesAPI } from "@/lib/api-client"
-import { useToast } from "@/hooks/use-toast"
-import type { Purchase } from "@/lib/types"
+import { PurchasesAPI } from "@/contexts/api-client"
+import { useToast } from "@/contexts/use-toast"
+import type { Purchase } from "@/contexts/types"
 
 interface PurchaseApprovalProps {
   purchases: Purchase[]

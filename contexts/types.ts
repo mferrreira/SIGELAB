@@ -26,7 +26,7 @@ export interface Project {
   description?: string | null
   createdAt: string
   createdBy: number
-  status: string
+  status: "active" | "completed" | "archived"
 }
 
 export interface ProjectFormData {
@@ -66,7 +66,7 @@ export interface TaskFormData {
 export interface Reward {
   id: number
   name: string
-  description?: string | null
+  description: string
   price: number
   available: boolean
 }
@@ -87,6 +87,7 @@ export interface Purchase {
   price: number
   purchaseDate: string
   status: string
+  formattedDate?: string
   user?: {
     id: number
     name: string

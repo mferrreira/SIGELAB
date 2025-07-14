@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Clock, CheckCircle, AlertCircle, Edit, Eye, Zap, Star, Crown } from "lucide-react"
 import { KanbanCard } from "@/components/ui/kanban-card"
-import type { Task, KanbanColumnProps } from "@/lib/types"
+import type { Task, KanbanColumnProps } from "@/contexts/types"
 
 const STATUS_CONFIG = {
   "to-do": {

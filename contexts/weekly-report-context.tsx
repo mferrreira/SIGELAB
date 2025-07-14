@@ -1,9 +1,9 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import { WeeklyReportsAPI } from "@/lib/api-client"
-import { useAuth } from "@/lib/auth-context"
-import type { WeeklyReport, WeeklyReportFormData } from "@/lib/types"
+import { WeeklyReportsAPI } from "@/contexts/api-client"
+import { useAuth } from "@/contexts/auth-context"
+import type { WeeklyReport, WeeklyReportFormData } from "@/contexts/types"
 
 interface WeeklyReportContextType {
   weeklyReports: WeeklyReport[]

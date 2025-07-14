@@ -2,10 +2,10 @@
 
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
+import { useAuth } from "@/contexts/auth-context"
 import { AppHeader } from "@/components/app-header"
-import { useUser } from "@/lib/user-context"
-import { useReward } from "@/lib/reward-context"
+import { useUser } from "@/contexts/user-context"
+import { useReward } from "@/contexts/reward-context"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -31,7 +31,7 @@ import { toast } from "@/components/ui/use-toast"
 import { ToastAction } from "@/components/ui/toast"
 import { Toaster } from "@/components/ui/toaster"
 import { PurchaseApproval } from "@/components/ui/purchase-approval"
-import type { Reward, Purchase } from "@/lib/types"
+import type { Reward, Purchase } from "@/contexts/types"
 
 export default function StorePage() {
   const { user, loading } = useAuth()

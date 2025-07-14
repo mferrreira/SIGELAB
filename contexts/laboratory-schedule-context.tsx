@@ -1,12 +1,12 @@
 "use client"
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react"
-import { UsersAPI } from "@/lib/api-client"
+import { UsersAPI } from "@/contexts/api-client"
 import type { 
   LaboratorySchedule, 
   LaboratoryScheduleFormData, 
   LaboratoryScheduleContextType 
-} from "@/lib/types"
+} from "@/contexts/types"
 
 const LaboratoryScheduleContext = createContext<LaboratoryScheduleContextType | undefined>(undefined)
 

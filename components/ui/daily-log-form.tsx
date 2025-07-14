@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Info } from "lucide-react"
-import type { DailyLogFormData } from "@/lib/types"
+import type { DailyLogFormData } from "@/contexts/types"
 
 interface DailyLogFormProps {
   initialNote?: string

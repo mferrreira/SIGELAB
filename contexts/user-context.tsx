@@ -1,9 +1,9 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { User } from "@/lib/types"
-import { UsersAPI } from "@/lib/api-client"
-import { useAuth } from "@/lib/auth-context"
+import type { User } from "@/contexts/types"
+import { UsersAPI } from "@/contexts/api-client"
+import { useAuth } from "@/contexts/auth-context"
 
 interface UserContextType {
   users: User[]

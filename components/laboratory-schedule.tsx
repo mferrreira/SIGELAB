@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { useAuth } from "@/lib/auth-context"
-import { useLaboratorySchedule } from "@/lib/laboratory-schedule-context"
+import { useAuth } from "@/contexts/auth-context"
+import { useLaboratorySchedule } from "@/contexts/laboratory-schedule-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,9 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/contexts/use-toast"
 import { Calendar, Clock, Plus, Edit, Trash2, Loader2 } from "lucide-react"
-import type { LaboratoryScheduleFormData } from "@/lib/types"
+import type { LaboratoryScheduleFormData } from "@/contexts/types"
 
 const DAYS_OF_WEEK = [
   { value: 0, label: "Domingo" },

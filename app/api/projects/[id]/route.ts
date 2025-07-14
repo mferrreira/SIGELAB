@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server"
+import { ProjectManagerController } from "@/backend/controllers/ProjectManagerController"
 import { prisma } from "@/lib/prisma"
+
+const projectManagerController = new ProjectManagerController();
 
 // GET: Obter um projeto específico
 export async function GET(request: Request, { params }: { params: { id: number } }) {

@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useAuth } from "@/lib/auth-context"
-import { useWeeklyReports } from "@/lib/weekly-report-context"
-import { useUser } from "@/lib/user-context"
+import { useAuth } from "@/contexts/auth-context"
+import { useWeeklyReports } from "@/contexts/weekly-report-context"
+import { useUser } from "@/contexts/user-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,8 +13,8 @@ import { Badge } from "@/components/ui/badge"
 import { Calendar, FileText, Users, CalendarDays, Plus, Download } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, AlertTriangle } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import type { WeeklyReport } from "@/lib/types"
+import { useToast } from "@/contexts/use-toast"
+import type { WeeklyReport } from "@/contexts/types"
 import { WeeklyReportDetail } from "@/components/ui/weekly-report-detail"
 
 export default function WeeklyReportsPage() {
