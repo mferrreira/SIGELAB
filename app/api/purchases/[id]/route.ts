@@ -8,8 +8,9 @@ import { PurchaseController } from "@/backend/controllers/PurchaseController"
 const purchaseController = new PurchaseController();
 
 // GET: Obter uma compra específica
-export async function GET({ params }: { params: { id: string } }) {
+export async function GET(context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const purchase = await purchaseController.getPurchase(Number(params.id));
     return NextResponse.json({ purchase });
   } catch (error: any) {
@@ -19,8 +20,9 @@ export async function GET({ params }: { params: { id: string } }) {
 }
 
 // PATCH: Aprovar ou negar uma compra
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const body = await request.json();
     let updated;
     if (body.action === "approve") {

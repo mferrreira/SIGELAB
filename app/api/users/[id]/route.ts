@@ -4,9 +4,12 @@ import { UserController } from "@/backend/controllers/UserController";
 const userController = new UserController();
 
 // GET: Obter um usuário específico
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const user = await userController.userModel.findById(params.id);
+    if (!user) return createApiError("Usuário não encontrado", 404);
+    // Garantir que currentWeekHours está presente
     return createApiResponse({ user });
   } catch (error: any) {
     console.error("Erro ao buscar usuário:", error);
@@ -15,8 +18,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // PUT: Atualizar um usuário
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const body = await request.json();
     const user = await userController.userModel.update(params.id, body);
     return createApiResponse({ user });
@@ -27,8 +31,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // PATCH: Adicionar pontos a um usuário
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const body = await request.json();
     if (body.action === "addPoints" && typeof body.points === "number") {
       const user = await userController.addPoints(params.id, body.points);
@@ -36,7 +41,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
     return createApiError("Ação não suportada", 400);
   } catch (error: any) {
-    console.error("Erro ao processar ação no usuário:", error);
-    return createApiError("Erro ao processar ação no usuário");
+    console.error("Erro ao processar a ação no usuário:", error);
+    return createApiError("Erro ao processar a ação no usuário");
   }
 }

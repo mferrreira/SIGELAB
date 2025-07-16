@@ -23,9 +23,9 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // PUT: Atualizar uma tarefa
-export async function PUT(request: Request, context: { params: { id: string } }) {
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = context
+    const params = await context.params
     const id = parseInt(params.id)
     let body = await request.json()
 
@@ -54,8 +54,9 @@ export async function PUT(request: Request, context: { params: { id: string } })
 }
 
 // DELETE: Excluir uma tarefa
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params
     const id = parseInt(params.id)
     await prisma.tasks.delete({ where: { id } })
     return NextResponse.json({ success: true })
@@ -69,9 +70,9 @@ export async function DELETE(request: Request, { params }: { params: { id: strin
 }
 
 // PATCH: Marcar tarefa como concluída e adicionar pontos ao voluntário
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { params } = context
+    const params = await context.params;
     const id = parseInt(params.id)
     const body = await request.json()
     const userId = body.userId

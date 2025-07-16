@@ -13,15 +13,17 @@ import { Plus, User, Trophy, Calendar, CalendarDays } from "lucide-react"
 import type { DailyLog, DailyLogFormData } from "@/contexts/types"
 import { TimerCard } from "@/components/ui/timer-card"
 import { useWorkSessions } from "@/contexts/work-session-context"
+import { UsersAPI } from "@/contexts/api-client"
 
 export default function ProfilePage() {
-  const { user } = useAuth()
+  const { user: authUser } = useAuth()
   const { logs, loading, error, createLog, updateLog, deleteLog } = useDailyLogs()
   const [submitting, setSubmitting] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [editingLog, setEditingLog] = useState<DailyLog | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
-  const { sessions, getWeeklyHours } = useWorkSessions()
+  const { sessions, getWeeklyHours, endSession } = useWorkSessions()
+  const [user, setUser] = useState(authUser)
   const [weeklyHours, setWeeklyHours] = useState<number>(0)
 
   const today = new Date()
@@ -46,6 +48,12 @@ export default function ProfilePage() {
         s.startTime &&
         new Date(s.startTime).toISOString().split("T")[0] === isoToday
     )
+  useEffect(() => {
+    if (authUser) {
+      UsersAPI.getById(authUser.id).then(({ user }) => setUser(user))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUser])
 
   useEffect(() => {
     if (user) {
@@ -106,6 +114,10 @@ export default function ProfilePage() {
       return dateB - dateA;
     });
 
+  // Substituir weeklyHours por user.currentWeekHours
+  const progressoSemanal = user?.currentWeekHours ?? 0;
+  const metaSemanal = user?.weekHours ?? 0;
+
   if (!user) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -151,11 +163,11 @@ export default function ProfilePage() {
                 <CalendarDays className="h-6 w-6 text-blue-600" />
               </div>
               <div>
-                <div className="text-lg font-bold text-blue-900">{weeklyHours.toFixed(1)} h</div>
+                <div className="text-lg font-bold text-blue-900">{progressoSemanal.toFixed(1)} h</div>
                 <div className="text-sm text-gray-700">Horas trabalhadas nesta semana</div>
                 <div className="text-sm mt-1">
-                  {user.weekHours !== undefined && (() => {
-                    const remaining = user.weekHours - weeklyHours;
+                  {metaSemanal !== undefined && (() => {
+                    const remaining = metaSemanal - progressoSemanal;
                     if (remaining > 0) return `${remaining.toFixed(1)}h restantes`;
                     if (remaining < 0) return `+${Math.abs(remaining).toFixed(1)}h extra`;
                     return 'Meta semanal atingida!';
@@ -166,7 +178,10 @@ export default function ProfilePage() {
           </Card>
 
           {/* Timer Card */}
-          <TimerCard />
+          <TimerCard onSessionEnd={(updatedUser) => {
+            if (updatedUser) setUser(updatedUser)
+            else if (authUser) UsersAPI.getById(authUser.id).then(({ user }) => setUser(user))
+          }} />
 
           {/* User Approval Section - Only for admins and laboratorists */}
           {(user.role === "administrador_laboratorio" || user.role === "laboratorista") && (

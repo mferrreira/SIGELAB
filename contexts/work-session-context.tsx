@@ -92,9 +92,19 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
     setLoading(true)
     setError(null)
     try {
+      // Calculate duration before ending session
+      const session = sessions.find(s => s.id === id)
+      let duration = 0
+      if (session && session.startTime) {
+        const startTime = new Date(session.startTime)
+        const endTime = new Date()
+        duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000) // duration in seconds
+      }
+
       const response = await WorkSessionsAPI.update(id, {
         status: "completed",
         endTime: new Date().toISOString(),
+        duration: duration,
         activity,
       })
       const updatedSession = response.data
@@ -249,20 +259,12 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
   }
 
   const getWeeklyHours = async (userId: number, weekStart: string, weekEnd: string): Promise<number> => {
-    // Defensive: filter out undefined/null sessions and those without startTime
-    const weekSessions = sessions.filter(session => {
-      if (!session || !session.startTime) return false;
-      const sessionDate = new Date(session.startTime);
-      return (
-        session.userId === userId &&
-        session.status === "completed" &&
-        session.duration &&
-        sessionDate >= new Date(weekStart) &&
-        sessionDate <= new Date(weekEnd)
-      );
-    });
-    const totalMinutes = weekSessions.reduce((sum, session) => sum + (session.duration || 0), 0);
-    return totalMinutes / 60;
+    // Buscar as horas atuais do usuário diretamente do contexto/auth
+    if (user && user.id === userId && typeof user.currentWeekHours === 'number') {
+      return user.currentWeekHours;
+    }
+    // Fallback: 0
+    return 0;
   };
 
   const value: WorkSessionContextType = {

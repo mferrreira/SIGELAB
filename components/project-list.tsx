@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useProject } from "@/contexts/project-context"
 import { useAuth } from "@/contexts/auth-context"
+import { useUser } from "@/contexts/user-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,6 +26,7 @@ const statusLabels = {
 export function ProjectList() {
   const { user } = useAuth()
   const { projects, deleteProject, loading } = useProject()
+  const { users } = useUser()
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
@@ -134,7 +136,7 @@ export function ProjectList() {
                 
                 <div className="flex justify-between items-center">
                   <div className="text-xs text-muted-foreground">
-                    Criado por: {project.createdBy}
+                    Criado por: {users.find(u => u.id === project.createdBy)?.name || project.createdBy}
                   </div>
                   
                   {user && (user.role === "laboratorista" || user.role === "administrador_laboratorio") && (

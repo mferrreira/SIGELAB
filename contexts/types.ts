@@ -9,6 +9,7 @@ export interface User {
   password?: string | null
   status: string
   weekHours: number
+  currentWeekHours?: number // Horas trabalhadas na semana atual
 }
 
 export interface UserFormData {

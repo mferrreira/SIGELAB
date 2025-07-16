@@ -2,8 +2,9 @@ import { WorkSessionController } from "@/backend/controllers/WorkSessionControll
 
 const workSessionController = new WorkSessionController();
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const data = await request.json();
     const id = Number(params.id);
     const session = await workSessionController.updateSession(id, data);
@@ -20,8 +21,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const id = Number(params.id);
     await workSessionController.deleteSession(id);
     return new Response(JSON.stringify({ success: true }), {

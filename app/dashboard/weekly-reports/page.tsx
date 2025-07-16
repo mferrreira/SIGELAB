@@ -262,7 +262,15 @@ export default function WeeklyReportsPage() {
 
       {/* WeeklyReportDetail Dialog */}
       {selectedReport && (
-        <WeeklyReportDetail report={selectedReport} onClose={() => setSelectedReport(null)} loading={detailLoading} />
+        <WeeklyReportDetail 
+          report={selectedReport} 
+          onClose={() => setSelectedReport(null)} 
+          loading={detailLoading}
+          onDelete={async () => {
+            await fetchWeeklyReports()
+            setSelectedReport(null)
+          }}
+        />
       )}
     </div>
   )

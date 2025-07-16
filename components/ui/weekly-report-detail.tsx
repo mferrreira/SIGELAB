@@ -8,15 +8,21 @@ import { Separator } from "@/components/ui/separator"
 import { Calendar, FileText, User, CalendarDays, X, Download, Clock, Loader2 } from "lucide-react"
 import type { WeeklyReport, DailyLog } from "@/contexts/types"
 import { Label } from "@/components/ui/label"
+import { useAuth } from "@/contexts/auth-context"
+import { useWeeklyReports } from "@/contexts/weekly-report-context"
 
 interface WeeklyReportDetailProps {
   report: WeeklyReport
   onClose: () => void
   loading?: boolean
+  onDelete?: (id: number) => void
 }
 
-export function WeeklyReportDetail({ report, onClose, loading }: WeeklyReportDetailProps) {
+export function WeeklyReportDetail({ report, onClose, loading, onDelete }: WeeklyReportDetailProps) {
+  const { user } = useAuth()
+  const { deleteWeeklyReport } = useWeeklyReports()
   const [isExporting, setIsExporting] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const formatDate = (date: Date | string) => {
     return new Date(date).toLocaleDateString('pt-BR')
@@ -72,6 +78,22 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
     }
   }
 
+  const canDelete = user && (user.role === "administrador_laboratorio" || user.id === report.userId)
+
+  const handleDelete = async () => {
+    if (!canDelete) return
+    setIsDeleting(true)
+    try {
+      await deleteWeeklyReport(report.id)
+      if (onDelete) onDelete(report.id)
+      onClose()
+    } catch (err) {
+      // Optionally show error
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -116,6 +138,16 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
                   </>
                 )}
               </Button>
+             {canDelete && (
+               <Button
+                 variant="destructive"
+                 size="sm"
+                 onClick={handleDelete}
+                 disabled={isDeleting}
+               >
+                 {isDeleting ? "Excluindo..." : "Excluir"}
+               </Button>
+             )}
               <Button 
                 variant="ghost" 
                 size="sm"

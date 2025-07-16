@@ -15,10 +15,12 @@ import { KanbanSquare, User, FolderKanban, Trophy, ShoppingBag, Clock, FileText 
 import { useUser } from "@/contexts/user-context"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { MobileMenu } from "@/components/mobile-menu"
+import { usePathname } from "next/navigation"
 
 export function AppHeader() {
   const { user, logout } = useAuth()
   const { users } = useUser()
+  const pathname = usePathname()
 
   // Encontrar usuário atual para obter pontos
   const currentUserData = user ? users.find((u) => u.id === user.id) : null
@@ -29,10 +31,10 @@ export function AppHeader() {
         <div className="flex items-center gap-4">
           {/* Mobile Menu */}
           <MobileMenu />
-          <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+          <Link href="/dashboard" className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${pathname === "/dashboard" ? "bg-accent text-accent-foreground px-3 py-2 rounded-md" : ""}`}>
             <KanbanSquare className="h-6 w-6 text-primary" />
-            <span className="font-semibold text-lg hidden sm:inline">Gerenciador de Tarefas</span>
-            <span className="font-semibold text-lg sm:hidden">Gerenciador</span>
+            <span className="font-semibold text-lg hidden sm:inline">SIGELAB</span>
+            <span className="font-semibold text-lg sm:hidden">SIGELAB</span>
           </Link>
 
           {/* Desktop Navigation - Hidden on mobile */}
@@ -41,7 +43,7 @@ export function AppHeader() {
             {user?.role === "gerente_projeto" && (
               <Link
                 href="/dashboard/projetos"
-                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
+                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/projetos") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
               >
                 <FolderKanban className="h-4 w-4" />
                 Projetos
@@ -51,7 +53,7 @@ export function AppHeader() {
             {/* Link para leaderboard (todos os usuários) */}
             <Link
               href="/dashboard/leaderboard"
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
+              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/leaderboard") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
             >
               <Trophy className="h-4 w-4" />
               Ranking
@@ -60,7 +62,7 @@ export function AppHeader() {
             {/* Link para loja (todos os usuários) */}
             <Link
               href="/dashboard/loja"
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
+              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/loja") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
             >
               <ShoppingBag className="h-4 w-4" />
               Loja
@@ -69,7 +71,7 @@ export function AppHeader() {
             {/* Link para responsabilidade do laboratório (todos os usuários) */}
             <Link
               href="/dashboard/laboratorio"
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
+              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/laboratorio") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
             >
               <Clock className="h-4 w-4" />
               Laboratório
@@ -79,7 +81,7 @@ export function AppHeader() {
             {(user?.role === "laboratorista" || user?.role === "administrador_laboratorio") && (
               <Link
                 href="/dashboard/projetos"
-                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
+                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/projetos") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
               >
                 <FolderKanban className="h-4 w-4" />
                 Projetos
@@ -90,7 +92,7 @@ export function AppHeader() {
             {user?.role === "administrador_laboratorio" && (
               <Link
                 href="/dashboard/weekly-reports"
-                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
+                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/weekly-reports") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
               >
                 <FileText className="h-4 w-4" />
                 Relatórios Semanais
@@ -100,7 +102,7 @@ export function AppHeader() {
             {user?.role === "administrador_laboratorio" && (
               <Link
                 href="/dashboard/admin"
-                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
+                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/admin") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
               >
                 <User className="h-4 w-4" />
                 Painel Administrativo
@@ -109,7 +111,7 @@ export function AppHeader() {
             {/* Useful future pages for all users */}
             <Link
               href="/dashboard/profile"
-              className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors duration-200 hover:bg-accent hover:text-accent-foreground px-3 py-2 rounded-md"
+              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/profile") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
             >
               <User className="h-4 w-4" />
               Perfil

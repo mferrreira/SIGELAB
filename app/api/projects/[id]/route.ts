@@ -5,9 +5,10 @@ import { prisma } from "@/lib/prisma"
 const projectManagerController = new ProjectManagerController();
 
 // GET: Obter um projeto específico
-export async function GET(request: Request, { params }: { params: { id: number } }) {
+export async function GET(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
-    const id = params.id
+    const params = await context.params;
+    const id = params.id;
     const project = await prisma.projects.findUnique({ where: { id } })
     if (!project) {
       return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 })
@@ -20,9 +21,10 @@ export async function GET(request: Request, { params }: { params: { id: number }
 }
 
 // PUT: Atualizar um projeto
-export async function PUT(request: Request, { params }: { params: { id: number } }) {
+export async function PUT(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
-    const id = params.id
+    const params = await context.params;
+    const id = params.id;
     const body = await request.json()
     const updatedProject = await prisma.projects.update({
       where: { id },
@@ -39,9 +41,10 @@ export async function PUT(request: Request, { params }: { params: { id: number }
 }
 
 // DELETE: Excluir um projeto
-export async function DELETE(request: Request, { params }: { params: { id: number } }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
-    const id = params.id
+    const params = await context.params;
+    const id = params.id;
     await prisma.projects.delete({ where: { id } })
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error: any) {

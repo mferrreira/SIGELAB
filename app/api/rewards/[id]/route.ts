@@ -4,8 +4,9 @@ import { RewardController } from "@/backend/controllers/RewardController"
 const rewardController = new RewardController();
 
 // GET: Obter uma recompensa específica
-export async function GET({ params }: { params: { id: string } }) {
+export async function GET(context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const reward = await rewardController.getReward(Number(params.id));
     return NextResponse.json({ reward });
   } catch (error: any) {
@@ -15,8 +16,9 @@ export async function GET({ params }: { params: { id: string } }) {
 }
 
 // PUT: Atualizar uma recompensa
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     const reward = await rewardController.updateReward(Number(params.id), request);
     return NextResponse.json({ reward });
   } catch (error: any) {
@@ -26,8 +28,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // DELETE: Excluir uma recompensa
-export async function DELETE({ params }: { params: { id: string } }) {
+export async function DELETE(context: { params: Promise<{ id: string }> }) {
   try {
+    const params = await context.params;
     await rewardController.deleteReward(Number(params.id));
     return NextResponse.json({ success: true });
   } catch (error: any) {

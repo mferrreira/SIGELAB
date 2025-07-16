@@ -6,9 +6,10 @@ import { createApiResponse, createApiError } from "@/contexts/utils"
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params;
     const session = await getServerSession(authOptions)
     if (!session?.user) {
       return createApiError("Não autenticado", 401)
@@ -62,5 +63,33 @@ export async function GET(
   } catch (error) {
     console.error("Erro ao buscar relatório semanal:", error)
     return createApiError("Erro interno do servidor", 500)
+  }
+}
+
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const params = await context.params;
+    const session = await getServerSession(authOptions)
+    if (!session?.user) {
+      return createApiError("Não autenticado", 401)
+    }
+    const id = parseInt(params.id)
+    if (!id) {
+      return createApiError("ID inválido", 400)
+    }
+    // Fetch the report to check permissions
+    const report = await prisma.weekly_reports.findUnique({ where: { id } })
+    if (!report) {
+      return createApiError("Relatório não encontrado", 404)
+    }
+    const user = session.user as any
+    if (user.role !== "administrador_laboratorio" && user.id !== report.userId) {
+      return createApiError("Sem permissão", 403)
+    }
+    await prisma.weekly_reports.delete({ where: { id } })
+    return createApiResponse({ success: true })
+  } catch (error) {
+    console.error("Erro ao deletar relatório semanal:", error)
+    return createApiError("Erro ao deletar relatório semanal", 500)
   }
 } 

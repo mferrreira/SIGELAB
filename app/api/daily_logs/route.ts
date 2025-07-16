@@ -34,14 +34,24 @@ export async function POST(request: Request) {
   }
   const body = await request.json();
   const { userId, date, note } = body;
-  if (!userId || !date) {
-    return NextResponse.json({ error: "userId e date são obrigatórios" }, { status: 400 });
+  if (!userId) {
+    return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
+  }
+  let logDate: Date;
+  if (!date) {
+    logDate = new Date(); // Use now if not provided
+  } else if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    // Only date provided, set to local 00:00:00
+    const [year, month, day] = date.split('-').map(Number);
+    logDate = new Date(year, month - 1, day, 0, 0, 0, 0);
+  } else {
+    logDate = new Date(date);
   }
   const user = session.user as any;
   if (user.role !== "administrador_laboratorio" && user.id !== userId) {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
   // Use controller for log creation
-  const log = await dailyLogController.createLog({ userId, date: new Date(date), note: note || null });
+  const log = await dailyLogController.createLog({ userId, date: logDate, note: note || null });
   return NextResponse.json({ log });
 } 

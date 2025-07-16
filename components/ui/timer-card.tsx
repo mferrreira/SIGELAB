@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useWorkSessions } from "@/contexts/work-session-context"
 import { useDailyLogs } from "@/contexts/daily-log-context"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2, Play, StopCircle, Clock, MapPin } from "lucide-react"
+import { Loader2, Play, StopCircle, Clock, MapPin, AlertTriangle } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -15,9 +15,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { UsersAPI } from "@/contexts/api-client"
+import type { User } from "@/contexts/types"
 
 interface TimerCardProps {
-  onSessionEnd?: () => void
+  onSessionEnd?: (updatedUser?: User) => void
 }
 
 export function TimerCard({ onSessionEnd }: TimerCardProps) {
@@ -33,6 +36,7 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const [logNote, setLogNote] = useState("")
   const [submittingLog, setSubmittingLog] = useState(false)
   const [sessionDuration, setSessionDuration] = useState(0)
+  const [pendingSessionEnd, setPendingSessionEnd] = useState(false)
 
   // Always fetch sessions on mount
   useEffect(() => {
@@ -61,10 +65,19 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSession])
 
-  // Debug logging
+  // Warn user about active session when closing browser
   useEffect(() => {
-    console.log('DEBUG TimerCard:', { user, activeSession, sessions })
-  }, [user, activeSession, sessions])
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (activeSession) {
+        e.preventDefault()
+        e.returnValue = "Você tem uma sessão ativa. Tem certeza que deseja sair?"
+        return "Você tem uma sessão ativa. Tem certeza que deseja sair?"
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [activeSession])
 
   useEffect(() => {
     return () => {
@@ -87,43 +100,73 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     }
   }
 
-  const handleEnd = async () => {
-    setError(null)
-    try {
-      const endTime = new Date()
-      const startTime = activeSession?.startTime ? new Date(activeSession.startTime) : new Date()
-      const duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000)
-      setSessionDuration(duration)
-      
-      await endSession(activeSession!.id, activity)
-      setShowLogDialog(true)
-      if (onSessionEnd) onSessionEnd()
-      await fetchSessions(user?.id)
-    } catch (err: any) {
-      setError(err.message || "Erro ao finalizar sessão")
-    }
+  const handleEndRequest = () => {
+    if (!activeSession) return
+    
+    // Calculate current duration
+    const startTime = new Date(activeSession.startTime).getTime()
+    const currentDuration = Math.floor((Date.now() - startTime) / 1000)
+    setSessionDuration(currentDuration)
+    setShowLogDialog(true)
   }
 
   const handleLogSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user || !logNote.trim()) return
+    if (!user || !activeSession) return
     
     setSubmittingLog(true)
     try {
-      const today = new Date().toISOString().split("T")[0]
-      await createLog({
-        userId: user.id,
-        date: today,
-        note: logNote.trim()
-      })
+      // End the session first
+      const updatedSession = await endSession(activeSession.id, activity)
+      
+      // Then create the log
+      if (logNote.trim()) {
+        const today = new Date().toISOString().split("T")[0]
+        await createLog({
+          userId: user.id,
+          date: today,
+          note: logNote.trim()
+        })
+      }
       
       setShowLogDialog(false)
       setLogNote("")
       setSessionDuration(0)
-      fetchSessions(user?.id)
+      setPendingSessionEnd(false)
+      
+      if (onSessionEnd) onSessionEnd()
+      await fetchSessions(user?.id)
     } catch (err) {
-      console.error("Erro ao salvar log:", err)
-      setError("Erro ao salvar registro de atividade")
+      console.error("Erro ao finalizar sessão:", err)
+      setError("Erro ao finalizar sessão")
+    } finally {
+      setSubmittingLog(false)
+    }
+  }
+
+  const handleLogCancel = () => {
+    setShowLogDialog(false)
+    setLogNote("")
+    setSessionDuration(0)
+    setPendingSessionEnd(false)
+  }
+
+  const handleEndWithoutLog = async () => {
+    if (!user || !activeSession) return
+    
+    setSubmittingLog(true)
+    try {
+      await endSession(activeSession.id, activity)
+      setShowLogDialog(false)
+      setLogNote("")
+      setSessionDuration(0)
+      setPendingSessionEnd(false)
+      
+      if (onSessionEnd) onSessionEnd()
+      await fetchSessions(user?.id)
+    } catch (err) {
+      console.error("Erro ao finalizar sessão:", err)
+      setError("Erro ao finalizar sessão")
     } finally {
       setSubmittingLog(false)
     }
@@ -179,7 +222,7 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
               <Button
                 variant="destructive"
                 className="mt-4 w-full h-12 text-lg font-bold bg-red-600 hover:bg-red-700"
-                onClick={handleEnd}
+                onClick={handleEndRequest}
                 disabled={loading}
               >
                 <StopCircle className="h-5 w-5 mr-2" />
@@ -233,47 +276,63 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
 
       {/* Activity Log Dialog */}
       <Dialog open={showLogDialog} onOpenChange={setShowLogDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle className="flex items-center space-x-2">
               <Clock className="h-5 w-5 text-blue-600" />
               <span>Registrar Atividade</span>
             </DialogTitle>
             <DialogDescription>
-              Sessão finalizada com duração de <strong>{formatDuration(sessionDuration)}</strong>. 
+              Sessão com duração de <strong>{formatDuration(sessionDuration)}</strong>. 
               Descreva o que você realizou durante este período.
             </DialogDescription>
           </DialogHeader>
           
-          <form onSubmit={handleLogSubmit} className="space-y-4">
-            <div className="space-y-2">
+          <form onSubmit={handleLogSubmit} className="flex-1 flex flex-col space-y-4 min-h-0">
+            <div className="flex-1 space-y-2 min-h-0">
               <label htmlFor="logNote" className="text-sm font-medium text-gray-700">
-                Descrição da atividade
+                Descrição da atividade (opcional)
               </label>
               <Textarea
                 id="logNote"
                 placeholder="Descreva as tarefas realizadas, projetos trabalhados, ou atividades desenvolvidas..."
                 value={logNote}
                 onChange={(e) => setLogNote(e.target.value)}
-                className="min-h-[100px] border-blue-300 focus:border-blue-500"
+                className="min-h-[120px] max-h-[200px] border-blue-300 focus:border-blue-500 resize-none"
                 autoFocus
-                required
               />
             </div>
             
-            <DialogFooter>
+            <Alert className="flex-shrink-0">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                A sessão será encerrada quando você confirmar. Se cancelar, a sessão continuará ativa.
+              </AlertDescription>
+            </Alert>
+            
+            <DialogFooter className="flex-shrink-0 flex flex-col sm:flex-row gap-2 pt-4">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowLogDialog(false)}
+                onClick={handleLogCancel}
                 disabled={submittingLog}
+                className="w-full sm:w-auto"
               >
-                Cancelar
+                Cancelar (Manter Ativa)
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleEndWithoutLog}
+                disabled={submittingLog}
+                className="w-full sm:w-auto"
+              >
+                Encerrar Sem Log
               </Button>
               <Button
                 type="submit"
-                disabled={submittingLog || !logNote.trim()}
-                className="bg-blue-600 hover:bg-blue-700"
+                disabled={submittingLog}
+                className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
               >
                 {submittingLog ? (
                   <>
@@ -281,7 +340,7 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
                     Salvando...
                   </>
                 ) : (
-                  "Salvar Registro"
+                  "Salvar e Encerrar"
                 )}
               </Button>
             </DialogFooter>

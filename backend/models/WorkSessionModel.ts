@@ -27,7 +27,39 @@ export class WorkSessionModel {
   }
 
   async update(id: number, data: any) {
-    return prisma.work_sessions.update({ where: { id }, data });
+    // Buscar a sessão atual para verificar se está sendo finalizada
+    const currentSession = await prisma.work_sessions.findUnique({
+      where: { id },
+      include: { user: true }
+    });
+
+    if (!currentSession) {
+      throw new Error('Sessão não encontrada');
+    }
+
+    // Atualizar a sessão
+    const updatedSession = await prisma.work_sessions.update({ 
+      where: { id }, 
+      data 
+    });
+
+      // Se a sessão foi finalizada (status = 'completed') e tem duração, atualizar as horas atuais do usuário
+  if (data.status === 'completed' && data.duration && data.duration > 0) {
+    const durationInHours = data.duration / 3600; // Converter segundos para horas
+    
+    await prisma.users.update({
+      where: { id: currentSession.userId },
+      data: {
+        currentWeekHours: {
+          increment: durationInHours
+        }
+      }
+    });
+
+    console.log(`✅ Horas atuais do usuário atualizadas: +${durationInHours.toFixed(2)}h para o usuário ${currentSession.userId}`);
+  }
+
+    return updatedSession;
   }
 
   async delete(id: number) {

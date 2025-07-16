@@ -9,15 +9,18 @@ const laboratoryScheduleController = new LaboratoryScheduleController();
 // PUT: Update a laboratory schedule
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  return laboratoryScheduleController.updateLabSchedule(request, params);
+  const params = await context.params;
+  const body = await request.json();
+  return laboratoryScheduleController.updateSchedule(Number(params.id), body);
 }
 
 // DELETE: Delete a laboratory schedule
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
-  return laboratoryScheduleController.deleteLabSchedule(request, params);
+  const params = await context.params;
+  return laboratoryScheduleController.deleteSchedule(Number(params.id));
 } 

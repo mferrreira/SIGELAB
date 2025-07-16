@@ -10,6 +10,17 @@ export class WeeklyReportModel {
   }
 
   async create(data: any) {
+    // Normalize weekStart to 00:00:00 and weekEnd to 23:59:59 local time
+    if (data.weekStart) {
+      const start = new Date(data.weekStart)
+      start.setHours(0, 0, 0, 0)
+      data.weekStart = start
+    }
+    if (data.weekEnd) {
+      const end = new Date(data.weekEnd)
+      end.setHours(23, 59, 59, 999)
+      data.weekEnd = end
+    }
     return prisma.weekly_reports.create({ data });
   }
 

@@ -55,7 +55,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
 
       const { project } = await ProjectsAPI.create({
         ...projectData,
-        createdBy: user.id,
+        createdBy: user.name,
       })
 
       setProjects((prevProjects) => [...prevProjects, project])

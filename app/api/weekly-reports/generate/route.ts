@@ -35,13 +35,19 @@ export async function POST(request: Request) {
       return createApiError("Usuário não encontrado", 404)
     }
     
+    // Normalize weekStart and weekEnd to local time boundaries
+    const weekStartDate = new Date(weekStart)
+    weekStartDate.setHours(0, 0, 0, 0)
+    const weekEndDate = new Date(weekEnd)
+    weekEndDate.setHours(23, 59, 59, 999)
+
     // Get all daily logs for the user in the date range
     const dailyLogs = await prisma.daily_logs.findMany({
       where: {
         userId: Number(userId),
         date: {
-          gte: new Date(weekStart),
-          lte: new Date(weekEnd)
+          gte: weekStartDate,
+          lte: weekEndDate
         }
       },
       orderBy: { date: "asc" },
@@ -76,8 +82,8 @@ export async function POST(request: Request) {
     const existingReport = await prisma.weekly_reports.findFirst({
       where: {
         userId: Number(userId),
-        weekStart: new Date(weekStart),
-        weekEnd: new Date(weekEnd)
+        weekStart: weekStartDate,
+        weekEnd: weekEndDate
       }
     })
     
@@ -107,8 +113,8 @@ export async function POST(request: Request) {
         data: {
           userId: Number(userId),
           userName: userData.name,
-          weekStart: new Date(weekStart),
-          weekEnd: new Date(weekEnd),
+          weekStart: weekStartDate,
+          weekEnd: weekEndDate,
           totalLogs,
           summary,
         },
