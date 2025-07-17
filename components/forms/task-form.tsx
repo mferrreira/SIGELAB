@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
 import type { Task, TaskFormData, User, Project } from "@/contexts/types"
+import { hasAccess } from "@/lib/utils/utils"
 
 interface TaskFormProps {
   task?: Task | null
@@ -231,7 +232,7 @@ export function TaskForm({
         description: "",
         status: "to-do",
         priority: "medium",
-        assignedTo: currentUser?.role === "gerente_projeto" ? currentUser.id.toString() : "",
+        assignedTo: currentUser?.roles?.includes("GERENTE_PROJETO") ? currentUser.id.toString() : "",
         project: projectId || "",
         dueDate: "",
         points: 10,
@@ -297,7 +298,7 @@ export function TaskForm({
   ]
   // Only show volunteers for task delegation
   const userOptions = users
-    .filter((user) => user.role === "voluntario")
+    .filter((user) => hasAccess(user.roles || [], 'COMPLETE_PUBLIC_TASKS'))
     .map((user) => ({
       value: user.id.toString(),
       label: user.name,

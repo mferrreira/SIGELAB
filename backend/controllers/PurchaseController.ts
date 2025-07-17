@@ -1,5 +1,5 @@
 import { PurchaseModel } from '../models/PurchaseModel';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/database/prisma';
 
 export class PurchaseController {
   private purchaseModel = new PurchaseModel();

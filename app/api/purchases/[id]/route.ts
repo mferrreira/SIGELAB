@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { prisma } from "@/lib/prisma"
-import { createApiResponse, createApiError } from "@/contexts/utils"
+import { prisma } from "@/lib/database/prisma"
+import { createApiResponse, createApiError } from "@/lib/utils/utils"
 import { PurchaseController } from "@/backend/controllers/PurchaseController"
 
 const purchaseController = new PurchaseController();

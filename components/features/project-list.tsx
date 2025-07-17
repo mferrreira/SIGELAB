@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { ProjectDialog } from "./project-dialog"
 import { Plus, Edit, Trash2, Calendar } from "lucide-react"
 import type { Project } from "@/contexts/types"
+import { hasAccess } from "@/lib/utils/utils"
 
 const statusColors = {
   active: "bg-green-100 text-green-800",
@@ -83,7 +84,7 @@ export function ProjectList() {
             Gerencie os projetos do laboratório
           </p>
         </div>
-        {user && (user.role === "laboratorista" || user.role === "administrador_laboratorio") && (
+        {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
           <Button onClick={handleCreateNew}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Projeto
@@ -97,12 +98,12 @@ export function ProjectList() {
             <Calendar className="h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-semibold mb-2">Nenhum projeto encontrado</h3>
             <p className="text-muted-foreground text-center mb-4">
-              {user?.role === "gerente_projeto" 
+              {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS')
                 ? "Você ainda não foi adicionado a nenhum projeto."
                 : "Comece criando seu primeiro projeto para organizar as atividades do laboratório."
               }
             </p>
-            {user && (user.role === "laboratorista" || user.role === "administrador_laboratorio") && (
+            {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
               <Button onClick={handleCreateNew}>
                 <Plus className="mr-2 h-4 w-4" />
                 Criar Primeiro Projeto
@@ -139,7 +140,7 @@ export function ProjectList() {
                     Criado por: {users.find(u => u.id === project.createdBy)?.name || project.createdBy}
                   </div>
                   
-                  {user && (user.role === "laboratorista" || user.role === "administrador_laboratorio") && (
+                  {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
                     <div className="flex space-x-2">
                       <Button
                         variant="outline"

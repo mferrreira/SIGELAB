@@ -10,7 +10,7 @@ import { useResponsibility } from "@/contexts/responsibility-context"
 import { useDailyLogs } from "@/contexts/daily-log-context"
 import { useSchedule } from "@/contexts/schedule-context"
 import { useWorkSessions } from "@/contexts/work-session-context"
-import { AppHeader } from "@/components/app-header"
+import { AppHeader } from "@/components/layout/app-header"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
@@ -37,7 +37,7 @@ import {
 } from "lucide-react"
 import type { Project, Task, LabResponsibility, DailyLog, UserSchedule, User } from "@/contexts/types"
 import { UsersAPI } from "@/contexts/api-client"
-import { UserApproval } from "@/components/user-approval"
+import { UserApproval } from "@/components/features/user-approval"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
@@ -145,7 +145,7 @@ export default function AdminDashboardPage() {
     }
   }, [user, loading, router])
   // Verificar se é administrador de laboratório
-  const isAdmin = user?.role === "administrador_laboratorio"
+  const isAdmin = user?.roles.includes("COORDENADOR") || user?.roles.includes("GERENTE")
   const stats = useMemo(() => {
     const totalUsers = users.length
     const totalProjects = projects.length

@@ -48,8 +48,11 @@ export async function POST(request: Request) {
     logDate = new Date(date);
   }
   const user = session.user as any;
-  if (user.role !== "administrador_laboratorio" && user.id !== userId) {
-    return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  if (user.roles.includes('COLABORADOR')) {
+    return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
+  }
+  if (!user.roles.includes('COORDENADOR') && user.id !== userId) {
+    return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
   }
   // Use controller for log creation
   const log = await dailyLogController.createLog({ userId, date: logDate, note: note || null });

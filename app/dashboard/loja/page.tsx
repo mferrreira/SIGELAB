@@ -3,11 +3,11 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { AppHeader } from "@/components/app-header"
+import { AppHeader } from "@/components/layout/app-header"
 import { useUser } from "@/contexts/user-context"
 import { useReward } from "@/contexts/reward-context"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -15,7 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { Trophy, ShoppingBag, Clock, CheckCircle, XCircle, Plus, Edit, Trash2, Settings, Shield } from "lucide-react"
+import { CheckCircle, XCircle, Plus, Edit, Trash2 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   AlertDialog,
@@ -32,6 +32,7 @@ import { ToastAction } from "@/components/ui/toast"
 import { Toaster } from "@/components/ui/toaster"
 import { PurchaseApproval } from "@/components/ui/purchase-approval"
 import type { Reward, Purchase } from "@/contexts/types"
+import { hasAccess } from "@/lib/utils/utils"
 
 export default function StorePage() {
   const { user, loading } = useAuth()
@@ -50,8 +51,7 @@ export default function StorePage() {
     available: true,
   })
 
-      // Check if user can manage store (administrador de laboratório or laboratorista)
-    const canManageStore = user?.role === "administrador_laboratorio" || user?.role === "laboratorista"
+  const canManageStore = hasAccess(user?.roles || [], 'MANAGE_REWARDS')
 
   useEffect(() => {
     // Redirecionar para login se não estiver autenticado
@@ -200,7 +200,7 @@ export default function StorePage() {
       case "pending":
         return (
           <Badge variant="outline" className="flex items-center gap-1">
-            <Clock className="h-3 w-3" /> Pendente
+            <span className="text-sm text-muted-foreground">Pendente</span>
           </Badge>
         )
       case "approved":
@@ -233,7 +233,6 @@ export default function StorePage() {
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Loja de Recompensas</h1>
           <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/30 px-3 py-1.5 rounded-md">
-            <Trophy className="h-5 w-5 text-amber-500" />
             <span className="text-lg font-bold text-amber-600 dark:text-amber-400">{userPoints}</span>
             <span className="text-sm text-muted-foreground">pontos disponíveis</span>
           </div>
@@ -242,18 +241,15 @@ export default function StorePage() {
         <Tabs defaultValue="rewards">
           <TabsList className="mb-4">
             <TabsTrigger value="rewards" className="flex items-center gap-1">
-              <ShoppingBag className="h-4 w-4" />
-              Recompensas
+              <span className="text-lg font-bold text-amber-600 dark:text-amber-400">Recompensas</span>
             </TabsTrigger>
             <TabsTrigger value="purchases" className="flex items-center gap-1">
-              <Trophy className="h-4 w-4" />
-              Minhas Compras
+              <span className="text-lg font-bold text-amber-600 dark:text-amber-400">Minhas Compras</span>
             </TabsTrigger>
             {canManageStore && (
               <>
                 <TabsTrigger value="approvals" className="flex items-center gap-1 relative">
-                  <Shield className="h-4 w-4" />
-                  Aprovações
+                  <span className="text-lg font-bold text-amber-600 dark:text-amber-400">Aprovações</span>
                   {pendingPurchasesCount > 0 && (
                     <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
                       {pendingPurchasesCount}
@@ -261,8 +257,7 @@ export default function StorePage() {
                   )}
                 </TabsTrigger>
                 <TabsTrigger value="manage" className="flex items-center gap-1">
-                  <Settings className="h-4 w-4" />
-                  Gerenciar
+                  <span className="text-lg font-bold text-amber-600 dark:text-amber-400">Gerenciar</span>
                 </TabsTrigger>
               </>
             )}
@@ -285,12 +280,11 @@ export default function StorePage() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                        <Trophy className="h-5 w-5" />
                         <span className="text-lg font-bold">{reward.price}</span>
                         <span className="text-sm text-muted-foreground">pontos</span>
                       </div>
                     </CardContent>
-                    <CardFooter className="flex justify-between">
+                    <div className="flex justify-between">
                       <Button
                         onClick={() => handlePurchase(reward)}
                         disabled={userPoints < reward.price}
@@ -298,7 +292,7 @@ export default function StorePage() {
                       >
                         {userPoints >= reward.price ? "Resgatar" : "Pontos insuficientes"}
                       </Button>
-                    </CardFooter>
+                    </div>
                   </Card>
                 ))}
               </div>
@@ -329,7 +323,6 @@ export default function StorePage() {
                         <TableCell className="font-medium">{purchase.rewardName}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <Trophy className="h-4 w-4 text-amber-500" />
                             <span>{purchase.price}</span>
                           </div>
                         </TableCell>
@@ -384,7 +377,6 @@ export default function StorePage() {
                           <TableCell className="max-w-xs truncate">{reward.description}</TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
-                              <Trophy className="h-4 w-4 text-amber-500" />
                               <span>{reward.price}</span>
                             </div>
                           </TableCell>

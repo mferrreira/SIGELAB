@@ -1,4 +1,3 @@
-import type React from "react"
 import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
@@ -6,7 +5,7 @@ import ClientLayout from "./client-layout"
 
 // Inicializar serviço de cron (apenas no servidor)
 if (typeof window === 'undefined') {
-  import('../lib/init-cron')
+  import('@/lib/services/init-cron')
 }
 
 const inter = Inter({ subsets: ["latin"] })

@@ -3,7 +3,6 @@ import { startOfWeek, endOfWeek, format } from 'date-fns'
 
 async function resetWeeklyHours() {
   try {
-    console.log('Iniciando reset das horas semanais...')
     
     // Buscar todos os usuários ativos
     const users = await prisma.users.findMany({
@@ -17,8 +16,6 @@ async function resetWeeklyHours() {
       }
     })
 
-    console.log(`Encontrados ${users.length} usuários ativos`)
-
     const now = new Date()
     const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 })
     const currentWeekEnd = endOfWeek(now, { weekStartsOn: 1 })
@@ -27,7 +24,6 @@ async function resetWeeklyHours() {
 
     for (const user of users) {
       if (user.weekHours > 0) {
-        console.log(`Processando usuário: ${user.name} - ${user.weekHours} segundos`)
         
         // Salvar as horas da semana atual no histórico
         await prisma.weekly_hours_history.create({
@@ -55,9 +51,7 @@ async function resetWeeklyHours() {
           weekEnd: format(currentWeekEnd, 'dd/MM/yyyy')
         })
 
-        console.log(`✓ ${user.name}: ${savedHours.toFixed(1)}h salvas e resetadas`)
       } else {
-        console.log(`- ${user.name}: Sem horas para resetar`)
       }
     }
 

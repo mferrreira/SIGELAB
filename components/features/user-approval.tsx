@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/contexts/use-toast"
 import { UserCheck, UserX, Clock, Users } from "lucide-react"
+import { hasAccess } from "@/lib/utils/utils"
 
 interface PendingUser {
   id: number
   name: string
   email: string
-  role: string
+  roles: string[]
   weekHours: number
   createdAt: string
 }
@@ -26,8 +27,8 @@ export function UserApproval() {
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState<number | null>(null)
 
-  // Check if user can approve others
-  const canApprove = user?.role === "administrador_laboratorio" || user?.role === "laboratorista"
+  // Check if user can approve others using standardized access control
+  const canApprove = hasAccess(user?.roles || [], 'MANAGE_USERS')
 
   useEffect(() => {
     if (canApprove) {
@@ -102,14 +103,19 @@ export function UserApproval() {
     }
   }
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case "voluntario": return "Voluntário"
-      case "gerente_projeto": return "Gerente de Projeto"
-      case "laboratorista": return "Laboratorista"
-      case "administrador_laboratorio": return "Administrador de Laboratório"
-      default: return role
+  const getRoleLabel = (roles: string[]) => {
+    if (!roles || roles.length === 0) return "N/A"
+    
+    const roleLabels: { [key: string]: string } = {
+      "VOLUNTARIO": "Voluntário",
+      "COLABORADOR": "Colaborador", 
+      "GERENTE_PROJETO": "Gerente de Projeto",
+      "LABORATORISTA": "Laboratorista",
+      "COORDENADOR": "Coordenador",
+      "GERENTE": "Gerente"
     }
+    
+    return roles.map(role => roleLabels[role] || role).join(", ")
   }
 
   const formatDate = (dateString: string) => {
@@ -194,36 +200,32 @@ export function UserApproval() {
                   <TableCell className="font-medium">{pendingUser.name}</TableCell>
                   <TableCell>{pendingUser.email}</TableCell>
                   <TableCell>
-                    <Badge variant="outline">{getRoleLabel(pendingUser.role)}</Badge>
+                    <Badge variant="outline">{getRoleLabel(pendingUser.roles)}</Badge>
                   </TableCell>
                   <TableCell>
                     <span className="font-medium">{pendingUser.weekHours}</span>
-                    <span className="text-muted-foreground text-xs ml-1">h/sem</span>
                   </TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {formatDate(pendingUser.createdAt)}
-                  </TableCell>
+                  <TableCell>{formatDate(pendingUser.createdAt)}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button
                         size="sm"
-                        variant="default"
                         onClick={() => handleApprove(pendingUser.id)}
                         disabled={processing === pendingUser.id}
-                        className="flex items-center gap-1"
+                        className="gap-1"
                       >
                         <UserCheck className="h-3 w-3" />
-                        Aprovar
+                        {processing === pendingUser.id ? "Aprovando..." : "Aprovar"}
                       </Button>
                       <Button
                         size="sm"
                         variant="destructive"
                         onClick={() => handleReject(pendingUser.id)}
                         disabled={processing === pendingUser.id}
-                        className="flex items-center gap-1"
+                        className="gap-1"
                       >
                         <UserX className="h-3 w-3" />
-                        Rejeitar
+                        {processing === pendingUser.id ? "Rejeitando..." : "Rejeitar"}
                       </Button>
                     </div>
                   </TableCell>

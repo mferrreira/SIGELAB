@@ -1,8 +1,6 @@
 "use client"
 
-import type React from "react"
-
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@/components/layout/theme-provider"
 import { AuthProvider } from "@/contexts/auth-context"
 import { UserProvider } from "@/contexts/user-context"
 import { ProjectProvider } from "@/contexts/project-context"
@@ -15,7 +13,7 @@ import { LaboratoryScheduleProvider } from "@/contexts/laboratory-schedule-conte
 import { WeeklyReportProvider } from "@/contexts/weekly-report-context"
 import { WorkSessionProvider } from "@/contexts/work-session-context"
 import { SessionProvider } from "next-auth/react"
-import { LabEventsProvider, useLabEvents } from "@/contexts/lab-events-context"
+import { LabEventsProvider } from "@/contexts/lab-events-context"
 
 export default function ClientLayout({
   children,

@@ -1,16 +1,17 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { DragDropContext, type DropResult } from "@hello-pangea/dnd"
 import { KanbanColumn } from "@/components/ui/kanban-column"
 import { KanbanHeader } from "@/components/ui/kanban-header"
-import { TaskDialog } from "@/components/task-dialog"
+import { TaskDialog } from "@/components/features/task-dialog"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
 import type { Task } from "@/contexts/types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/contexts/use-toast"
+import { hasAccess } from "@/lib/utils/utils"
 
 const COLUMNS = [
   { id: "to-do", status: "to-do" },
@@ -30,24 +31,28 @@ export function KanbanBoard() {
   const [isUpdating, setIsUpdating] = useState(false)
   const [optimisticTasks, setOptimisticTasks] = useState<Task[]>([])
 
-  // Load tasks when user changes
-  useEffect(() => {
+  // Load tasks when user changes - optimized with useCallback
+  const loadTasks = useCallback(() => {
     if (user) {
       fetchTasks()
     }
   }, [user, fetchTasks])
+
+  useEffect(() => {
+    loadTasks()
+  }, [loadTasks])
 
   // Update optimistic tasks when tasks change
   useEffect(() => {
     setOptimisticTasks(tasks || [])
   }, [tasks])
 
-  // Memoize overdue status for each task
+  // Memoize overdue status for each task - optimized computation
   const overdueStatusMap = useMemo(() => {
     const map: { [id: string]: boolean } = {}
-    if (optimisticTasks && Array.isArray(optimisticTasks) && optimisticTasks.length > 0) {
+    if (optimisticTasks?.length > 0) {
       optimisticTasks.forEach((task) => {
-        if (task && task.id) {
+        if (task?.id) {
           map[task.id] = isTaskOverdue(task)
         }
       })
@@ -72,7 +77,7 @@ export function KanbanBoard() {
   }, [optimisticTasks, overdueStatusMap])
 
   // Check if user can create tasks
-  const canCreateTasks = Boolean(user && ["gerente_projeto", "laboratorista", "administrador_laboratorio"].includes(user.role))
+  const canCreateTasks = hasAccess(user?.roles || [], 'MANAGE_TASKS')
 
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result
@@ -80,6 +85,18 @@ export function KanbanBoard() {
     // Early return if no destination or same position
     if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) {
       return
+    }
+
+    // Prevent dragging tasks out of 'done' unless user is a project leader
+    const isLeader = hasAccess(user?.roles || [], 'MANAGE_TASKS')
+    if (source.droppableId === "done" && !isLeader) {
+      // Optionally show a toast or message
+      toast({
+        title: "Ação não permitida",
+        description: "Apenas líderes de projeto podem mover tarefas concluídas.",
+        variant: "destructive",
+      });
+      return;
     }
 
     // Prevent default behavior that might cause page reload
@@ -115,20 +132,20 @@ export function KanbanBoard() {
         const updateData: any = { status: newStatus }
         
         // For public tasks being moved to done, assign to the current user if they're a volunteer
-        if (newStatus === "done" && taskToUpdate.taskVisibility === "public" && !taskToUpdate.assignedTo && user?.role === "voluntario") {
+        if (newStatus === "done" && taskToUpdate.taskVisibility === "public" && !taskToUpdate.assignedTo && user && hasAccess(user.roles || [], 'COMPLETE_PUBLIC_TASKS')) {
           updateData.assignedTo = user.id.toString()
         }
         
         // Then update the backend
         if (newStatus === "done") {
-          await completeTask(taskToUpdate.id, user?.id)
+          await completeTask(taskToUpdate.id)
         } else {
-          await updateTask(taskToUpdate.id, updateData, user?.id)
+          await updateTask(taskToUpdate.id, updateData)
         }
         
         // Show success message if points were awarded
         if (newStatus === "done" && previousStatus !== "done" && taskToUpdate.points > 0) {
-          const userToAward = taskToUpdate.assignedTo || (taskToUpdate.taskVisibility === "public" && user?.role === "voluntario" ? user.id : null)
+          const userToAward = taskToUpdate.assignedTo || (taskToUpdate.taskVisibility === "public" && hasAccess(user?.roles || [], 'COMPLETE_PUBLIC_TASKS') ? user?.id : null)
           if (userToAward) {
             toast({
               title: "🎉 Tarefa Concluída!",

@@ -1,4 +1,4 @@
-import { createApiResponse, createApiError } from "@/contexts/utils";
+import { createApiResponse, createApiError } from "@/lib/utils/utils";
 import { UserController } from "@/backend/controllers/UserController";
 
 const userController = new UserController();

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { UserScheduleController } from "@/backend/controllers/UserScheduleController"
-import { handlePrismaError, createApiResponse, createApiError } from "@/contexts/utils"
+import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils/utils"
 
 const userScheduleController = new UserScheduleController();
 
@@ -17,7 +17,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 }
 
 // DELETE: Excluir um horário
-export async function DELETE(context: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   const params = await context.params;
   return userScheduleController.deleteSchedule(Number(params.id));
 } 

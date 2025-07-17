@@ -4,34 +4,37 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  // Users
   const roles = [
-    'administrador_laboratorio',
-    'laboratorista',
-    'gerente_projeto',
-    'voluntario',
+    { key: 'COORDENADOR', email: 'coordenador@lab.com', name: 'Coordenador', weekHours: 40 },
+    { key: 'GERENTE', email: 'gerente@lab.com', name: 'Gerente', weekHours: 40 },
+    { key: 'LABORATORISTA', email: 'laboratorista@lab.com', name: 'Laboratorista', weekHours: 40 },
+    { key: 'PESQUISADOR', email: 'pesquisador@lab.com', name: 'Pesquisador', weekHours: 40 },
+    { key: 'GERENTE_PROJETO', email: 'gerente_projeto@lab.com', name: 'Gerente de Projeto', weekHours: 40 },
+    { key: 'COLABORADOR', email: 'colaborador@lab.com', name: 'Colaborador', weekHours: 20 },
   ];
   const password = await bcrypt.hash('123', 10);
 
+  const createdUsers = [];
   for (const role of roles) {
-    await prisma.users.upsert({
-      where: { email: `${role}@lab.com` },
+    const user = await prisma.users.upsert({
+      where: { email: role.email },
       update: {
         password,
-        role,
+        roles: [role.key as any],
         status: 'active',
-        name: role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' '),
-        weekHours: 40,
+        name: role.name,
+        weekHours: role.weekHours,
       },
       create: {
-        email: `${role}@lab.com`,
+        email: role.email,
         password,
-        role,
+        roles: [role.key as any],
         status: 'active',
-        name: role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' '),
-        weekHours: 40,
+        name: role.name,
+        weekHours: role.weekHours,
       },
     });
+    createdUsers.push(user);
   }
 
   // Rewards
@@ -44,25 +47,26 @@ async function main() {
     skipDuplicates: true,
   });
 
-  // Schedules (for user 1)
-  await prisma.user_schedules.createMany({
-    data: [
-      { userId: 1, dayOfWeek: 1, startTime: '09:00', endTime: '12:00' },
-      { userId: 1, dayOfWeek: 3, startTime: '14:00', endTime: '18:00' },
-    ],
-    skipDuplicates: true,
-  });
+  // Schedules (for coordenador user if exists)
+  const coordenador = createdUsers.find(u => u.email === 'coordenador@lab.com');
+  if (coordenador) {
+    await prisma.user_schedules.createMany({
+      data: [
+        { userId: coordenador.id, dayOfWeek: 1, startTime: '09:00', endTime: '12:00' },
+        { userId: coordenador.id, dayOfWeek: 3, startTime: '14:00', endTime: '18:00' },
+      ],
+      skipDuplicates: true,
+    });
 
-  // Work sessions (for user 1)
-  await prisma.work_sessions.createMany({
-    data: [
-      { userId: 1, userName: 'Administrador Laboratorio', activity: 'Reunião', status: 'completed', startTime: new Date(), endTime: new Date(), duration: 60 },
-      { userId: 1, userName: 'Administrador Laboratorio', activity: 'Pesquisa', status: 'active', startTime: new Date() },
-    ],
-    skipDuplicates: true,
-  });
-
-  console.log('Dummy data inserted.');
+    // Work sessions (for coordenador)
+    await prisma.work_sessions.createMany({
+      data: [
+        { userId: coordenador.id, userName: 'Coordenador', activity: 'Reunião', status: 'completed', startTime: new Date(), endTime: new Date(), duration: 60 },
+        { userId: coordenador.id, userName: 'Coordenador', activity: 'Pesquisa', status: 'active', startTime: new Date() },
+      ],
+      skipDuplicates: true,
+    });
+  }
 }
 
 main()

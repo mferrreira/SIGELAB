@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { prisma } from "@/lib/prisma"
-import { createApiResponse, createApiError } from "@/contexts/utils"
+import { prisma } from "@/lib/database/prisma"
+import { createApiResponse, createApiError } from "@/lib/utils/utils"
 
 export async function GET(
   request: NextRequest,
@@ -27,7 +27,7 @@ export async function GET(
             id: true,
             name: true,
             email: true,
-            role: true
+            roles: true
           }
         }
       }
@@ -83,7 +83,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
       return createApiError("Relatório não encontrado", 404)
     }
     const user = session.user as any
-    if (user.role !== "administrador_laboratorio" && user.id !== report.userId) {
+    if (!user.roles.includes('COORDENADOR') && user.id !== report.userId) {
       return createApiError("Sem permissão", 403)
     }
     await prisma.weekly_reports.delete({ where: { id } })

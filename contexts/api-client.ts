@@ -3,6 +3,7 @@
 // Função genérica para fazer requisições
 async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(url, {
+    credentials: "include", // Ensure cookies/session are sent
     headers: {
       "Content-Type": "application/json",
       ...options.headers,

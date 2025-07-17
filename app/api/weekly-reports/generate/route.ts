@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { prisma } from "@/lib/prisma"
-import { createApiResponse, createApiError } from "@/contexts/utils"
+import { prisma } from "@/lib/database/prisma"
+import { createApiResponse, createApiError } from "@/lib/utils/utils"
 
 // POST: Gerar relatório semanal baseado nos logs diários
 export async function POST(request: Request) {
@@ -21,8 +21,8 @@ export async function POST(request: Request) {
     
     // Only allow if user is admin/laboratorist or generating their own report
     const user = session.user as any
-    if (user.role !== "administrador_laboratorio" && user.role !== "laboratorist" && user.id !== userId) {
-      return createApiError("Sem permissão", 403)
+    if (!user.roles.includes('COORDENADOR') && !user.roles.includes('GERENTE') && user.id !== userId) {
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
     
     // Get user data
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
               id: true,
               name: true,
               email: true,
-              role: true
+              roles: true
             }
           }
         }
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
               id: true,
               name: true,
               email: true,
-              role: true
+              roles: true
             }
           }
         }

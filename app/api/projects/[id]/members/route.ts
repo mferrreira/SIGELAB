@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server"
 import { ProjectManagerController } from "@/backend/controllers/ProjectManagerController"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/database/prisma"
 
 const projectManagerController = new ProjectManagerController();
 
 // GET: List all members of a project
-export async function GET(request: Request, { params }: { params: { id: number } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: number }> }) {
   try {
-    const projectId = Number(params.id)
+    const { id } = await params
+    const projectId = Number(id)
     const members = await prisma.project_members.findMany({
       where: { projectId },
       include: { user: true },
@@ -20,15 +21,16 @@ export async function GET(request: Request, { params }: { params: { id: number }
 }
 
 // POST: Add a member to a project
-export async function POST(request: Request, { params }: { params: { id: number } }) {
+export async function POST(request: Request, { params }: { params: Promise<{ id: number }> }) {
   try {
-    const projectId = Number(params.id)
+    const { id } = await params
+    const projectId = Number(id)
     const body = await request.json()
-    const { userId, role } = body
-    if (!userId || !role) {
-      return NextResponse.json({ error: "userId e role são obrigatórios" }, { status: 400 })
+    const { userId, roles } = body
+    if (!userId || !roles || !Array.isArray(roles) || roles.length === 0) {
+      return NextResponse.json({ error: "userId e roles são obrigatórios" }, { status: 400 })
     }
-    const member = await projectManagerController.assignUserToProject(projectId.toString(), userId.toString(), role)
+    const member = await projectManagerController.assignUserToProject(projectId.toString(), userId.toString(), roles)
     return NextResponse.json({ member }, { status: 201 })
   } catch (error: any) {
     if (error.code === 'P2002') {
@@ -40,9 +42,10 @@ export async function POST(request: Request, { params }: { params: { id: number 
 }
 
 // DELETE: Remove a member from a project
-export async function DELETE(request: Request, { params }: { params: { id: number } }) {
+export async function DELETE(request: Request, { params }: { params: Promise<{ id: number }> }) {
   try {
-    const projectId = Number(params.id)
+    const { id } = await params
+    const projectId = Number(id)
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get("userId")
     if (!userId) {

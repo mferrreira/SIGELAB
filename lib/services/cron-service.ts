@@ -1,5 +1,5 @@
 import * as cron from 'node-cron'
-import { prisma } from './prisma'
+import { prisma } from '@/lib/database/prisma'
 import { startOfWeek, endOfWeek, format } from 'date-fns'
 
 class CronService {
@@ -11,23 +11,16 @@ class CronService {
    */
   init() {
     if (this.isInitialized) {
-      console.log('CronService já foi inicializado')
       return
     }
 
-    console.log('🚀 Inicializando CronService...')
-    
     // Reset semanal - toda segunda-feira às 00:00
     this.weeklyResetJob = cron.schedule('0 0 * * 1', async () => {
-      console.log('⏰ Executando reset semanal automático...')
       await this.executeWeeklyReset()
     }, {
       timezone: 'America/Sao_Paulo' // Fuso horário do Brasil
     })
 
-    console.log('✅ CronService inicializado com sucesso!')
-    console.log('📅 Reset semanal agendado para: Segunda-feira às 00:00 (GMT-3)')
-    
     this.isInitialized = true
   }
 
@@ -36,7 +29,6 @@ class CronService {
    */
   private async executeWeeklyReset() {
     try {
-      console.log(`[${format(new Date(), 'dd/MM/yyyy HH:mm:ss')}] Iniciando reset automático das horas semanais...`)
       
       // Buscar todos os usuários ativos
       const users = await prisma.users.findMany({
@@ -49,8 +41,6 @@ class CronService {
           weekHours: true
         }
       })
-
-      console.log(`Encontrados ${users.length} usuários ativos`)
 
       const now = new Date()
       const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 })
@@ -78,7 +68,6 @@ class CronService {
         const totalHours = totalSeconds / 3600
 
         if (totalHours > 0) {
-          console.log(`Processando usuário: ${user.name} - ${totalHours.toFixed(2)}h trabalhadas`)
           
           // Salvar no histórico
           await prisma.weekly_hours_history.create({
@@ -101,9 +90,8 @@ class CronService {
             weekEnd: format(currentWeekEnd, 'dd/MM/yyyy')
           })
 
-          console.log(`✓ ${user.name}: ${savedHours.toFixed(1)}h salvas`)
         } else {
-          console.log(`- ${user.name}: Sem horas para resetar`)
+          
         }
         
         // Resetar as horas atuais da semana para 0
@@ -112,24 +100,8 @@ class CronService {
           data: { currentWeekHours: 0 }
         })
         
-        console.log(`✓ ${user.name}: Horas atuais resetadas para 0`)
       }
 
-      console.log('\n=== RESUMO DO RESET AUTOMÁTICO ===')
-      console.log(`Data/Hora: ${format(now, 'dd/MM/yyyy HH:mm:ss')}`)
-      console.log(`Semana: ${format(currentWeekStart, 'dd/MM/yyyy')} a ${format(currentWeekEnd, 'dd/MM/yyyy')}`)
-      console.log(`Usuários processados: ${results.length}`)
-      console.log(`Total de horas salvas: ${totalHoursSaved.toFixed(1)}h`)
-      
-      if (results.length > 0) {
-        console.log('\nUsuários com horas resetadas:')
-        results.forEach(r => {
-          console.log(`  - ${r.userName}: ${r.savedHours}h`)
-        })
-      }
-
-      console.log('\n✅ Reset automático das horas semanais concluído com sucesso!')
-      
     } catch (error) {
       console.error('❌ Erro ao executar reset automático:', error)
     }
@@ -141,7 +113,6 @@ class CronService {
   stop() {
     if (this.weeklyResetJob) {
       this.weeklyResetJob.stop()
-      console.log('🛑 CronService parado')
     }
     this.isInitialized = false
   }
@@ -157,7 +128,6 @@ class CronService {
    * Executa reset manual (para testes)
    */
   async executeManualReset() {
-    console.log('🔧 Executando reset manual...')
     await this.executeWeeklyReset()
   }
 

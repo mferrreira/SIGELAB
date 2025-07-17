@@ -3,8 +3,8 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { KanbanBoard } from "@/components/kanban-board"
-import { AppHeader } from "@/components/app-header"
+import { KanbanBoard } from "@/components/features/kanban-board"
+import { AppHeader } from "@/components/layout/app-header"
 
 export default function DashboardPage() {
   const { user, loading } = useAuth()

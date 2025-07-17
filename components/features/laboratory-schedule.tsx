@@ -41,7 +41,7 @@ export function LaboratorySchedule() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Check if user can manage schedules
-  const canManage = user?.role === "administrador_laboratorio" || user?.role === "laboratorista"
+  const canManage = user?.roles?.includes("COORDENADOR") || user?.roles?.includes("LABORATORISTA")
 
   const handleOpenDialog = (schedule?: any) => {
     if (schedule) {

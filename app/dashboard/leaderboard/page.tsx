@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { AppHeader } from "@/components/app-header"
+import { AppHeader } from "@/components/layout/app-header"
 import { useUser } from "@/contexts/user-context"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -121,10 +121,18 @@ export default function LeaderboardPage() {
                       <div>
                         <p className="font-medium">{rankedUser.name}</p>
                         <p className="text-xs text-muted-foreground capitalize">
-                          {rankedUser.role === "gerente_projeto" ? "Gerente de Projeto" : 
-                 rankedUser.role === "laboratorista" ? "Laboratorista" :
-                 rankedUser.role === "administrador_laboratorio" ? "Administrador de Laboratório" :
-                 rankedUser.role === "voluntario" ? "Voluntário" : "Usuário"}
+                          {rankedUser.roles.map((role, i) => (
+                            <span key={role}>
+                              {i > 0 && ", "}
+                              {role === "GERENTE_PROJETO" ? "Gerente de Projeto" :
+                               role === "LABORATORISTA" ? "Laboratorista" :
+                               role === "COORDENADOR" ? "Coordenador" :
+                               role === "GERENTE" ? "Gerente" :
+                               role === "PESQUISADOR" ? "Pesquisador" :
+                               role === "COLABORADOR" ? "Colaborador" :
+                               role}
+                            </span>
+                          ))}
                         </p>
                       </div>
                     </div>

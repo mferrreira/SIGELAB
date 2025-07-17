@@ -22,8 +22,8 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
   const user = session.user as User;
   const log = await dailyLogController.getLog(Number(params.id));
   if (!log) return NextResponse.json({ error: "Log não encontrado" }, { status: 404 });
-  if (user.role !== "administrador_laboratorio" && user.id !== log.userId) {
-    return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  if (!user.roles.includes('COORDENADOR') && user.id !== log.userId) {
+    return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
   }
   const body = await request.json();
   const updated = await dailyLogController.updateLog(Number(params.id), {
@@ -42,8 +42,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   const user = session.user as User;
   const log = await dailyLogController.getLog(Number(params.id));
   if (!log) return NextResponse.json({ error: "Log não encontrado" }, { status: 404 });
-  if (user.role !== "administrador_laboratorio" && user.id !== log.userId) {
-    return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  if (!user.roles.includes('COORDENADOR') && user.id !== log.userId) {
+    return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
   }
   await dailyLogController.deleteLog(Number(params.id));
   return NextResponse.json({ success: true });

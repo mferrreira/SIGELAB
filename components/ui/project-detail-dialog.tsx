@@ -19,10 +19,11 @@ import {
   Plus
 } from "lucide-react"
 import { useTask } from "@/contexts/task-context"
-import { TaskDialog } from "@/components/task-dialog"
+import { TaskDialog } from "@/components/features/task-dialog"
 import type { Project, Task } from "@/contexts/types"
 import { useAuth } from "@/contexts/auth-context"
-import { ProjectMembersManager } from "@/components/ui/project-members-manager"
+import { ProjectMembersManager } from "@/components/forms/project-members-manager"
+import { hasAccess } from "@/lib/utils/utils"
 
 interface ProjectDetailDialogProps {
   project: Project | null
@@ -101,7 +102,7 @@ export function ProjectDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh]">
           <DialogHeader>
             <div className="flex justify-between items-start">
               <div className="flex-1">
@@ -116,7 +117,7 @@ export function ProjectDetailDialog({
                 </div>
               </div>
               <div className="flex gap-2">
-                {user && (user.role === "laboratorista" || user.role === "administrador_laboratorio") && (
+                {user && hasAccess(user.roles, "EDIT_PROJECT") && (
                   <>
                     <Button
                       variant="outline"
@@ -140,7 +141,7 @@ export function ProjectDetailDialog({
             </div>
           </DialogHeader>
 
-          <div className="space-y-6">
+          <div className="space-y-6 overflow-y-auto max-h-[70vh] pr-2">
             {/* Project Description */}
             {project.description && (
               <Card>
@@ -220,7 +221,7 @@ export function ProjectDetailDialog({
                     <CheckCircle2 className="h-5 w-5" />
                     Tarefas do Projeto
                   </CardTitle>
-                  {user && ["gerente_projeto", "laboratorista", "administrador_laboratorio"].includes(user.role) && (
+                  {user && hasAccess(user.roles, "CREATE_TASK") && (
                     <Button onClick={handleCreateTask} size="sm">
                       <Plus className="h-4 w-4 mr-2" />
                       Nova Tarefa
@@ -236,7 +237,7 @@ export function ProjectDetailDialog({
                     <p className="text-muted-foreground mb-4">
                       Este projeto ainda não possui tarefas. Crie a primeira tarefa para começar.
                     </p>
-                    {user && ["gerente_projeto", "laboratorista", "administrador_laboratorio"].includes(user.role) && (
+                    {user && hasAccess(user.roles, "CREATE_TASK") && (
                       <Button onClick={handleCreateTask}>
                         <Plus className="h-4 w-4 mr-2" />
                         Criar Primeira Tarefa
@@ -336,7 +337,7 @@ export function ProjectDetailDialog({
               </CardContent>
             </Card>
             {/* Project Membership Management (only for allowed roles) */}
-            {user && ["gerente_projeto", "laboratorista", "administrador_laboratorio"].includes(user.role) && (
+            {(user && hasAccess(user.roles, "MANAGE_PROJECT_MEMBERS")) && (
               <ProjectMembersManager projectId={project.id} />
             )}
           </div>

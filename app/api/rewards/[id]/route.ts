@@ -28,7 +28,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 }
 
 // DELETE: Excluir uma recompensa
-export async function DELETE(context: { params: Promise<{ id: string }> }) {
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params;
     await rewardController.deleteReward(Number(params.id));

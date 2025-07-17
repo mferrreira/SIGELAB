@@ -1,5 +1,5 @@
 import { UserScheduleModel } from '../models/UserScheduleModel';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/database/prisma';
 
 export class UserScheduleController {
   private userScheduleModel = new UserScheduleModel();
@@ -13,10 +13,15 @@ export class UserScheduleController {
   }
 
   async createSchedule(data: any) {
+    if (!data.userId || isNaN(Number(data.userId))) {
+      throw new Error('userId é obrigatório e deve ser um número');
+    }
     const user = await prisma.users.findUnique({ where: { id: data.userId } });
     if (!user) throw new Error('Usuário não encontrado');
+
     const schedules = await this.userScheduleModel.findByUserId(data.userId);
-    let totalMinutes = schedules.reduce((total, sched) => {
+    
+    let totalMinutes = schedules.reduce((total: any, sched: any) => {
       const [startH, startM] = sched.startTime.split(':').map(Number);
       const [endH, endM] = sched.endTime.split(':').map(Number);
       return total + ((endH * 60 + endM) - (startH * 60 + startM));

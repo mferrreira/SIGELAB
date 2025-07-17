@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { AppHeader } from "@/components/app-header"
+import { AppHeader } from "@/components/layout/app-header"
 import { useResponsibility } from "@/contexts/responsibility-context"
 import { useDailyLogs } from "@/contexts/daily-log-context"
 import { useLaboratorySchedule } from "@/contexts/laboratory-schedule-context"
@@ -18,10 +18,10 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, Clock, Play, Square, AlertCircle, FileText } from "lucide-react"
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { Tooltip } from "@/components/ui/tooltip"
 import DayViewCalendar from "@/components/ui/day-view-calendar"
 import { Input } from "@/components/ui/input"
-import { LaboratorySchedule } from "@/components/laboratory-schedule"
+import { LaboratorySchedule } from "@/components/features/laboratory-schedule"
+import { hasAccess } from "@/lib/utils/utils"
 
 export default function LabResponsibilityPage() {
   const { user, loading: authLoading } = useAuth()
@@ -68,15 +68,11 @@ export default function LabResponsibilityPage() {
       fetchActiveResponsibility()
       
       // Role-based log fetching
-      if (user.role === "administrador_laboratorio" || user.role === "laboratorista") {
+      if (hasAccess(user?.roles || [], 'VIEW_ALL_DATA')) {
         // Admins and laboratorists see all logs
         fetchAllLogs()
-      } else if (user.role === "gerente_projeto") {
-        // Project managers see logs from their projects
-        // For now, we'll show all logs but this can be enhanced to filter by user's projects
-        fetchAllLogs()
-      } else if (user.role === "voluntario") {
-        // Volunteers only see their own logs
+      } else {
+        // Other users only see their own logs
         fetchLogs(user.id)
       }
     }
@@ -291,7 +287,7 @@ export default function LabResponsibilityPage() {
               <CardHeader>
                 <CardTitle>Status Atual</CardTitle>
                 <CardDescription>
-                  {user?.role === "administrador_laboratorio" || user?.role === "laboratorista" 
+                  {hasAccess(user?.roles || [], 'VIEW_ALL_DATA') || hasAccess(user?.roles || [], 'VIEW_ALL_DATA')
                     ? "Controle de responsabilidade pelo laboratório" 
                     : "Visualização do status do laboratório"}
                 </CardDescription>
@@ -317,8 +313,8 @@ export default function LabResponsibilityPage() {
                       <span className="text-2xl font-mono">{activeResponsibility.duration}</span>
                     </div>
 
-                            {/* Only show control buttons for administrador de laboratório and laboratorista */}
-        {(user?.role === "administrador_laboratorio" || user?.role === "laboratorista") && (
+                            {/* Only show control buttons for COORDENADOR and LABORATORISTA */}
+        {hasAccess(user?.roles || [], 'VIEW_ALL_DATA') && (
                       <Button
                         variant="destructive"
                         className="w-full"
@@ -340,8 +336,8 @@ export default function LabResponsibilityPage() {
                       <Badge variant="outline">Laboratório disponível</Badge>
                     </div>
 
-                            {/* Only show start controls for administrador de laboratório and laboratorista */}
-        {(user?.role === "administrador_laboratorio" || user?.role === "laboratorista") ? (
+                            {/* Only show start controls for COORDENADOR and LABORATORISTA */}
+        {hasAccess(user?.roles || [], 'VIEW_ALL_DATA') ? (
                       <>
                         <Textarea
                           placeholder="Notas (opcional)"
@@ -367,7 +363,7 @@ export default function LabResponsibilityPage() {
                       </>
                     ) : (
                       <p className="text-sm text-muted-foreground text-center">
-                        Apenas laboratoristas e administradores de laboratório podem assumir responsabilidade pelo laboratório.
+                        Apenas laboratoristas e coordenadores podem assumir responsabilidade pelo laboratório.
                       </p>
                     )}
                   </div>

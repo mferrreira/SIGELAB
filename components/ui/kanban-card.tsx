@@ -68,7 +68,7 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
   }
 
   return (
-    <Draggable draggableId={task.id.toString()} index={index}>
+    <Draggable draggableId={task.id.toString()} index={index} isDragDisabled={task.status === 'done'}>
       {(provided, snapshot) => {
         const getCardStyle = () => {
           if (isPublicTask) {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/database/prisma"
 
 // PATCH: Encerrar uma responsabilidade ou atualizar notas
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -36,7 +36,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
           return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
         }
 
-        const canEnd = requestingUser.role === "administrador_laboratorio" || 
+        const canEnd = requestingUser.roles.includes("COORDENADOR") || 
                       requestingUser.id === existingResponsibility.userId
 
         if (!canEnd) {

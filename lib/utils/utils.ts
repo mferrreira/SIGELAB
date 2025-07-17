@@ -48,12 +48,24 @@ export function validateEmail(email: string): { valid: boolean; error?: string }
   return { valid: true }
 }
 
+// Refatorar validateRole para aceitar array de roles e validar todos os papéis.
 export function validateRole(role: string): { valid: boolean; error?: string } {
   const validRoles = ["administrador_laboratorio", "laboratorista", "gerente_projeto", "voluntario"]
   if (!validRoles.includes(role)) {
     return { valid: false, error: "Função inválida" }
   }
   return { valid: true }
+}
+
+// Nova função para validar múltiplos papéis
+export function validateRoles(roles: string[]): { valid: boolean; error?: string } {
+  const validRoles = ['COORDENADOR', 'GERENTE', 'LABORATORISTA', 'PESQUISADOR', 'GERENTE_PROJETO', 'COLABORADOR'];
+  for (const role of roles) {
+    if (!validRoles.includes(role)) {
+      return { valid: false, error: `Papel inválido: ${role}` };
+    }
+  }
+  return { valid: true };
 }
 
 // Error handling utilities
@@ -102,3 +114,13 @@ export function paginateResults<T>(items: T[], page: number = 1, limit: number =
     }
   }
 }
+
+// Re-export access control utilities for frontend use
+export { 
+  ACCESS_CONTROL, 
+  hasAccess, 
+  hasAnyRole, 
+  hasAllRoles, 
+  getPrimaryRole, 
+  getRoleDisplayName 
+} from "./access-control";

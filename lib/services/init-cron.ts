@@ -1,4 +1,4 @@
-import { cronService } from './cron-service'
+import { cronService } from '@/lib/services/cron-service'
 
 /**
  * Inicializa o serviço de cron quando o servidor Next.js inicia

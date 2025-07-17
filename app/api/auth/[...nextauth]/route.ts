@@ -1,6 +1,6 @@
 import NextAuth, { type AuthOptions, type SessionStrategy } from "next-auth"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/database/prisma"
 import bcrypt from "bcryptjs"
 
 export const authOptions: AuthOptions = {
@@ -46,7 +46,7 @@ export const authOptions: AuthOptions = {
     async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
         token.id = (user as any).id
-        token.role = (user as any).role
+        token.roles = (user as any).roles
         token.name = (user as any).name
         token.email = (user as any).email
       }
@@ -57,7 +57,7 @@ export const authOptions: AuthOptions = {
         session.user.name = token.name as string | undefined
         session.user.email = token.email as string | undefined
         // @ts-ignore: custom fields
-        session.user.role = token.role
+        session.user.roles = token.roles
         // @ts-ignore: custom fields
         session.user.id = token.id
       }

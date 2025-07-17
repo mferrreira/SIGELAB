@@ -13,8 +13,8 @@ export async function GET(request: Request) {
     }
 
     const user = session.user as any
-    if (user.role !== "administrador_laboratorio") {
-      return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
+    if (!user.roles.includes('COORDENADOR')) {
+      return NextResponse.json({ error: 'Apenas coordenadores podem acessar.' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url)

@@ -1,5 +1,5 @@
 import { UserController } from './UserController';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/database/prisma';
 
 export class LaboratoristController extends UserController {
   async getLabSchedules(userId: string) {

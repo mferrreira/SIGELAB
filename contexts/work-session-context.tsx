@@ -57,7 +57,6 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
     setError(null)
     
     try {
-      console.log('Starting session with data:', sessionData)
       const response = await WorkSessionsAPI.start({
         ...sessionData,
         userId: sessionData.userId || user.id,

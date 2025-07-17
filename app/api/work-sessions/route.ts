@@ -1,5 +1,5 @@
 import { WorkSessionController } from "@/backend/controllers/WorkSessionController"
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/database/prisma";
 
 const workSessionController = new WorkSessionController();
 

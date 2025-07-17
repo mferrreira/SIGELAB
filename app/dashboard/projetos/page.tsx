@@ -4,23 +4,23 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
-import { AppHeader } from "@/components/app-header"
-import { ProjectList } from "@/components/project-list"
+import { AppHeader } from "@/components/layout/app-header"
+import { ProjectList } from "@/components/features/project-list"
 import { ProjectDetailDialog } from "@/components/ui/project-detail-dialog"
-import { ProjectDialog } from "@/components/project-dialog"
+import { ProjectDialog } from "@/components/features/project-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  BarChart3, 
-  Calendar, 
-  Users, 
+import {
+  Plus,
+  Search,
+  Filter,
+  BarChart3,
+  Calendar,
+  Users,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -32,7 +32,7 @@ export default function ProjetosPage() {
   const { user } = useAuth()
   const { projects, loading } = useProject()
   const { tasks } = useTask()
-  
+
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
@@ -43,7 +43,7 @@ export default function ProjetosPage() {
   // Filter projects based on search and status
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      project.description?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || project.status === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -54,10 +54,10 @@ export default function ProjetosPage() {
     const totalTasks = projectTasks.length
     const completedTasks = projectTasks.filter(task => task.status === "done").length
     const pendingTasks = projectTasks.filter(task => task.status === "to-do").length
-    const inProgressTasks = projectTasks.filter(task => 
+    const inProgressTasks = projectTasks.filter(task =>
       task.status === "in-progress" || task.status === "in-review" || task.status === "adjust"
     ).length
-    
+
     return {
       total: totalTasks,
       completed: completedTasks,
@@ -116,8 +116,8 @@ export default function ProjetosPage() {
     )
   }
 
-  // Only allow access to laboratorista, administrador_laboratorio, gerente_projeto
-  if (!["laboratorista", "administrador_laboratorio", "gerente_projeto"].includes(user.role)) {
+  // Only allow access to PESQUISADOR, COORDENADOR, GERENTE_PROJETO, GERENTE
+  if (!user.roles?.some(role => ["PESQUISADOR", "COORDENADOR", "GERENTE_PROJETO", "GERENTE"].includes(role))) {
     return (
       <div className="flex min-h-screen flex-col">
         <AppHeader />
@@ -192,8 +192,8 @@ export default function ProjetosPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {overallStats.totalTasks > 0 
-                      ? Math.round((overallStats.completedTasks / overallStats.totalTasks) * 100) 
+                    {overallStats.totalTasks > 0
+                      ? Math.round((overallStats.completedTasks / overallStats.totalTasks) * 100)
                       : 0}%
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -216,7 +216,7 @@ export default function ProjetosPage() {
                   className="pl-10 w-full md:w-64"
                 />
               </div>
-              
+
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-full md:w-48">
                   <Filter className="h-4 w-4 mr-2" />
@@ -253,9 +253,9 @@ export default function ProjetosPage() {
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredProjects.map((project) => {
                   const stats = getProjectStats(project.id)
-                                     return (
-                     <Card key={String(project.id)} className="hover:shadow-lg transition-shadow cursor-pointer"
-                           onClick={() => handleProjectClick(project)}>
+                  return (
+                    <Card key={String(project.id)} className="hover:shadow-lg transition-shadow cursor-pointer"
+                      onClick={() => handleProjectClick(project)}>
                       <CardHeader>
                         <div className="flex justify-between items-start">
                           <div className="flex-1">
@@ -264,15 +264,15 @@ export default function ProjetosPage() {
                               Criado em {new Date(project.createdAt).toLocaleDateString("pt-BR")}
                             </CardDescription>
                           </div>
-                          <Badge 
+                          <Badge
                             className={
                               project.status === "active" ? "bg-green-100 text-green-800" :
-                              project.status === "completed" ? "bg-blue-100 text-blue-800" :
-                              "bg-gray-100 text-gray-800"
+                                project.status === "completed" ? "bg-blue-100 text-blue-800" :
+                                  "bg-gray-100 text-gray-800"
                             }
                           >
                             {project.status === "active" ? "Ativo" :
-                             project.status === "completed" ? "Concluído" : "Arquivado"}
+                              project.status === "completed" ? "Concluído" : "Arquivado"}
                           </Badge>
                         </div>
                       </CardHeader>
@@ -282,14 +282,14 @@ export default function ProjetosPage() {
                             {project.description}
                           </p>
                         )}
-                        
+
                         <div className="space-y-2">
                           <div className="flex justify-between text-sm">
                             <span>Progresso:</span>
                             <span className="font-medium">{stats.completionRate}%</span>
                           </div>
                           <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div 
+                            <div
                               className="bg-blue-600 h-2 rounded-full transition-all duration-300"
                               style={{ width: `${stats.completionRate}%` }}
                             />
@@ -326,7 +326,7 @@ export default function ProjetosPage() {
                     <BarChart3 className="h-12 w-12 text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2">Nenhum projeto encontrado</h3>
                     <p className="text-muted-foreground text-center mb-4">
-                      {searchTerm || statusFilter !== "all" 
+                      {searchTerm || statusFilter !== "all"
                         ? "Tente ajustar os filtros de busca."
                         : "Comece criando seu primeiro projeto para organizar as atividades do laboratório."
                       }
@@ -334,25 +334,25 @@ export default function ProjetosPage() {
                   </CardContent>
                 </Card>
               )}
-                         </TabsContent>
-           </Tabs>
-         </div>
+            </TabsContent>
+          </Tabs>
+        </div>
 
-         {/* Dialogs */}
-         <ProjectDetailDialog
-           project={selectedProject}
-           open={isDetailDialogOpen}
-           onOpenChange={setIsDetailDialogOpen}
-           onEditProject={handleEditProject}
-           onDeleteProject={handleDeleteProject}
-         />
+        {/* Dialogs */}
+        <ProjectDetailDialog
+          project={selectedProject}
+          open={isDetailDialogOpen}
+          onOpenChange={setIsDetailDialogOpen}
+          onEditProject={handleEditProject}
+          onDeleteProject={handleDeleteProject}
+        />
 
-         <ProjectDialog
-           open={isProjectDialogOpen}
-           onOpenChange={setIsProjectDialogOpen}
-           project={editingProject}
-         />
-       </main>
-     </div>
-   )
- }
+        <ProjectDialog
+          open={isProjectDialogOpen}
+          onOpenChange={setIsProjectDialogOpen}
+          project={editingProject}
+        />
+      </main>
+    </div>
+  )
+}

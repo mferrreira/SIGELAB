@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/database/prisma"
 
 // GET: Get pending users for approval
 export async function GET(request: Request) {
@@ -14,8 +14,8 @@ export async function GET(request: Request) {
     const user = session.user as any
     
     // Only admins and laboratorists can see pending users
-    if (user.role !== "administrador_laboratorio" && user.role !== "laboratorista") {
-      return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
+    if (!user.roles.includes('COORDENADOR') && !user.roles.includes('GERENTE')) {
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
     const pendingUsers = await prisma.users.findMany({
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
         id: true,
         name: true,
         email: true,
-        role: true,
+        roles: true,
         weekHours: true,
         createdAt: true
       },
@@ -49,8 +49,8 @@ export async function POST(request: Request) {
     const user = session.user as any
     
     // Only admins and laboratorists can approve users
-    if (user.role !== "administrador_laboratorio" && user.role !== "laboratorista") {
-      return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
+    if (!user.roles.includes('COORDENADOR') && !user.roles.includes('GERENTE')) {
+      return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
     const body = await request.json()
@@ -60,24 +60,41 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "ID do usuário e ação são obrigatórios" }, { status: 400 })
     }
 
-    const status = action === "approve" ? "active" : "rejected"
-    
-    const updatedUser = await prisma.users.update({
-      where: { id: Number(userId) },
-      data: { status },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        status: true
-      }
-    })
+    if (action === "approve") {
+      // Approve user by setting status to active
+      const updatedUser = await prisma.users.update({
+        where: { id: Number(userId) },
+        data: { status: "active" },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          roles: true,
+          status: true
+        }
+      })
 
-    return NextResponse.json({ 
-      user: updatedUser, 
-      message: action === "approve" ? "Usuário aprovado com sucesso" : "Usuário rejeitado"
-    }, { status: 200 })
+      return NextResponse.json({ 
+        user: updatedUser, 
+        message: "Usuário aprovado com sucesso"
+      }, { status: 200 })
+    } else {
+      // Reject user by deleting them from the database
+      const deletedUser = await prisma.users.delete({
+        where: { id: Number(userId) },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          roles: true
+        }
+      })
+
+      return NextResponse.json({ 
+        user: deletedUser, 
+        message: "Usuário rejeitado e removido do sistema"
+      }, { status: 200 })
+    }
   } catch (error: any) {
     if (error.code === 'P2025') {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })

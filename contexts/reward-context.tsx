@@ -63,7 +63,7 @@ export function RewardProvider({ children }: { children: ReactNode }) {
       fetchRewards()
       // Se o usuário pode gerenciar a loja, buscar todas as compras para aprovação
       // Caso contrário, buscar apenas as compras do usuário
-      const canManageStore = user.role === "administrador_laboratorio" || user.role === "laboratorista"
+      const canManageStore = user?.roles?.includes('LABORATORISTA') || user?.roles?.includes('COORDENADOR');
       fetchPurchases(canManageStore ? undefined : Number(user.id))
     } else {
       setRewards([])

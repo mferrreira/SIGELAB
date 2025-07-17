@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
 import { Activity, UserCheck, BarChart3, Clock, AlertCircle } from "lucide-react";
-import { UserApproval } from "@/components/user-approval";
+import { UserApproval } from "@/components/features/user-approval";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -139,13 +139,18 @@ export const AdminTabs = ({
       }));
       // 3. POST each new schedule
       for (const s of userSchedule) {
+        const userIdNum = parseInt(selectedUserId);
+        if (!userIdNum || isNaN(userIdNum)) {
+          alert("Usuário inválido.");
+          setSaving(false);
+          return;
+        }
         const payload = {
-          userId: parseInt(selectedUserId),
+          userId: userIdNum,
           dayOfWeek: s.dayOfWeek,
           startTime: s.startTime,
           endTime: s.endTime
         };
-        console.log("Saving schedule:", payload);
         await fetch("/api/schedules", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -748,7 +753,7 @@ export const AdminTabs = ({
                     <TableRow key={user.id}>
                       <TableCell className="font-medium">{user.name}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{user.role}</Badge>
+                        <Badge variant="outline">{user.roles?.join(', ')}</Badge>
                       </TableCell>
                       <TableCell>
                         <span className="font-medium">{user.weekHours}</span>

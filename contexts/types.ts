@@ -1,21 +1,24 @@
 // User types
+export type UserRole = 'COORDENADOR' | 'GERENTE' | 'LABORATORISTA' | 'PESQUISADOR' | 'GERENTE_PROJETO' | 'COLABORADOR' | 'VOLUNTARIO';
+
 export interface User {
-  id: number
-  name: string
-  email: string
-  role: string
-  points: number
-  completedTasks: number
-  password?: string | null
-  status: string
-  weekHours: number
-  currentWeekHours?: number // Horas trabalhadas na semana atual
+  id: number;
+  name: string;
+  email: string;
+  roles: UserRole[];
+  points: number;
+  completedTasks: number;
+  password?: string;
+  status: string;
+  weekHours: number;
+  currentWeekHours: number;
+  createdAt: Date;
 }
 
 export interface UserFormData {
   name: string
   email: string
-  role: string
+  roles: UserRole[]
   password: string
   weekHours: number
 }
@@ -254,7 +257,7 @@ export interface AuthUser {
   id: number
   name: string
   email: string
-  role: string
+  roles: UserRole[]
   points: number
   completedTasks: number
   status: string
@@ -269,7 +272,7 @@ export interface LoginFormData {
 export interface RegisterFormData {
   name: string
   email: string
-  role: string
+  roles: UserRole[]
   password: string
   weekHours: number
 }

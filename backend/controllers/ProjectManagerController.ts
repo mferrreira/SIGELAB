@@ -1,5 +1,16 @@
 import { UserController } from './UserController';
-import { prisma } from '@/lib/prisma';
+import { prisma } from '@/lib/database/prisma';
+import { UserRole } from '@prisma/client';
+
+const validProjectRoles = [
+  'COORDENADOR',
+  'GERENTE',
+  'LABORATORISTA',
+  'PESQUISADOR',
+  'GERENTE_PROJETO',
+  'COLABORADOR',
+  'VOLUNTARIO',
+];
 
 export class ProjectManagerController extends UserController {
   async createProject(data: any) {
@@ -9,12 +20,15 @@ export class ProjectManagerController extends UserController {
     return project;
   }
 
-  async assignUserToProject(projectId: string, userId: string, role: string) {
+  async assignUserToProject(projectId: string, userId: string, roles: string[]) {
+    if (!validProjectRoles.includes(roles[0])) {
+      throw new Error(`Papel de projeto inválido: ${roles[0]}`);
+    }
     const membership = await prisma.project_members.create({
       data: {
         projectId: Number(projectId),
         userId: Number(userId),
-        role,
+        roles: roles as UserRole[],
       },
     });
     return membership;

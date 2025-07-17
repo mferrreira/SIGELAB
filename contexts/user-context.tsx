@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import type { User } from "@/contexts/types"
 import { UsersAPI } from "@/contexts/api-client"
 import { useAuth } from "@/contexts/auth-context"
+import { globalCache, CacheKeys, CacheTTL, invalidateRelatedCache } from "@/lib/managers/cache-manager"
 
 interface UserContextType {
   users: User[]
@@ -27,7 +28,18 @@ export function UserProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       setError(null)
 
+      // Check cache first
+      const cachedUsers = globalCache.get<User[]>(CacheKeys.USERS)
+      if (cachedUsers) {
+        setUsers(cachedUsers)
+        setLoading(false)
+        return
+      }
+
       const { users } = await UsersAPI.getAll()
+      
+      // Cache the result
+      globalCache.set(CacheKeys.USERS, users, CacheTTL.MEDIUM)
       setUsers(users)
     } catch (err) {
       setError("Erro ao carregar usuários")
@@ -52,6 +64,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       const { user } = await UsersAPI.update(id, userData)
       setUsers((prevUsers) => prevUsers.map((u) => (u.id === id ? user : u)))
+      
+      // Invalidate related cache
+      invalidateRelatedCache('user', id)
+      
       return user
     } catch (err) {
       setError("Erro ao atualizar usuário")
@@ -69,6 +85,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
 
       const { user } = await UsersAPI.addPoints(id, points)
       setUsers((prevUsers) => prevUsers.map((u) => (u.id === id ? user : u)))
+      
+      // Invalidate related cache
+      invalidateRelatedCache('user', id)
+      
       return user
     } catch (err) {
       setError("Erro ao adicionar pontos")

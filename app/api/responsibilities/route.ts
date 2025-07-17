@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/database/prisma"
 
 // GET: Obter todas as responsabilidades ou filtrar por período
 export async function GET(request: Request) {
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
           activeResponsibility: {
             ...activeResponsibility,
             duration,
-            userRole: activeResponsibility.user?.role || "unknown",
+            userRole: activeResponsibility.user?.roles || "nenhuma",
           },
         }, { status: 200 })
       } else {
@@ -72,8 +72,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
     }
 
-    if (user.role !== "administrador_laboratorio" && user.role !== "laboratorista") {
-      return NextResponse.json({ error: "Apenas administradores de laboratório e laboratoristas podem iniciar responsabilidades" }, { status: 403 })
+    if (!user.roles.includes("COORDENADOR") && !user.roles.includes("GERENTE")) {
+      return NextResponse.json({ error: "Apenas coordenadores e gerentes podem iniciar responsabilidades" }, { status: 403 })
     }
 
     const responsibility = await prisma.lab_responsibilities.create({

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { UserScheduleController } from "@/backend/controllers/UserScheduleController"
-import { handlePrismaError, createApiResponse, createApiError } from "@/contexts/utils"
+import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils/utils"
 
 const userScheduleController = new UserScheduleController();
 
@@ -23,5 +23,17 @@ export async function GET() {
 
 // POST: Criar um novo horário
 export async function POST(request: Request) {
-  return userScheduleController.createSchedule(request);
+  const data = await request.json();
+  try {
+    const schedule = await userScheduleController.createSchedule(data);
+    return new Response(JSON.stringify({ schedule }), {
+      status: 201,
+      headers: { "Content-Type": "application/json" }
+    });
+  } catch (error: any) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" }
+    });
+  }
 } 

@@ -28,6 +28,30 @@ const nextConfig = {
     parallelServerCompiles: true,
   },
   output: 'standalone',
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Fix for openid-client in browser environment
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        crypto: false,
+        fs: false,
+        path: false,
+        os: false,
+        stream: false,
+        util: false,
+        buffer: false,
+        url: false,
+        zlib: false,
+        http: false,
+        https: false,
+        assert: false,
+        constants: false,
+        events: false,
+        querystring: false,
+      };
+    }
+    return config;
+  },
 }
 
 if (userConfig) {

@@ -1,6 +1,7 @@
 import { UserController } from './UserController';
-import { validateRole } from '../../contexts/utils';
-import { prisma } from '@/lib/prisma';
+import { validateRoles } from '@/lib/utils/utils';
+import { prisma } from '@/lib/database/prisma';
+import { UserRole } from '@prisma/client';
 
 export class AdminController extends UserController {
   async approveUser(id: string) {
@@ -19,14 +20,14 @@ export class AdminController extends UserController {
     return user;
   }
 
-  async assignRole(id: string, role: string) {
-    const roleValidation = validateRole(role);
+  async assignRole(id: string, roles: string[]) {
+    const roleValidation = validateRoles(roles);
     if (!roleValidation.valid) {
       throw new Error(roleValidation.error);
     }
     const user = await prisma.users.update({
       where: { id: Number(id) },
-      data: { role },
+      data: { roles: roles as UserRole[] },
     });
     return user;
   }

@@ -18,11 +18,11 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [addUserId, setAddUserId] = useState("")
-  const [addRole, setAddRole] = useState("voluntario")
+  const [addRoles, setAddRoles] = useState<string[]>(["VOLUNTARIO"])
   const { users, loading: usersLoading } = useUser()
 
   // Check if user has permission to manage project members
-  const canManageMembers = user && ["laboratorista", "administrador_laboratorio", "gerente_projeto"].includes(user.role)
+  const canManageMembers = user && user.roles && user.roles.some((r: string) => ["GERENTE", "GERENTE_PROJETO", "COORDENADOR"].includes(r))
 
   if (!canManageMembers) {
     return null
@@ -48,21 +48,21 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
   }, [projectId])
 
   const handleAddMember = async () => {
-    if (!addUserId) return
+    if (!addUserId || !addRoles.length) return
     setLoading(true)
     setError(null)
     try {
       const res = await fetch(`/api/projects/${projectId}/members`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: addUserId, role: addRole }),
+        body: JSON.stringify({ userId: addUserId, roles: addRoles }),
       })
       if (!res.ok) {
         const data = await res.json()
         setError(data.error || "Erro ao adicionar membro")
       } else {
         setAddUserId("")
-        setAddRole("voluntario")
+        setAddRoles(["VOLUNTARIO"])
         fetchMembers()
       }
     } catch (e) {
@@ -117,20 +117,22 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
                 <SelectContent>
                   {availableUsers.map((user) => (
                     <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.name} ({user.role})
+                      {user.name} ({Array.isArray(user.roles) ? user.roles.join(', ') : ''})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Select value={addRole} onValueChange={setAddRole} disabled={loading}>
+              <Select value={addRoles[0]} onValueChange={v => setAddRoles([v])} disabled={loading}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="voluntario">Voluntário</SelectItem>
-                  <SelectItem value="gerente_projeto">Gerente</SelectItem>
+                  <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
+                  <SelectItem value="COLABORADOR">Colaborador</SelectItem>
+                  <SelectItem value="GERENTE_PROJETO">Gerente</SelectItem>
+                  <SelectItem value="COORDENADOR">Coordenador</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -147,7 +149,9 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
               <div key={member.userId} className="flex items-center justify-between p-2 border rounded">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{member.user.name}</span>
-                  <Badge>{member.role}</Badge>
+                  {Array.isArray(member.roles)
+                    ? member.roles.map((r: string) => <Badge key={r}>{r}</Badge>)
+                    : <Badge>{member.role}</Badge>}
                 </div>
                 <Button
                   variant="ghost"

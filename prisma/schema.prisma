@@ -11,14 +11,14 @@ model users {
   id                   Int                    @id @default(autoincrement())
   name                 String
   email                String                 @unique
-  role                 String
   points               Int                    @default(0)
   completedTasks       Int                    @default(0)
   password             String?
   status               String                 @default("pending")
   weekHours            Float                  @default(0)
-  currentWeekHours     Float                  @default(0)
   createdAt            DateTime               @default(now())
+  currentWeekHours     Float                  @default(0)
+  roles                UserRole[]
   daily_logs           daily_logs[]           @relation("UserDailyLogs")
   lab_events           lab_events[]           @relation("UserLabEvents")
   lab_responsibilities lab_responsibilities[] @relation("UserLabResponsibilities")
@@ -27,9 +27,9 @@ model users {
   purchases            purchases[]            @relation("UserPurchases")
   tasks                tasks[]                @relation("UserTasks")
   schedules            user_schedules[]       @relation("UserSchedules")
+  weekly_hours_history weekly_hours_history[] @relation("UserWeeklyHoursHistory")
   weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
   work_sessions        work_sessions[]        @relation("UserWorkSessions")
-  weekly_hours_history weekly_hours_history[] @relation("UserWeeklyHoursHistory")
 }
 
 model projects {
@@ -49,8 +49,8 @@ model project_members {
   id        Int      @id @default(autoincrement())
   projectId Int
   userId    Int
-  role      String
   joinedAt  DateTime @default(now())
+  roles     UserRole[]
   project   projects @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
   user      users    @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
@@ -181,12 +181,22 @@ model lab_events {
 }
 
 model weekly_hours_history {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  userName  String
-  weekStart DateTime
-  weekEnd   DateTime
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  userName   String
+  weekStart  DateTime
+  weekEnd    DateTime
   totalHours Float
-  createdAt DateTime @default(now())
-  user      users    @relation("UserWeeklyHoursHistory", fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  user       users    @relation("UserWeeklyHoursHistory", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  COORDENADOR
+  GERENTE
+  LABORATORISTA
+  PESQUISADOR
+  GERENTE_PROJETO
+  COLABORADOR
+  VOLUNTARIO
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/database/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { ProjectManagerController } from "@/backend/controllers/ProjectManagerController"
@@ -30,7 +30,7 @@ export async function GET() {
     }
     let projects: any[] = []
     // Role-based filtering
-    if (user.role === "laboratorista" || user.role === "administrador_laboratorio") {
+    if (user.roles && (user.roles.includes("LABORATORISTA") || user.roles.includes("COORDENADOR") || user.roles.includes("GERENTE"))) {
       // Laboratorists and admins see all projects
       projects = await prisma.projects.findMany({
         include: {
@@ -48,7 +48,7 @@ export async function GET() {
                   id: true,
                   name: true,
                   email: true,
-                  role: true
+                  roles: true
                 }
               }
             }
@@ -63,11 +63,11 @@ export async function GET() {
           createdAt: "desc"
         }
       })
-    } else if (user.role === "gerente_projeto" || user.role === "voluntario") {
+    } else if (user.roles && user.roles.includes("GERENTE_PROJETO")) {
       // Project managers and volunteers see projects they're members of or created
       const userProjectIds = user.projectMemberships.map((membership: any) => membership.project.id)
       // For project managers, also include projects they created
-      if (user.role === "gerente_projeto") {
+      if (user.roles && user.roles.includes("GERENTE_PROJETO")) {
         const createdProjects = await prisma.projects.findMany({
           where: { createdBy: user.id },
           select: { id: true }
@@ -96,7 +96,7 @@ export async function GET() {
                   id: true,
                   name: true,
                   email: true,
-                  role: true
+                  roles: true
                 }
               }
             }
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
       data: {
         projectId: project.id,
         userId: sessionUser.id,
-        role: "gerente_projeto"
+        roles: ["GERENTE_PROJETO"]
       }
     })
     return NextResponse.json({ project }, { status: 201 })

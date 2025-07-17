@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/database/prisma"
 import { startOfWeek, endOfWeek, subWeeks, format } from "date-fns"
 
 export class WeeklyHoursHistoryController {
@@ -14,7 +14,7 @@ export class WeeklyHoursHistoryController {
               id: true,
               name: true,
               email: true,
-              role: true
+              roles: true
             }
           }
         }
@@ -46,7 +46,7 @@ export class WeeklyHoursHistoryController {
               id: true,
               name: true,
               email: true,
-              role: true
+              roles: true
             }
           }
         }

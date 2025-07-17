@@ -22,7 +22,7 @@ import {
   Home,
   FileText
 } from "lucide-react"
-import { ThemeToggle } from "@/components/theme-toggle"
+import { ThemeToggle } from "@/components/layout/theme-toggle"
 
 export function MobileMenu() {
   const { user, logout } = useAuth()
@@ -55,7 +55,7 @@ export function MobileMenu() {
       href: "/dashboard/projetos",
       icon: FolderKanban,
       label: "Projetos",
-              show: user?.role === "gerente_projeto" || user?.role === "laboratorista" || user?.role === "administrador_laboratorio"
+              show: user?.roles?.includes("GERENTE_PROJETO") || user?.roles?.includes("LABORATORISTA") || user?.roles?.includes("COORDENADOR")
     },
     {
       href: "/dashboard/leaderboard",
@@ -79,13 +79,13 @@ export function MobileMenu() {
       href: "/dashboard/weekly-reports",
       icon: FileText,
       label: "Relatórios Semanais",
-      show: user?.role === "administrador_laboratorio" || user?.role === "laboratorista"
+      show: user?.roles?.includes("COORDENADOR") || user?.roles?.includes("LABORATORISTA")
     },
     {
       href: "/dashboard/admin",
       icon: User,
-      label: "Admin Dashboard",
-              show: user?.role === "administrador_laboratorio"
+      label: "Painel Administrativo",
+      show: user?.roles?.includes("COORDENADOR")
     },
     {
       href: "/dashboard/profile",
@@ -112,8 +112,8 @@ export function MobileMenu() {
       <SheetContent side="left" className="w-[280px] sm:w-[320px]">
         <SheetHeader className="text-left">
           <SheetTitle className="flex items-center gap-2">
-            <KanbanSquare className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold">Gerenciador</span>
+            <KanbanSquare className="h-5 w-5 text-primary" />
+            <span className="text-lg font-semibold">SIGELAB</span>
           </SheetTitle>
         </SheetHeader>
 
@@ -123,12 +123,14 @@ export function MobileMenu() {
             <div className="space-y-3">
               <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                 <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                  <User className="h-5 w-5 text-primary" />
+                  <User className="h-4 w-4 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{user.name}</p>
                   <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {user?.roles.includes("GERENTE_PROJETO") ? "Gerente de Projeto" : user?.roles.includes("COORDENADOR") ? "Coordenador" : user?.roles.includes("LABORATORISTA") ? "Laboratorista" : user?.roles.includes("VOLUNTARIO") ? "Voluntário" : "Usuário"}
+                  </p>
                 </div>
               </div>
               
@@ -156,7 +158,7 @@ export function MobileMenu() {
                   onClick={() => setIsOpen(false)}
                   className="flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className="h-5 w-5" />
                   {item.label}
                 </Link>
               ))}
@@ -177,7 +179,7 @@ export function MobileMenu() {
               onClick={handleLogout}
               className="w-full justify-start gap-3"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-5 w-5" />
               Sair
             </Button>
           </div>

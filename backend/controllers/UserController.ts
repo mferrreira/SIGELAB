@@ -2,9 +2,9 @@ import { UserModel } from '../models/UserModel';
 import { UserCreateInput, UserUpdateInput } from '../types/user';
 import { NextApiRequest, NextApiResponse } from 'next';
 import bcrypt from "bcryptjs";
-import { validateEmail, validateRole } from '../../contexts/utils';
-import { prisma } from "@/lib/prisma";
-import { parseTimeToMinutes, validateTimeOrder, validateRequiredFields } from '../../contexts/utils';
+import { validateEmail, validateRole } from '@/lib/utils/utils';
+import { prisma } from "@/lib/database/prisma";
+import { parseTimeToMinutes, validateTimeOrder, validateRequiredFields } from '@/lib/utils/utils';
 
 export class UserController {
   public userModel = new UserModel();

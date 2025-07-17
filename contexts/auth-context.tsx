@@ -4,13 +4,14 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 import type { User } from "@/contexts/types"
 import { UsersAPI } from "@/contexts/api-client"
 import { useSession, signIn, signOut } from "next-auth/react"
+import type { UserRole } from "./types";
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   error: string | null
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string, role: "administrador_laboratorio" | "laboratorista" | "gerente_projeto" | "voluntario", weekHours: number) => Promise<void>
+  register: (name: string, email: string, password: string, roles: UserRole[], weekHours: number) => Promise<void>
   logout: () => void
 }
 
@@ -34,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   // O registro permanece igual
-  const register = async (name: string, email: string, password: string, role: "administrador_laboratorio" | "laboratorista" | "gerente_projeto" | "voluntario", weekHours: number) => {
+  const register = async (name: string, email: string, password: string, roles: UserRole[], weekHours: number) => {
     const normalizedEmail = email.toLowerCase()
     // Verificar se o usuário já existe
     const { users } = await UsersAPI.getAll()
@@ -46,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { user } = await UsersAPI.create({
       name,
       email: normalizedEmail,
-      role,
+      roles,
       password,
       weekHours,
     })

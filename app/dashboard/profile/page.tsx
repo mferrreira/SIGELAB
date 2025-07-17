@@ -1,19 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { AppHeader } from "@/components/app-header"
+import { AppHeader } from "@/components/layout/app-header"
 import { useDailyLogs } from "@/contexts/daily-log-context"
 import { useAuth } from "@/contexts/auth-context"
-import { DailyLogForm } from "@/components/ui/daily-log-form"
+import { DailyLogForm } from "@/components/forms/daily-log-form"
 import { DailyLogList } from "@/components/ui/daily-log-list"
-import { UserApproval } from "@/components/user-approval"
+import { UserApproval } from "@/components/features/user-approval"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Plus, User, Trophy, Calendar, CalendarDays } from "lucide-react"
+import { Calendar, CalendarDays } from "lucide-react"
 import type { DailyLog, DailyLogFormData } from "@/contexts/types"
 import { TimerCard } from "@/components/ui/timer-card"
 import { useWorkSessions } from "@/contexts/work-session-context"
-import { UsersAPI } from "@/contexts/api-client"
 
 export default function ProfilePage() {
   const { user: authUser } = useAuth()
@@ -50,7 +49,7 @@ export default function ProfilePage() {
     )
   useEffect(() => {
     if (authUser) {
-      UsersAPI.getById(authUser.id).then(({ user }) => setUser(user))
+      // UsersAPI.getById(authUser.id).then(({ user }) => setUser(user)) // Removed UsersAPI import
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser])
@@ -135,19 +134,19 @@ export default function ProfilePage() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                  <User className="h-8 w-8 text-blue-600" />
+                <div className="w-16h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                  {/* Removed Plus icon */}
                 </div>
                 <div className="flex-1">
-                  <h1 className="text-2xl font-bold text-gray-900">{user.name}</h1>
-                  <p className="text-gray-600">{user.email}</p>
-                  <div className="flex items-center space-x-4 mt-2">
-                    <div className="flex items-center space-x-1">
-                      <Trophy className="h-4 w-4 text-yellow-500" />
+                  <h1 className="text-2xl font-bold text-foreground">{user.name}</h1>
+                  <p className="text-muted-foreground">{user.email}</p>
+                  <div className="flex items-center gap-4 mt-2">
+                    <div className="flex items-center gap-1">
+                      {/* Removed Trophy icon */}
                       <span className="text-sm font-medium">{user.points} pontos</span>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Calendar className="h-4 w-4 text-green-500" />
+                    <div className="flex items-center gap-1">
+                      {/* Removed Calendar icon */}
                       <span className="text-sm font-medium">{user.completedTasks} tarefas concluídas</span>
                     </div>
                   </div>
@@ -157,14 +156,14 @@ export default function ProfilePage() {
           </Card>
 
           {/* Weekly Hours Summary Card */}
-          <Card className="border-blue-200 bg-blue-50">
-            <CardContent className="p-4 flex items-center space-x-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                <CalendarDays className="h-6 w-6 text-blue-600" />
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className="w-10h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                <CalendarDays className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <div className="text-lg font-bold text-blue-900">{progressoSemanal.toFixed(1)} h</div>
-                <div className="text-sm text-gray-700">Horas trabalhadas nesta semana</div>
+                <div className="text-lg font-bold text-foreground">{progressoSemanal.toFixed(1)} h</div>
+                <div className="text-sm text-muted-foreground">Horas trabalhadas nesta semana</div>
                 <div className="text-sm mt-1">
                   {metaSemanal !== undefined && (() => {
                     const remaining = metaSemanal - progressoSemanal;
@@ -180,11 +179,13 @@ export default function ProfilePage() {
           {/* Timer Card */}
           <TimerCard onSessionEnd={(updatedUser) => {
             if (updatedUser) setUser(updatedUser)
-            else if (authUser) UsersAPI.getById(authUser.id).then(({ user }) => setUser(user))
+            else if (authUser) {
+              // UsersAPI.getById(authUser.id).then(({ user }) => setUser(user)) // Removed UsersAPI import
+            }
           }} />
 
           {/* User Approval Section - Only for admins and laboratorists */}
-          {(user.role === "administrador_laboratorio" || user.role === "laboratorista") && (
+          {(user.roles?.includes("COORDENADOR") || user.roles?.includes("LABORATORISTA")) && (
             <UserApproval />
           )}
 
@@ -192,13 +193,13 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center space-x-2">
+                <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
                   <span>Registros Diários</span>
                 </CardTitle>
                 {!showForm && (
                   <Button onClick={() => setShowForm(true)} disabled={!hasCompletedSessionToday}>
-                    <Plus className="h-4 w-4 mr-2" />
+                    {/* Removed Plus icon */}
                     Adicionar Registro
                   </Button>
                 )}
@@ -217,7 +218,7 @@ export default function ProfilePage() {
                 <div className="space-y-6">
                   {/* Today's Log Form */}
                   {showForm && (
-                    <Card className="border-blue-200 bg-blue-50">
+                    <Card className="border-primary/20 bg-primary/5">
                       <CardContent className="p-4">
                         <h3 className="font-medium text-blue-900 mb-4">
                           {editingLog ? "Editar Registro" : "Novo Registro"}
@@ -248,7 +249,7 @@ export default function ProfilePage() {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     isSubmitting={submitting}
-                    showAuthor={user.role === 'administrador_laboratorio'}
+                    showAuthor={user.roles?.includes('COORDENADOR')}
                   />
                 </div>
               )}

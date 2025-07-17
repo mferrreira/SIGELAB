@@ -1,11 +1,9 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect, useState, useCallback, useMemo } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { AppHeader } from "@/components/app-header"
+import { AppHeader } from "@/components/layout/app-header"
 import { useReward } from "@/contexts/reward-context"
 import { useUser } from "@/contexts/user-context"
 import type { rewards as Reward, purchases as Purchase } from "@prisma/client"
@@ -30,7 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { hasAccess } from "@/lib/utils/utils"
 
 export default function ManageRewardsPage() {
   const { user, loading } = useAuth()
@@ -49,21 +47,21 @@ export default function ManageRewardsPage() {
     available: true,
   })
 
-  const checkAuthentication = useCallback(() => {
+  const checkAuthentication = () => {
     if (!loading && !user) {
       router.push("/login")
       return false
     }
-    if (!loading && user && user.role !== "gerente_projeto") {
+    if (!loading && user && !hasAccess(user.roles || [], 'MANAGE_REWARDS')) {
       router.push("/dashboard")
       return false
     }
     return true
-  }, [user, loading, router])
+  }
 
   useEffect(() => {
     checkAuthentication()
-  }, [checkAuthentication])
+  }, [user, loading, router])
 
   if (loading) {
     return (
@@ -73,13 +71,13 @@ export default function ManageRewardsPage() {
     )
   }
 
-      if (user && user.role !== "gerente_projeto") {
+  if (!hasAccess(user?.roles || [], 'MANAGE_REWARDS')) {
     return (
       <div className="flex min-h-screen flex-col">
         <AppHeader />
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
+            <XCircle className="h-4 w-4" />
             <AlertTitle>Acesso Negado</AlertTitle>
             <AlertDescription>
               Você não tem permissão para acessar esta página. Apenas gerentes podem gerenciar recompensas.
@@ -122,13 +120,6 @@ export default function ManageRewardsPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (editingReward) {
-      // updateReward(editingReward.id, formData) // This line was removed from context
-    } else {
-      // addReward(newReward) // This line was removed from context
-    }
-
     setIsDialogOpen(false)
     setEditingReward(null)
   }
@@ -144,13 +135,8 @@ export default function ManageRewardsPage() {
 
   const confirmDelete = () => {
     if (rewardToDelete) {
-      // deleteReward(rewardToDelete) // This line was removed from context
       setRewardToDelete(null)
     }
-  }
-
-  const handleUpdatePurchaseStatus = (purchaseId: string, status: Purchase["status"]) => {
-    // updatePurchaseStatus(purchaseId, status) // This line was removed from context
   }
 
   const getUserName = (userId: number) => {
@@ -281,7 +267,6 @@ export default function ManageRewardsPage() {
                               variant="outline"
                               size="sm"
                               className="flex items-center gap-1"
-                              onClick={() => handleUpdatePurchaseStatus(purchase.id.toString(), "approved")}
                             >
                               <CheckCircle className="h-4 w-4" />
                               Aprovar
@@ -290,7 +275,6 @@ export default function ManageRewardsPage() {
                               variant="outline"
                               size="sm"
                               className="flex items-center gap-1"
-                              onClick={() => handleUpdatePurchaseStatus(purchase.id.toString(), "rejected")}
                             >
                               <XCircle className="h-4 w-4" />
                               Rejeitar
@@ -349,7 +333,6 @@ export default function ManageRewardsPage() {
                                 variant="outline"
                                 size="sm"
                                 className="flex items-center gap-1"
-                                onClick={() => handleUpdatePurchaseStatus(purchase.id.toString(), "used")}
                               >
                                 <CheckCircle className="h-4 w-4" />
                                 Marcar como Utilizado

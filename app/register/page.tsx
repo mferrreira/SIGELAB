@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -18,7 +16,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState("voluntario")
+  const [role, setRole] = useState("VOLUNTARIO")
   const [weekHours, setWeekHours] = useState(0)
   const [error, setError] = useState("")
   const { register } = useAuth()
@@ -29,9 +27,9 @@ export default function RegisterPage() {
     setError("")
 
     try {
-      await register(name, email, password, role as "administrador_laboratorio" | "laboratorista" | "gerente_projeto" | "voluntario", weekHours)
+      await register(name, email, password, [role] as any, weekHours)
       // Show success message and redirect to login
-      alert("Conta criada com sucesso! Sua solicitação será analisada por um administrador ou laboratorista. Você receberá um email quando sua conta for aprovada.")
+      alert("Conta criada com sucesso! Sua solicitação será analisada por um coordenador ou laboratorista. Você receberá um email quando sua conta for aprovada.")
       router.push("/login")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao registrar")
@@ -47,7 +45,7 @@ export default function RegisterPage() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Após o registro, sua conta será analisada por um administrador ou laboratorista. 
+              Após o registro, sua conta será analisada por um coordenador ou laboratorista. 
               Você receberá uma notificação quando sua conta for aprovada.
             </AlertDescription>
           </Alert>
@@ -98,10 +96,11 @@ export default function RegisterPage() {
                   <SelectValue placeholder="Selecione a função" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="voluntario">Voluntário</SelectItem>
-                  <SelectItem value="gerente_projeto">Gerente de Projeto</SelectItem>
-                  <SelectItem value="laboratorista">Laboratorista</SelectItem>
-                  <SelectItem value="administrador_laboratorio">Administrador de Laboratório</SelectItem>
+                  <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
+                  <SelectItem value="COLABORADOR">Colaborador</SelectItem>
+                  <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
+                  <SelectItem value="LABORATORISTA">Laboratorista</SelectItem>
+                  <SelectItem value="COORDENADOR">Coordenador</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -112,22 +111,21 @@ export default function RegisterPage() {
                 type="number"
                 min="0"
                 max="168"
-                placeholder="Ex: 20"
                 value={weekHours}
-                onChange={(e) => setWeekHours(parseInt(e.target.value) || 0)}
+                onChange={(e) => setWeekHours(Number(e.target.value))}
                 required
               />
             </div>
             <Button type="submit" className="w-full">
-              Registrar
+              Criar conta
             </Button>
           </form>
         </CardContent>
         <CardFooter className="flex justify-center">
           <p className="text-sm text-muted-foreground">
             Já tem uma conta?{" "}
-            <Link href="/login" className="text-primary underline">
-              Login
+            <Link href="/login" className="text-primary hover:underline">
+              Faça login
             </Link>
           </p>
         </CardFooter>

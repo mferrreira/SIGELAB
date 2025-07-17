@@ -16,7 +16,6 @@ async function normalizeWeeklyReportTimes() {
         weekEnd,
       },
     })
-    console.log(`Updated report ${report.id}: weekStart=${weekStart}, weekEnd=${weekEnd}`)
   }
 }
 
@@ -41,7 +40,6 @@ async function addDummyReports() {
       summary: 'Another dummy report for testing',
     },
   })
-  console.log('Dummy reports added.')
 }
 
 async function main() {

@@ -1,7 +1,7 @@
 "use client"
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { TaskForm } from "@/components/ui/task-form"
+import { TaskForm } from "@/components/forms/task-form"
 import { useUser } from "@/contexts/user-context"
 import { useProject } from "@/contexts/project-context"
 import { useTask } from "@/contexts/task-context"
@@ -9,8 +9,9 @@ import { useAuth } from "@/contexts/auth-context"
 import { useState, useCallback } from "react"
 import type { Task, TaskFormData } from "@/contexts/types"
 import { Button } from "@/components/ui/button"
-import { Alert } from "@/components/ui/alert"
-import { Trash2 } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Trash2, AlertCircle } from "lucide-react"
+import { hasAccess } from "@/lib/utils/utils"
 
 interface TaskDialogProps {
   open: boolean
@@ -40,6 +41,10 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+
+  // Check if user can edit tasks
+  const canEditTasks = currentUser && hasAccess(currentUser.roles, 'MANAGE_TASKS')
+  const canCreateTasks = currentUser && hasAccess(currentUser.roles, 'CREATE_TASK')
 
   const handleSubmit = useCallback(async (formData: TaskFormData) => {
     try {
@@ -78,11 +83,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
     }
   }, [isSubmitting, onOpenChange])
 
-  const canDelete = !!task && currentUser && [
-    "gerente_projeto",
-    "laboratorista",
-    "administrador_laboratorio"
-  ].includes(currentUser.role)
+  const canDelete = !!task && currentUser && hasAccess(currentUser.roles, 'MANAGE_TASKS');
 
   const handleDelete = useCallback(async () => {
     if (!task) return
@@ -118,19 +119,46 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
           </Alert>
         )}
 
-        <TaskForm
-          key={open ? (task?.id ?? 'new') : 'closed'}
-          task={task}
-          users={users}
-          projects={projects}
-          currentUser={currentUser}
-          onSubmit={handleSubmit}
-          onCancel={handleCancel}
-          isSubmitting={isSubmitting}
-          error={error}
-          projectId={projectId}
-          open={open}
-        />
+        {/* Show access denied message for volunteers trying to edit tasks */}
+        {task && !canEditTasks ? (
+          <div className="p-6 text-center">
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Você não tem permissão para editar tarefas. Apenas coordenadores, gerentes e gerentes de projeto podem editar tarefas.
+              </AlertDescription>
+            </Alert>
+            <Button onClick={handleCancel} variant="outline">
+              Fechar
+            </Button>
+          </div>
+        ) : !task && !canCreateTasks ? (
+          <div className="p-6 text-center">
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Você não tem permissão para criar tarefas. Apenas coordenadores, gerentes, gerentes de projeto e colaboradores podem criar tarefas.
+              </AlertDescription>
+            </Alert>
+            <Button onClick={handleCancel} variant="outline">
+              Fechar
+            </Button>
+          </div>
+        ) : (
+          <TaskForm
+            key={open ? (task?.id ?? 'new') : 'closed'}
+            task={task}
+            users={users}
+            projects={projects}
+            currentUser={currentUser}
+            onSubmit={handleSubmit}
+            onCancel={handleCancel}
+            isSubmitting={isSubmitting}
+            error={error}
+            projectId={projectId}
+            open={open}
+          />
+        )}
 
         {/* Botão de remover tarefa, só aparece para papéis permitidos e se for edição */}
         {canDelete && (

@@ -23,11 +23,9 @@ async function fixDailyLogTimes() {
         where: { id: log.id },
         data: { date: newDate },
       })
-      console.log(`Updated log ${log.id}: ${log.date} -> ${newDate}`)
       count++
     }
   }
-  console.log(`Updated ${count} logs with random times.`)
   await prisma.$disconnect()
 }
 

@@ -78,7 +78,7 @@ ${index + 1}. ${formatDate(log.date)} - ${formatTime(log.date)}
     }
   }
 
-  const canDelete = user && (user.role === "administrador_laboratorio" || user.id === report.userId)
+  const canDelete = user && (user.roles?.includes("COORDENADOR") || user.id === report.userId)
 
   const handleDelete = async () => {
     if (!canDelete) return

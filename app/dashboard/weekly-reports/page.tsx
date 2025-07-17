@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { useWeeklyReports } from "@/contexts/weekly-report-context"
 import { useUser } from "@/contexts/user-context"
+import { hasAccess } from "@/lib/utils/utils"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -92,7 +93,7 @@ export default function WeeklyReportsPage() {
     return `${formatDate(start)} - ${formatDate(end)}`
   }
 
-  if (!user || (user.role !== "administrador_laboratorio" && user.role !== "laboratorist")) {
+  if (!user || !hasAccess(user.roles || [], 'VIEW_WEEKLY_REPORTS')) {
     return (
       <div className="container mx-auto p-6">
         <Alert variant="destructive">
@@ -105,27 +106,17 @@ export default function WeeklyReportsPage() {
     )
   }
 
-  if (loading) {
-    return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Relatórios Semanais</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">
+          <h1 className="text-3xl font-bold text-foreground">Relatórios Semanais</h1>
+          <p className="text-muted-foreground mt-2">
             Visualize e gere relatórios semanais baseados nos logs diários dos usuários
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <FileText className="h-6 w-6 text-blue-600" />
+        <div className="flex items-center gap-2">
+          <FileText className="h-6 w-6 text-primary" />
           <Badge variant="secondary">{weeklyReports.length} relatórios</Badge>
         </div>
       </div>
@@ -159,7 +150,7 @@ export default function WeeklyReportsPage() {
                 <SelectContent>
                   {users.map((user) => (
                     <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.name} ({user.role})
+                      {user.name} ({user.roles.join(', ')})
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -3,7 +3,7 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import { LabResponsibilityStatus } from "@/components/lab-responsibility-status"
+import { LabResponsibilityStatus } from "@/components/features/lab-responsibility-status"
 
 export default function Home() {
   const { user } = useAuth()

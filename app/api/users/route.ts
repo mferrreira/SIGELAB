@@ -1,4 +1,4 @@
-import { createApiResponse, createApiError } from "@/contexts/utils";
+import { createApiResponse, createApiError } from "@/lib/utils/utils";
 import { UserController } from "@/backend/controllers/UserController";
 
 const userController = new UserController();
@@ -18,6 +18,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log("Received user data:", {
+      name: body.name,
+      email: body.email,
+      password: body.password ? `${body.password.substring(0, 10)}...` : 'undefined',
+      roles: body.roles,
+      weekHours: body.weekHours
+    });
     const user = await userController.userModel.create(body);
     return createApiResponse({ user }, 201);
   } catch (error: any) {

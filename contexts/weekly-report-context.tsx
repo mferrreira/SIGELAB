@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { WeeklyReportsAPI } from "@/contexts/api-client"
 import { useAuth } from "@/contexts/auth-context"
 import type { WeeklyReport, WeeklyReportFormData } from "@/contexts/types"
+import { hasAccess } from "@/lib/utils/utils"
 
 interface WeeklyReportContextType {
   weeklyReports: WeeklyReport[]
@@ -48,7 +49,7 @@ export function WeeklyReportProvider({ children }: { children: ReactNode }) {
       const response = await WeeklyReportsAPI.generate(userId, weekStart, weekEnd)
       const report = response?.weeklyReport
       if (report) {
-        setWeeklyReports((prev) => [report, ...prev])
+        await fetchWeeklyReports()
         return report
       }
       throw new Error("Erro ao gerar relatório semanal: resposta inválida")
@@ -132,7 +133,7 @@ export function WeeklyReportProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
-    if (user && (user.role === "administrador_laboratorio" || user.role === "laboratorista")) {
+    if (user && hasAccess(user.roles || [], 'VIEW_WEEKLY_REPORTS')) {
       fetchWeeklyReports()
     } else {
       setWeeklyReports([])

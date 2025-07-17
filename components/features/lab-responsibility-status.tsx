@@ -87,10 +87,10 @@ export function LabResponsibilityStatus() {
               {activeResponsibility.userRole && (
                 <div className="mt-1">
                   <Badge variant="secondary" className="text-xs">
-                          {activeResponsibility.userRole === "administrador_laboratorio" ? "Administrador de Laboratório" :
-        activeResponsibility.userRole === "laboratorista" ? "Laboratorista" :
-        activeResponsibility.userRole === "gerente_projeto" ? "Gerente de Projeto" :
-        activeResponsibility.userRole === "voluntario" ? "Voluntário" :
+                    {activeResponsibility.userRole === "COORDENADOR" ? "Administrador de Laboratório" :
+                     activeResponsibility.userRole === "LABORATORISTA" ? "Laboratorista" :
+                     activeResponsibility.userRole === "GERENTE_PROJETO" ? "Gerente de Projeto" :
+                     activeResponsibility.userRole === "VOLUNTARIO" ? "Voluntário" :
                      activeResponsibility.userRole}
                   </Badge>
                 </div>
