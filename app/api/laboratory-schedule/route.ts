@@ -24,5 +24,6 @@ export async function GET() {
 
 // POST: Create a new laboratory schedule
 export async function POST(request: Request) {
-  return laboratoryScheduleController.createSchedule(request);
+  const data = await request.json();
+  return NextResponse.json(await laboratoryScheduleController.createSchedule(data));
 } 

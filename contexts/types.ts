@@ -31,12 +31,14 @@ export interface Project {
   createdAt: string
   createdBy: number
   status: "active" | "completed" | "archived"
+  links?: { label: string; url: string }[] // Add links field
 }
 
 export interface ProjectFormData {
   name: string
   description: string
   status: "active" | "completed" | "archived"
+  links?: { label: string; url: string }[] // Add links field
 }
 
 // Task types

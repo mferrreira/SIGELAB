@@ -27,6 +27,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
     name: "",
     description: "",
     status: "active",
+    links: [], // Add links array to form state
   })
 
   // Reset form when dialog opens/closes or project changes
@@ -36,12 +37,14 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         name: project.name,
         description: project.description || "",
         status: project.status,
+        links: project.links || [], // Initialize links from project if editing
       })
     } else if (open) {
       setFormData({
         name: "",
         description: "",
         status: "active",
+        links: [],
       })
     }
     setError(null)
@@ -54,6 +57,25 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
 
   const handleSelectChange = (value: string) => {
     setFormData((prev) => ({ ...prev, status: value as "active" | "completed" | "archived" }))
+  }
+
+  // Handle dynamic links
+  const handleLinkChange = (index: number, field: "label" | "url", value: string) => {
+    setFormData((prev) => {
+      const links = [...(prev.links || [])]
+      links[index] = { ...links[index], [field]: value }
+      return { ...prev, links }
+    })
+  }
+  const handleAddLink = () => {
+    setFormData((prev) => ({ ...prev, links: [...(prev.links || []), { label: "", url: "" }] }))
+  }
+  const handleRemoveLink = (index: number) => {
+    setFormData((prev) => {
+      const links = [...(prev.links || [])]
+      links.splice(index, 1)
+      return { ...prev, links }
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -131,6 +153,30 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
                   <SelectItem value="archived">Arquivado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Links</Label>
+              {(formData.links || []).map((link, idx) => (
+                <div key={idx} className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="Label (ex: Figma, GitHub)"
+                    value={link.label}
+                    onChange={e => handleLinkChange(idx, "label", e.target.value)}
+                    className="w-1/3"
+                  />
+                  <Input
+                    placeholder="URL"
+                    value={link.url}
+                    onChange={e => handleLinkChange(idx, "url", e.target.value)}
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="destructive" onClick={() => handleRemoveLink(idx)}>-</Button>
+                </div>
+              ))}
+              <Button type="button" variant="outline" onClick={handleAddLink}>
+                + Adicionar Link
+              </Button>
             </div>
           </div>
 

@@ -191,37 +191,21 @@ export default function LabResponsibilityPage() {
     }))
   , [responsibilities])
 
-  // Build events for the selected day
+  // Build events for the selected day (only lab events posted by users)
   const events = useMemo(() => {
-    const currentDate = date || new Date()
-    // Get laboratory schedules for this day
-    const dayOfWeek = currentDate.getDay()
-    const daySchedules = getSchedulesByDay(dayOfWeek)
-    // Create laboratory schedule events
-    const labScheduleEvents = daySchedules.map(schedule => ({
-      time: schedule.startTime,
-      note: schedule.notes || `Horário do laboratório: ${schedule.startTime} - ${schedule.endTime}`,
-      type: "laboratory" as const
-    }))
-    const labEndEvents = daySchedules.map(schedule => ({
-      time: schedule.endTime,
-      note: `Fim do horário: ${schedule.startTime} - ${schedule.endTime}`,
-      type: "laboratory" as const
-    }))
-    // Lab public events
-    const publicEvents = labEvents
+    const currentDate = date || new Date();
+    return labEvents
       .filter(event => {
-        const eventDate = new Date(event.date)
-        return eventDate.toDateString() === currentDate.toDateString()
+        const eventDate = new Date(event.date);
+        return eventDate.toDateString() === currentDate.toDateString();
       })
       .map(event => ({
-        time: new Date(event.date).toTimeString().slice(0,5),
+        time: new Date(event.date).toTimeString().slice(0, 5),
         note: event.note,
         type: "event" as const,
-        userName: event.userName
-      }))
-    return [...labScheduleEvents, ...labEndEvents, ...publicEvents]
-  }, [labEvents, date, getSchedulesByDay])
+        userName: event.userName,
+      }));
+  }, [labEvents, date]);
 
   // Handle add event
   const handleAddEvent = async (time: string, note: string) => {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { ProjectManagerController } from "@/backend/controllers/ProjectManagerController"
-import { prisma } from "@/lib/prisma"
+import { prisma } from "@/lib/database/prisma"
 
 const projectManagerController = new ProjectManagerController();
 
@@ -8,7 +8,7 @@ const projectManagerController = new ProjectManagerController();
 export async function GET(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
     const params = await context.params;
-    const id = params.id;
+    const id = Number(params.id);
     const project = await prisma.projects.findUnique({ where: { id } })
     if (!project) {
       return NextResponse.json({ error: "Projeto não encontrado" }, { status: 404 })
@@ -24,7 +24,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: num
 export async function PUT(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
     const params = await context.params;
-    const id = params.id;
+    const id = Number(params.id);
     const body = await request.json()
     const updatedProject = await prisma.projects.update({
       where: { id },
@@ -44,7 +44,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: num
 export async function DELETE(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
     const params = await context.params;
-    const id = params.id;
+    const id = Number(params.id);
     await prisma.projects.delete({ where: { id } })
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error: any) {

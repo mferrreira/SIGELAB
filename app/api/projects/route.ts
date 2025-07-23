@@ -138,6 +138,7 @@ export async function POST(request: Request) {
       createdAt: new Date().toISOString(),
       createdBy: sessionUser.id,
       status: body.status || "active",
+      links: body.links || [], // Pass links to the database
     });
     // Automatically add the creator as a project manager member
     await prisma.project_members.create({

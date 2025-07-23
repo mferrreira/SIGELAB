@@ -39,6 +39,7 @@ model projects {
   createdAt   String
   createdBy   Int
   status      String
+  links       Json?
   daily_logs  daily_logs[]      @relation("ProjectDailyLogs")
   members     project_members[] @relation("ProjectMemberships")
   creator     users             @relation("UserProjects", fields: [createdBy], references: [id])

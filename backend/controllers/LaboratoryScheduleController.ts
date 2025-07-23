@@ -17,7 +17,7 @@ export class LaboratoryScheduleController {
     if ((endH * 60 + endM) <= (startH * 60 + startM)) {
       throw new Error('Horário final deve ser após o horário inicial');
     }
-    return this.labScheduleModel.create(data);
+    return await this.labScheduleModel.create(data);
   }
 
   async updateSchedule(id: number, data: any) {

@@ -85,7 +85,9 @@ export function AppHeader() {
             {hasAccess(user?.roles || [], 'DASHBOARD_WEEKLY_REPORTS') && (
               <Link
                 href="/dashboard/weekly-reports"
-                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/weekly-reports") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
+                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/weekly-reports") 
+                  ? "bg-accent text-accent-foreground" 
+                  : "text-black dark:text-white/80 hover:text-black dark:hover:text-white hover:bg-accent hover:text-accent-foreground"}`}
               >
                 <FileText className="h-5 w-5" />
                 Relatórios Semanais
