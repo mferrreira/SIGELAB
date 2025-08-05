@@ -15,9 +15,9 @@ export async function GET(request: Request) {
     const weekEnd = searchParams.get("weekEnd")
     const session = await getServerSession(authOptions)
     const currentUser = session?.user as any
-    // Role-based filtering logic can be added here if needed
+
     let reports = await weeklyReportController.getAllReports();
-    // Optionally filter reports by userId, weekStart, weekEnd
+
     if (userId) reports = reports.filter((r: any) => r.userId === Number(userId));
     if (weekStart) reports = reports.filter((r: any) => new Date(r.weekStart) >= new Date(weekStart));
     if (weekEnd) reports = reports.filter((r: any) => new Date(r.weekEnd) <= new Date(weekEnd));
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     if (user.role !== "administrador_laboratorio" && user.role !== "laboratorista" && user.id !== userId) {
       return createApiError("Sem permissão", 403)
     }
-    // Use controller for report creation
+    
     const weeklyReport = await weeklyReportController.createReport({
       userId: Number(userId),
       userName: user.name,

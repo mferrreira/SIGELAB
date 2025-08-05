@@ -5,7 +5,6 @@ import { LaboratoryScheduleController } from "@/backend/controllers/LaboratorySc
 
 const laboratoryScheduleController = new LaboratoryScheduleController();
 
-// GET: Get all laboratory schedules
 export async function GET() {
   try {
     const schedules = await laboratoryScheduleController.getAllSchedules();
@@ -22,7 +21,6 @@ export async function GET() {
   }
 }
 
-// POST: Create a new laboratory schedule
 export async function POST(request: Request) {
   const data = await request.json();
   return NextResponse.json(await laboratoryScheduleController.createSchedule(data));

@@ -29,7 +29,7 @@ export function MobileMenu() {
   const { users } = useUser()
   const [isOpen, setIsOpen] = useState(false)
 
-  // Close menu when route changes
+  // Fechar o menu quando uma rota muda
   useEffect(() => {
     const handleRouteChange = () => setIsOpen(false)
     window.addEventListener('popstate', handleRouteChange)

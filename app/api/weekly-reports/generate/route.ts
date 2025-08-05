@@ -19,13 +19,11 @@ export async function POST(request: Request) {
       return createApiError("userId, weekStart e weekEnd são obrigatórios", 400)
     }
     
-    // Only allow if user is admin/laboratorist or generating their own report
     const user = session.user as any
     if (!user.roles.includes('COORDENADOR') && !user.roles.includes('GERENTE') && user.id !== userId) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
     
-    // Get user data
     const userData = await prisma.users.findUnique({
       where: { id: Number(userId) },
       select: { name: true }
@@ -35,13 +33,11 @@ export async function POST(request: Request) {
       return createApiError("Usuário não encontrado", 404)
     }
     
-    // Normalize weekStart and weekEnd to local time boundaries
     const weekStartDate = new Date(weekStart)
     weekStartDate.setHours(0, 0, 0, 0)
     const weekEndDate = new Date(weekEnd)
     weekEndDate.setHours(23, 59, 59, 999)
 
-    // Get all daily logs for the user in the date range
     const dailyLogs = await prisma.daily_logs.findMany({
       where: {
         userId: Number(userId),
@@ -61,10 +57,8 @@ export async function POST(request: Request) {
       }
     })
     
-    // Count total logs
     const totalLogs = dailyLogs.length
     
-    // Generate summary based on logs
     let summary = ""
     if (totalLogs > 0) {
       const projects = [...new Set(dailyLogs.map(log => log.project?.name).filter(Boolean))]
@@ -78,7 +72,6 @@ export async function POST(request: Request) {
       summary = "Nenhum log encontrado para este período."
     }
     
-    // Check if a weekly report already exists for this user and week
     const existingReport = await prisma.weekly_reports.findFirst({
       where: {
         userId: Number(userId),
@@ -89,7 +82,7 @@ export async function POST(request: Request) {
     
     let weeklyReport
     if (existingReport) {
-      // Update existing report
+
       weeklyReport = await prisma.weekly_reports.update({
         where: { id: existingReport.id },
         data: {
@@ -108,7 +101,7 @@ export async function POST(request: Request) {
         }
       })
     } else {
-      // Create new report
+
       weeklyReport = await prisma.weekly_reports.create({
         data: {
           userId: Number(userId),
@@ -131,7 +124,6 @@ export async function POST(request: Request) {
       })
     }
     
-    // Add the daily logs to the response
     const reportWithLogs = {
       ...weeklyReport,
       logs: dailyLogs

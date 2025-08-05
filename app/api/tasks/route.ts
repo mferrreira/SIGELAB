@@ -11,12 +11,9 @@ export async function GET(request: Request) {
     const userId = searchParams.get("userId")
     const role = searchParams.get("role")
 
-    // If project manager, return all tasks for projects they are a member of
     if (userId && role === "gerente_projeto") {
-      // Find all projects where this user is a member
       const projectMemberships = await prisma.project_members.findMany({ where: { userId: Number(userId) } })
       const projectIds = projectMemberships.map((m) => m.projectId)
-      // Get all tasks for these projects (including completed and public)
       const tasks = await prisma.tasks.findMany({
         where: { projectId: { in: projectIds } },
         include: { assignee: true, projectObj: true },
@@ -25,7 +22,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ tasks })
     }
 
-    // For volunteers, show assigned and public tasks
     if (userId && role === "voluntario") {
       const assignedTasks = await prisma.tasks.findMany({
         where: { assignedTo: Number(userId) },
@@ -37,12 +33,9 @@ export async function GET(request: Request) {
         include: { assignee: true, projectObj: true },
         orderBy: { id: 'desc' },
       })
-      // Merge and deduplicate by id
       const allTasks = [...assignedTasks, ...publicTasks].filter((task, idx, arr) => arr.findIndex(t => t.id === task.id) === idx)
       return NextResponse.json({ tasks: allTasks })
     }
-
-    // Otherwise, use Prisma directly for all tasks
     const tasks = await prisma.tasks.findMany({
       include: { assignee: true, projectObj: true },
       orderBy: { id: 'desc' }
@@ -58,7 +51,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    // Map assignedTo and remove extra fields
+
     const {
       title,
       description,
@@ -71,6 +64,7 @@ export async function POST(request: Request) {
       completed,
       taskVisibility
     } = body
+
     const task = await prisma.tasks.create({
       data: {
         title,

@@ -13,7 +13,7 @@ export async function PUT(
 ) {
   const params = await context.params;
   const body = await request.json();
-  return laboratoryScheduleController.updateSchedule(Number(params.id), body);
+  return NextResponse.json(laboratoryScheduleController.updateSchedule(Number(params.id), body));
 }
 
 // DELETE: Delete a laboratory schedule
@@ -22,5 +22,5 @@ export async function DELETE(
   context: { params: Promise<{ id: string }> }
 ) {
   const params = await context.params;
-  return laboratoryScheduleController.deleteSchedule(Number(params.id));
+  return NextResponse.json(laboratoryScheduleController.deleteSchedule(Number(params.id)));
 } 

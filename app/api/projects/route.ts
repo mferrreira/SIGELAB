@@ -6,7 +6,6 @@ import { ProjectManagerController } from "@/backend/controllers/ProjectManagerCo
 
 const projectManagerController = new ProjectManagerController();
 
-// GET: Obter todos os projetos com filtro baseado no papel do usuário
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -14,7 +13,7 @@ export async function GET() {
     if (!userEmail) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
-    const sessionUser = session?.user as any
+
     const user = await prisma.users.findUnique({
       where: { email: userEmail },
       include: {
@@ -29,9 +28,9 @@ export async function GET() {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
     }
     let projects: any[] = []
-    // Role-based filtering
+
     if (user.roles && (user.roles.includes("LABORATORISTA") || user.roles.includes("COORDENADOR") || user.roles.includes("GERENTE"))) {
-      // Laboratorists and admins see all projects
+
       projects = await prisma.projects.findMany({
         include: {
           creator: {
@@ -64,9 +63,8 @@ export async function GET() {
         }
       })
     } else if (user.roles && user.roles.includes("GERENTE_PROJETO")) {
-      // Project managers and volunteers see projects they're members of or created
+
       const userProjectIds = user.projectMemberships.map((membership: any) => membership.project.id)
-      // For project managers, also include projects they created
       if (user.roles && user.roles.includes("GERENTE_PROJETO")) {
         const createdProjects = await prisma.projects.findMany({
           where: { createdBy: user.id },
@@ -119,7 +117,6 @@ export async function GET() {
   }
 }
 
-// POST: Criar um novo projeto
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)

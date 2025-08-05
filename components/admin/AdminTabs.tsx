@@ -4,13 +4,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Activity, UserCheck, BarChart3, Clock, AlertCircle } from "lucide-react";
+import { Activity, UserCheck, BarChart3, Clock, AlertCircle, Trash } from "lucide-react";
 import { UserApproval } from "@/components/features/user-approval";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const TIME_SLOTS = [
   { start: "07:00", end: "09:00" },
@@ -65,7 +64,26 @@ export const AdminTabs = ({
   const [loadingSchedules, setLoadingSchedules] = useState(false);
   const [error, setError] = useState("");
 
-  // Fetch all schedules from API
+async function handleDelete(scheduleId: number) {
+  try {
+    console.log("Excluindo agendamento:", scheduleId);
+    
+    const response = await fetch(`/api/schedules/${scheduleId}`, {
+      method: "DELETE",
+    });
+
+    if (!response.ok) {
+      throw new Error("Erro ao excluir");
+    }
+
+    // Atualiza o estado local removendo o agendamento
+    setLocalSchedules((prev: any) => prev.filter((s: any) => s.id !== scheduleId));
+  } catch (error) {
+    console.error("Erro ao excluir agendamento:", error);
+    alert("Não foi possível excluir o agendamento.");
+  }
+}
+
   async function fetchSchedulesFromApi() {
     setLoadingSchedules(true);
     try {
@@ -134,9 +152,9 @@ export const AdminTabs = ({
       // 1. Get all existing schedules for this user
       const userSchedules = localSchedules.filter((s: any) => s.userId === parseInt(selectedUserId));
       // 2. Delete all existing schedules for this user
-      await Promise.all(userSchedules.map(async (s: any) => {
-        await fetch(`/api/schedules/${s.id}`, { method: "DELETE" });
-      }));
+      // await Promise.all(userSchedules.map(async (s: any) => {
+      //   await fetch(`/api/schedules/${s.id}`, { method: "DELETE" });
+      // }));
       // 3. POST each new schedule
       for (const s of userSchedule) {
         const userIdNum = parseInt(selectedUserId);
@@ -555,10 +573,17 @@ export const AdminTabs = ({
                                     return (
                                       <div
                                         key={s.id}
-                                        className={`rounded border px-2 py-1 text-xs font-medium ${getUserColor(s.userId)} flex items-center gap-1`}
+                                        className={`group rounded border px-2 py-1 text-xs font-medium ${getUserColor(s.userId)} flex items-center justify-between gap-1`}
                                       >
                                         <span>{user?.name || "Usuário"}</span>
                                         <span className="ml-1 text-[10px] text-muted-foreground">({s.startTime} - {s.endTime})</span>
+                                          <button
+                                            onClick={() => handleDelete(s.id)}
+                                            className=" center right-0 group-hover:block hidden text-red-500 hover:text-red-700"
+                                            title="Remover"
+                                          >
+                                            <Trash className="w-4 h-4"/>
+                                          </button>
                                       </div>
                                     );
                                   })}

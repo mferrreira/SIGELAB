@@ -4,7 +4,6 @@ import { prisma } from "@/lib/database/prisma"
 
 const projectManagerController = new ProjectManagerController();
 
-// GET: Obter um projeto específico
 export async function GET(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
     const params = await context.params;
@@ -20,7 +19,6 @@ export async function GET(request: Request, context: { params: Promise<{ id: num
   }
 }
 
-// PUT: Atualizar um projeto
 export async function PUT(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
     const params = await context.params;
@@ -40,7 +38,6 @@ export async function PUT(request: Request, context: { params: Promise<{ id: num
   }
 }
 
-// DELETE: Excluir um projeto
 export async function DELETE(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
     const params = await context.params;

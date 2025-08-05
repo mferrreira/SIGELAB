@@ -13,13 +13,13 @@ export async function GET(request: Request) {
     if (active === "true") {
       sessions = await workSessionController.getActiveSessions();
     } else if (managerId) {
-      // Find all projects managed by this user
+
       const projects = await prisma.projects.findMany({ where: { createdBy: Number(managerId) } });
       const projectIds = projects.map(p => p.id);
-      // Find all users in these projects
+
       const members = await prisma.project_members.findMany({ where: { projectId: { in: projectIds } } });
       const userIds = members.map(m => m.userId);
-      // Get all sessions for these users
+
       sessions = await prisma.work_sessions.findMany({ where: { userId: { in: userIds } } });
     } else if (userId) {
       sessions = await workSessionController.getSessionsByUser(Number(userId));
@@ -42,12 +42,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    // Look up the user's name
+
     const user = await prisma.users.findUnique({ where: { id: data.userId } });
     if (!user) {
       return new Response(JSON.stringify({ error: "Usuário não encontrado" }), { status: 404 });
     }
-    // Add userName to the data
+
     const session = await workSessionController.createSession({
       ...data,
       userName: user.name,

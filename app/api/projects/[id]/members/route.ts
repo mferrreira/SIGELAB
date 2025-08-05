@@ -4,7 +4,6 @@ import { prisma } from "@/lib/database/prisma"
 
 const projectManagerController = new ProjectManagerController();
 
-// GET: List all members of a project
 export async function GET(request: Request, { params }: { params: Promise<{ id: number }> }) {
   try {
     const { id } = await params

@@ -18,7 +18,6 @@ export async function GET(
     if (!id) {
       return createApiError("ID inválido", 400)
     }
-    // Fetch the weekly report
     const report = await prisma.weekly_reports.findUnique({
       where: { id },
       include: {
@@ -35,7 +34,7 @@ export async function GET(
     if (!report) {
       return createApiError("Relatório não encontrado", 404)
     }
-    // Fetch all daily logs for the report's user and week
+
     const dailyLogs = await prisma.daily_logs.findMany({
       where: {
         userId: report.userId,
@@ -77,7 +76,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     if (!id) {
       return createApiError("ID inválido", 400)
     }
-    // Fetch the report to check permissions
+
     const report = await prisma.weekly_reports.findUnique({ where: { id } })
     if (!report) {
       return createApiError("Relatório não encontrado", 404)

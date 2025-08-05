@@ -23,16 +23,13 @@ export function AppHeader() {
   const { users } = useUser()
   const pathname = usePathname()
 
-  // Encontrar usuário atual para obter pontos
   const currentUserData = user ? users.find((u) => u.id === user.id) : null
-
-  //
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          {/* Mobile Menu */}
+
           <MobileMenu />
           <Link href="/dashboard" className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${pathname === "/dashboard" ? "bg-accent text-accent-foreground px-3 py-2 rounded-md" : ""}`}>
             <KanbanSquare className="h-5 w-5 text-primary" />
@@ -40,13 +37,12 @@ export function AppHeader() {
             <span className="font-semibold text-lg sm:hidden">SIGELAB</span>
           </Link>
 
-          {/* Desktop Navigation - Hidden on mobile */}
           <div className="hidden md:flex items-center gap-2">
 
             {/* Link para leaderboard (todos os usuários) */}
             <Link
               href="/dashboard/leaderboard"
-              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/leaderboard") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
+              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/leaderboard") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
             >
               <Trophy className="h-5 w-5" />
               Ranking
@@ -55,7 +51,7 @@ export function AppHeader() {
             {/* Link para loja (todos os usuários) */}
             <Link
               href="/dashboard/loja"
-              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/loja") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
+              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/loja") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
             >
               <ShoppingBag className="h-5 w-5" />
               Loja
@@ -64,7 +60,7 @@ export function AppHeader() {
             {/* Link para responsabilidade do laboratório (todos os usuários) */}
             <Link
               href="/dashboard/laboratorio"
-              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/laboratorio") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
+              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/laboratorio") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
             >
               <Clock className="h-5 w-5" />
               Laboratório
@@ -74,7 +70,7 @@ export function AppHeader() {
             {hasAccess(user?.roles || [], 'DASHBOARD_PROJETOS') && (
               <Link
                 href="/dashboard/projetos"
-                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/projetos") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
+                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/projetos") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
               >
                 <FolderKanban className="h-5 w-5" />
                 Projetos
@@ -85,9 +81,7 @@ export function AppHeader() {
             {hasAccess(user?.roles || [], 'DASHBOARD_WEEKLY_REPORTS') && (
               <Link
                 href="/dashboard/weekly-reports"
-                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/weekly-reports") 
-                  ? "bg-accent text-accent-foreground" 
-                  : "text-black dark:text-white/80 hover:text-black dark:hover:text-white hover:bg-accent hover:text-accent-foreground"}`}
+                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/weekly-reports") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
               >
                 <FileText className="h-5 w-5" />
                 Relatórios Semanais
@@ -97,7 +91,7 @@ export function AppHeader() {
             {hasAccess(user?.roles || [], 'DASHBOARD_ADMIN') && (
               <Link
                 href="/dashboard/admin"
-                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/admin") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
+                className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/admin") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
               >
                 <User className="h-5 w-5" />
                 Painel Administrativo
@@ -106,7 +100,7 @@ export function AppHeader() {
             {/* Useful future pages for all users */}
             <Link
               href="/dashboard/profile"
-              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/profile") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent hover:text-accent-foreground"}`}
+              className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/profile") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
             >
               <User className="h-5 w-5" />
               Perfil

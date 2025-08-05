@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { UserScheduleController } from "@/backend/controllers/UserScheduleController"
-import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils/utils"
 
 const userScheduleController = new UserScheduleController();
 

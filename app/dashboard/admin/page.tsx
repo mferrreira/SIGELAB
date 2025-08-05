@@ -11,46 +11,12 @@ import { useDailyLogs } from "@/contexts/daily-log-context"
 import { useSchedule } from "@/contexts/schedule-context"
 import { useWorkSessions } from "@/contexts/work-session-context"
 import { AppHeader } from "@/components/layout/app-header"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Progress } from "@/components/ui/progress"
-import { 
-  Users, 
-  FolderOpen, 
-  CheckCircle, 
-  Clock, 
-  Calendar, 
-  TrendingUp, 
-  Activity,
-  UserCheck,
-  CalendarDays,
-  BarChart3,
-  Plus,
-  Edit,
-  Trash2,
-  AlertCircle,
-  ChevronLeft,
-  ChevronRight
-} from "lucide-react"
-import type { Project, Task, LabResponsibility, DailyLog, UserSchedule, User } from "@/contexts/types"
-import { UsersAPI } from "@/contexts/api-client"
-import { UserApproval } from "@/components/features/user-approval"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { UserCheck } from "lucide-react"
 import { WorkSessionsAPI } from "@/contexts/api-client"
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale/pt-BR'
-import { UserWeeklyHoursTable } from "@/components/ui/user-weekly-hours-table";
 import { AdminStatsCards } from "@/components/admin/AdminStatsCards";
 import { AdminWeeklyHoursTable } from "@/components/admin/AdminWeeklyHoursTable";
 import { AdminTabs } from "@/components/admin/AdminTabs";
-import { ScheduleManagementDialog } from "@/components/admin/ScheduleManagementDialog";
 import { AddEditScheduleDialog } from "@/components/admin/AddEditScheduleDialog";
 
 export default function AdminDashboardPage() {
@@ -164,6 +130,7 @@ export default function AdminDashboardPage() {
       avgCompletionRate
     }
   }, [users, projects, tasks, responsibilities])
+
   const projectsWithProgress = useMemo(() => {
     return projects.map(project => {
       const projectTasks = tasks.filter(t => t.projectId === project.id)
@@ -177,16 +144,19 @@ export default function AdminDashboardPage() {
       }
     })
   }, [projects, tasks])
+
   const recentResponsibilities = useMemo(() => {
     return responsibilities
       .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
       .slice(0, 10)
   }, [responsibilities])
+
   const recentDailyLogs = useMemo(() => {
     return dailyLogs
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
       .slice(0, 10)
   }, [dailyLogs])
+
   const weekSchedule = useMemo(() => {
     const days = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado']
     const timeSlots = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`)
@@ -200,14 +170,17 @@ export default function AdminDashboardPage() {
       }
     })
   }, [schedules])
+
   const selectedUserSchedules = useMemo(() => {
     if (!selectedUserId) return []
     return schedules.filter(s => s.userId === parseInt(selectedUserId))
   }, [schedules, selectedUserId])
+
   const selectedUser = useMemo(() => {
     if (!selectedUserId) return null
     return users.find(u => u.id === parseInt(selectedUserId))
   }, [users, selectedUserId])
+
   const scheduleStats = useMemo(() => {
     if (!selectedUser) return null
     const totalMinutes = selectedUserSchedules.reduce((total, schedule) => {
@@ -217,6 +190,7 @@ export default function AdminDashboardPage() {
       const endMinutes = endH * 60 + endM
       return total + (endMinutes - startMinutes)
     }, 0)
+
     const scheduledHours = totalMinutes / 60
     const allowedHours = selectedUser.weekHours
     const remainingHours = allowedHours - scheduledHours

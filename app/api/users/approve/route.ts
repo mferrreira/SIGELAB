@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/database/prisma"
 
-// GET: Get pending users for approval
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions)
@@ -13,7 +12,6 @@ export async function GET(request: Request) {
 
     const user = session.user as any
     
-    // Only admins and laboratorists can see pending users
     if (!user.roles.includes('COORDENADOR') && !user.roles.includes('GERENTE')) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
@@ -38,7 +36,7 @@ export async function GET(request: Request) {
   }
 }
 
-// POST: Approve or reject a user
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions)
@@ -48,7 +46,6 @@ export async function POST(request: Request) {
 
     const user = session.user as any
     
-    // Only admins and laboratorists can approve users
     if (!user.roles.includes('COORDENADOR') && !user.roles.includes('GERENTE')) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
@@ -61,7 +58,6 @@ export async function POST(request: Request) {
     }
 
     if (action === "approve") {
-      // Approve user by setting status to active
       const updatedUser = await prisma.users.update({
         where: { id: Number(userId) },
         data: { status: "active" },
@@ -79,7 +75,7 @@ export async function POST(request: Request) {
         message: "Usuário aprovado com sucesso"
       }, { status: 200 })
     } else {
-      // Reject user by deleting them from the database
+
       const deletedUser = await prisma.users.delete({
         where: { id: Number(userId) },
         select: {
