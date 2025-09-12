@@ -123,9 +123,9 @@ export function ProjectList() {
                       Criado em {new Date(project.createdAt).toLocaleDateString("pt-BR")}
                     </CardDescription>
                   </div>
-                                     <Badge className={statusColors[project.status as keyof typeof statusColors]}>
-                     {statusLabels[project.status as keyof typeof statusLabels]}
-                   </Badge>
+                  <Badge className={statusColors[project.status as keyof typeof statusColors]}>
+                    {statusLabels[project.status as keyof typeof statusLabels]}
+                  </Badge>
                 </div>
               </CardHeader>
               <CardContent>
@@ -134,12 +134,12 @@ export function ProjectList() {
                     {project.description}
                   </p>
                 )}
-                
+
                 <div className="flex justify-between items-center">
                   <div className="text-xs text-muted-foreground">
                     Criado por: {users.find(u => u.id === project.createdBy)?.name || project.createdBy}
                   </div>
-                  
+
                   {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
                     <div className="flex space-x-2">
                       <Button
@@ -159,6 +159,30 @@ export function ProjectList() {
                     </div>
                   )}
                 </div>
+
+                {project.links &&
+                  <div>
+                    <hr className="border-t border-gray-300 m-4" />
+                    <h3 className="mt-2 align-middle text-center m-2">Links</h3>
+                    <div className="flex flex-row gap-4 m-4">
+                      {project.links.filter(l => l?.url && l?.label).length > 0
+                        ? project.links
+                          .filter(l => l?.url && l?.label)
+                          .map((l, i) => (
+                            <div className="w-auto h-auto p-4 bg-secondary rounded-md" key={i}>
+                              <a href={l.url} target="_blank" rel="noopener noreferrer">
+                                {l.label}
+                              </a>
+                            </div>
+                          ))
+                        : <div>
+                          <p>Não há links cadastrados nesse projeto.</p>
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+
               </CardContent>
             </Card>
           ))}

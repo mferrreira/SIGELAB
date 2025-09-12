@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useWorkSessions } from "@/contexts/work-session-context"
 import { useDailyLogs } from "@/contexts/daily-log-context"
 import { useAuth } from "@/contexts/auth-context"
-import { Loader2, Play, StopCircle, Clock, MapPin, AlertTriangle } from "lucide-react"
+import { Loader2, Play, StopCircle, Clock, MapPin, AlertTriangle, Info } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,8 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const [submittingLog, setSubmittingLog] = useState(false)
   const [sessionDuration, setSessionDuration] = useState(0)
   const [pendingSessionEnd, setPendingSessionEnd] = useState(false)
+  const [showManualLogDialog, setShowManualLogDialog] = useState(false)
+  const [manualLogNote, setManualLogNote] = useState("")
 
   // Always fetch sessions on mount
   useEffect(() => {
@@ -44,9 +46,9 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
-  // Start timer if session is active
+  // Start timer if session is active and belongs to current user
   useEffect(() => {
-    if (activeSession && activeSession.startTime) {
+    if (activeSession && activeSession.startTime && activeSession.userId === user?.id) {
       const start = new Date(activeSession.startTime).getTime()
       setTimer(Math.floor((Date.now() - start) / 1000))
       if (!timerInterval) {
@@ -56,14 +58,23 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
         setTimerInterval(interval)
       }
     } else {
+      // Clear timer when no active session or session doesn't belong to current user
       setTimer(0)
       if (timerInterval) {
         clearInterval(timerInterval)
         setTimerInterval(null)
       }
     }
+    
+    // Cleanup function to clear interval when component unmounts or dependencies change
+    return () => {
+      if (timerInterval) {
+        clearInterval(timerInterval)
+        setTimerInterval(null)
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSession])
+  }, [activeSession, user?.id])
 
   // Warn user about active session when closing browser
   useEffect(() => {
@@ -79,11 +90,6 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [activeSession])
 
-  useEffect(() => {
-    return () => {
-      if (timerInterval) clearInterval(timerInterval)
-    }
-  }, [timerInterval])
 
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -117,7 +123,7 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     setSubmittingLog(true)
     try {
       // End the session first
-      const updatedSession = await endSession(activeSession.id, activity)
+      await endSession(activeSession.id, activity)
       
       // Then create the log
       if (logNote.trim()) {
@@ -129,10 +135,12 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
         })
       }
       
+      // Clear all session-related state
       setShowLogDialog(false)
       setLogNote("")
       setSessionDuration(0)
       setPendingSessionEnd(false)
+      setTimer(0)
       
       if (onSessionEnd) onSessionEnd()
       await fetchSessions(user?.id)
@@ -157,10 +165,13 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     setSubmittingLog(true)
     try {
       await endSession(activeSession.id, activity)
+      
+      // Clear all session-related state
       setShowLogDialog(false)
       setLogNote("")
       setSessionDuration(0)
       setPendingSessionEnd(false)
+      setTimer(0)
       
       if (onSessionEnd) onSessionEnd()
       await fetchSessions(user?.id)
@@ -170,6 +181,34 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
     } finally {
       setSubmittingLog(false)
     }
+  }
+
+  const handleManualLogSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!user || !manualLogNote.trim()) return
+    
+    setSubmittingLog(true)
+    try {
+      const today = new Date().toISOString().split("T")[0]
+      await createLog({
+        userId: user.id,
+        date: today,
+        note: manualLogNote.trim()
+      })
+      
+      setShowManualLogDialog(false)
+      setManualLogNote("")
+    } catch (err) {
+      console.error("Erro ao criar log:", err)
+      setError("Erro ao criar log")
+    } finally {
+      setSubmittingLog(false)
+    }
+  }
+
+  const handleManualLogCancel = () => {
+    setShowManualLogDialog(false)
+    setManualLogNote("")
   }
 
   const formatTime = (seconds: number) => {
@@ -200,7 +239,7 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {activeSession ? (
+          {activeSession && activeSession.userId === user?.id ? (
             <div className="flex flex-col items-start space-y-4 w-full">
               <div className="text-3xl font-mono text-blue-900 font-bold">
                 {formatTime(timer)}
@@ -271,6 +310,20 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
               )}
             </form>
           )}
+          
+          {/* Add Log Button when no active session */}
+          {!activeSession && (
+            <div className="mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowManualLogDialog(true)}
+                className="w-full border-green-300 text-green-700 hover:bg-green-50"
+              >
+                <Clock className="h-4 w-4 mr-2" />
+                Adicionar Log Manual
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -306,7 +359,10 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
             <Alert className="flex-shrink-0">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                A sessão será encerrada quando você confirmar. Se cancelar, a sessão continuará ativa.
+                <strong>Opções disponíveis:</strong><br/>
+                • <strong>Salvar e Encerrar:</strong> Cria um log e finaliza a sessão<br/>
+                • <strong>Encerrar Sem Log:</strong> Finaliza a sessão sem criar log<br/>
+                • <strong>Cancelar:</strong> Mantém a sessão ativa
               </AlertDescription>
             </Alert>
             
@@ -341,6 +397,71 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
                   </>
                 ) : (
                   "Salvar e Encerrar"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Log Dialog */}
+      <Dialog open={showManualLogDialog} onOpenChange={setShowManualLogDialog}>
+        <DialogContent className="sm:max-w-xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center space-x-2">
+              <Clock className="h-5 w-5 text-green-600" />
+              <span>Adicionar Log Manual</span>
+            </DialogTitle>
+            <DialogDescription>
+              Registre uma atividade realizada sem usar o timer de trabalho.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <form onSubmit={handleManualLogSubmit} className="flex-1 flex flex-col space-y-4 min-h-0">
+            <div className="flex-1 space-y-2 min-h-0">
+              <label htmlFor="manualLogNote" className="text-sm font-medium text-gray-700">
+                Descrição da atividade
+              </label>
+              <Textarea
+                id="manualLogNote"
+                placeholder="Descreva as tarefas realizadas, projetos trabalhados, ou atividades desenvolvidas..."
+                value={manualLogNote}
+                onChange={(e) => setManualLogNote(e.target.value)}
+                className="min-h-[120px] max-h-[200px] border-green-300 focus:border-green-500 resize-none"
+                autoFocus
+                required
+              />
+            </div>
+            
+            <Alert className="flex-shrink-0">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Este log será adicionado aos seus registros diários e incluído no relatório semanal.
+              </AlertDescription>
+            </Alert>
+            
+            <DialogFooter className="flex-shrink-0 flex flex-col sm:flex-row gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleManualLogCancel}
+                disabled={submittingLog}
+                className="w-full sm:w-auto"
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={submittingLog || !manualLogNote.trim()}
+                className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+              >
+                {submittingLog ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Adicionar Log"
                 )}
               </Button>
             </DialogFooter>

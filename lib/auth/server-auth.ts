@@ -1,7 +1,7 @@
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import type { NextRequest } from "next/server"
-import { createApiError } from "../contexts/utils"
+import { createApiError } from "../utils/utils"
 
 export async function getUserFromRequest(req: NextRequest) {
   const session = await getServerSession(authOptions)

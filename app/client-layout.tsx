@@ -14,6 +14,7 @@ import { WeeklyReportProvider } from "@/contexts/weekly-report-context"
 import { WorkSessionProvider } from "@/contexts/work-session-context"
 import { SessionProvider } from "next-auth/react"
 import { LabEventsProvider } from "@/contexts/lab-events-context"
+import { AppHeader } from "@/components/layout/app-header"
 
 export default function ClientLayout({
   children,
@@ -35,6 +36,7 @@ export default function ClientLayout({
                         <LaboratoryScheduleProvider>
                           <WorkSessionProvider>
                             <WeeklyReportProvider>
+                              <AppHeader />
                               {children}
                             </WeeklyReportProvider>
                           </WorkSessionProvider>

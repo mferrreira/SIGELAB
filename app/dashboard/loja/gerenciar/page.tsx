@@ -74,7 +74,6 @@ export default function ManageRewardsPage() {
   if (!hasAccess(user?.roles || [], 'MANAGE_REWARDS')) {
     return (
       <div className="flex min-h-screen flex-col">
-        <AppHeader />
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <Alert variant="destructive">
             <XCircle className="h-4 w-4" />
@@ -158,7 +157,7 @@ export default function ManageRewardsPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <AppHeader />
+
       <main className="flex-1 container mx-auto p-4 md:p-6">
         <h1 className="text-2xl font-bold mb-6">Gerenciar Recompensas</h1>
 

@@ -430,16 +430,15 @@ export interface WeeklyReportContextType {
   deleteWeeklyReport: (id: number) => Promise<void>
 }
 
-// Work Session types
 export interface WorkSession {
   id: number
   userId: number
   userName: string
   startTime: Date
   endTime?: Date | null
-  duration?: number | null // Duration in minutes
+  duration?: number | null
   activity?: string | null
-  location?: string | null // "lab", "home", "remote", etc.
+  location?: string | null
   status: "active" | "completed" | "paused"
   createdAt: Date
   updatedAt: Date

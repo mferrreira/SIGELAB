@@ -47,13 +47,13 @@ model projects {
 }
 
 model project_members {
-  id        Int      @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   projectId Int
   userId    Int
-  joinedAt  DateTime @default(now())
+  joinedAt  DateTime   @default(now())
   roles     UserRole[]
-  project   projects @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
-  user      users    @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  project   projects   @relation("ProjectMemberships", fields: [projectId], references: [id], onDelete: Cascade)
+  user      users      @relation("UserProjectMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([projectId, userId])
 }
@@ -106,14 +106,16 @@ model lab_responsibilities {
 }
 
 model daily_logs {
-  id        Int       @id @default(autoincrement())
-  userId    Int
-  projectId Int?
-  date      DateTime
-  note      String?
-  createdAt DateTime  @default(now())
-  project   projects? @relation("ProjectDailyLogs", fields: [projectId], references: [id])
-  user      users     @relation("UserDailyLogs", fields: [userId], references: [id])
+  id            Int            @id @default(autoincrement())
+  userId        Int
+  projectId     Int?
+  date          DateTime
+  note          String?
+  createdAt     DateTime       @default(now())
+  workSessionId Int?           @unique
+  project       projects?      @relation("ProjectDailyLogs", fields: [projectId], references: [id])
+  user          users          @relation("UserDailyLogs", fields: [userId], references: [id])
+  workSession   work_sessions? @relation("WorkSessionDailyLog", fields: [workSessionId], references: [id], onDelete: Cascade)
 }
 
 model weekly_reports {
@@ -149,18 +151,19 @@ model laboratory_schedules {
 }
 
 model work_sessions {
-  id        Int       @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   userId    Int
   userName  String
-  startTime DateTime  @default(now())
+  startTime DateTime    @default(now())
   endTime   DateTime?
   duration  Float?
   activity  String?
   location  String?
-  status    String    @default("active")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  user      users     @relation("UserWorkSessions", fields: [userId], references: [id], onDelete: Cascade)
+  status    String      @default("active")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  dailyLog  daily_logs? @relation("WorkSessionDailyLog")
+  user      users       @relation("UserWorkSessions", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model kanban_boards {

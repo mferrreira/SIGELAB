@@ -160,7 +160,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
               {(formData.links || []).map((link, idx) => (
                 <div key={idx} className="flex gap-2 mb-2">
                   <Input
-                    placeholder="Label (ex: Figma, GitHub)"
+                    placeholder="Nome (ex: Figma, GitHub)"
                     value={link.label}
                     onChange={e => handleLinkChange(idx, "label", e.target.value)}
                     className="w-1/3"

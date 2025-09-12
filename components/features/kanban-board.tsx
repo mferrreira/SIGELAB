@@ -138,7 +138,9 @@ export function KanbanBoard() {
         
         // Then update the backend
         if (newStatus === "done") {
-          await completeTask(taskToUpdate.id)
+          // Determine which user should get the points
+          const userToAward = taskToUpdate.assignedTo || (taskToUpdate.taskVisibility === "public" && hasAccess(user?.roles || [], 'COMPLETE_PUBLIC_TASKS') ? user?.id : null)
+          await completeTask(taskToUpdate.id, userToAward)
         } else {
           await updateTask(taskToUpdate.id, updateData)
         }

@@ -27,6 +27,8 @@ import {
   Archive
 } from "lucide-react"
 import type { Project } from "@/contexts/types"
+import { hasAccess } from "@/lib/utils/access-control"
+
 
 export default function ProjetosPage() {
   const { user } = useAuth()
@@ -106,7 +108,7 @@ export default function ProjetosPage() {
   if (!user) {
     return (
       <div className="flex min-h-screen flex-col">
-        <AppHeader />
+
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Faça login para acessar os projetos</p>
@@ -117,10 +119,10 @@ export default function ProjetosPage() {
   }
 
   // Only allow access to PESQUISADOR, COORDENADOR, GERENTE_PROJETO, GERENTE
-  if (!user.roles?.some(role => ["PESQUISADOR", "COORDENADOR", "GERENTE_PROJETO", "GERENTE"].includes(role))) {
+  if (!hasAccess(user?.roles || [], "VIEW_PROJECT_DASHBOARD")) {
     return (
       <div className="flex min-h-screen flex-col">
-        <AppHeader />
+
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-center h-64">
             <p className="text-muted-foreground">Você não tem permissão para acessar esta página.</p>
@@ -132,7 +134,7 @@ export default function ProjetosPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <AppHeader />
+
       <main className="flex-1 container mx-auto p-4 md:p-6">
         <div className="space-y-6">
           {/* Header */}
@@ -242,13 +244,17 @@ export default function ProjetosPage() {
           <Tabs defaultValue="list" className="space-y-4">
             <TabsList>
               <TabsTrigger value="list">Lista de Projetos</TabsTrigger>
-              <TabsTrigger value="grid">Visualização em Grid</TabsTrigger>
+              {hasAccess(user?.roles || [], "EDIT_PROJECT") &&
+                <TabsTrigger value="grid">Visualização em Grid</TabsTrigger>
+              }
             </TabsList>
 
             <TabsContent value="list" className="space-y-4">
               <ProjectList />
             </TabsContent>
-
+            
+            {hasAccess(user?.roles || [], "EDIT_PROJECT") &&
+            
             <TabsContent value="grid" className="space-y-4">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {filteredProjects.map((project) => {
@@ -335,6 +341,7 @@ export default function ProjetosPage() {
                 </Card>
               )}
             </TabsContent>
+            }
           </Tabs>
         </div>
 
@@ -352,6 +359,8 @@ export default function ProjetosPage() {
           onOpenChange={setIsProjectDialogOpen}
           project={editingProject}
         />
+
+
       </main>
     </div>
   )

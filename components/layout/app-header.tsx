@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { KanbanSquare, User, FolderKanban, Trophy, ShoppingBag, Clock, FileText } from "lucide-react"
+import { User, FolderKanban, Trophy, ShoppingBag, Clock, FileText } from "lucide-react"
 import { useUser } from "@/contexts/user-context"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { MobileMenu } from "@/components/layout/mobile-menu"
@@ -31,10 +31,11 @@ export function AppHeader() {
         <div className="flex items-center gap-4">
 
           <MobileMenu />
+
           <Link href="/dashboard" className={`flex items-center gap-2 hover:opacity-80 transition-opacity ${pathname === "/dashboard" ? "bg-accent text-accent-foreground px-3 py-2 rounded-md" : ""}`}>
-            <KanbanSquare className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-lg hidden sm:inline">SIGELAB</span>
-            <span className="font-semibold text-lg sm:hidden">SIGELAB</span>
+            <img src="/LOGO.png" className="h-10 w-10 text-primary" />
+            <span className="font-semibold text-lg hidden sm:inline">Display Quest</span>
+
           </Link>
 
           <div className="hidden md:flex items-center gap-2">
@@ -67,7 +68,7 @@ export function AppHeader() {
             </Link>
 
             {/* Future pages for laboratorists and admins */}
-            {hasAccess(user?.roles || [], 'DASHBOARD_PROJETOS') && (
+            {hasAccess(user?.roles || [], 'VIEW_PROJECT_DASHBOARD') && (
               <Link
                 href="/dashboard/projetos"
                 className={`text-sm flex items-center gap-1 transition-colors duration-200 px-3 py-2 rounded-md ${pathname.startsWith("/dashboard/projetos") ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground hover:bg-accent"}`}
@@ -110,7 +111,6 @@ export function AppHeader() {
 
         <div className="flex items-center gap-4">
 
-          
           {/* Desktop Controls */}
           <div className="hidden md:flex items-center gap-4">
             

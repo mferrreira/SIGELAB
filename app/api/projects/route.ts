@@ -3,6 +3,7 @@ import { prisma } from "@/lib/database/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { ProjectManagerController } from "@/backend/controllers/ProjectManagerController"
+import { hasAccess } from "@/lib/utils/access-control"
 
 const projectManagerController = new ProjectManagerController();
 
@@ -29,7 +30,7 @@ export async function GET() {
     }
     let projects: any[] = []
 
-    if (user.roles && (user.roles.includes("LABORATORISTA") || user.roles.includes("COORDENADOR") || user.roles.includes("GERENTE"))) {
+    if (user.roles && hasAccess(user.roles, "MANAGE_TASKS")) {
 
       projects = await prisma.projects.findMany({
         include: {
@@ -62,7 +63,7 @@ export async function GET() {
           createdAt: "desc"
         }
       })
-    } else if (user.roles && user.roles.includes("GERENTE_PROJETO")) {
+    } else {
 
       const userProjectIds = user.projectMemberships.map((membership: any) => membership.project.id)
       if (user.roles && user.roles.includes("GERENTE_PROJETO")) {

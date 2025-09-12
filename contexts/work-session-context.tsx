@@ -16,30 +16,43 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Fetch sessions on mount and when user changes
   useEffect(() => {
     if (user) {
       fetchSessions(user.id)
+    } else {
+      // Clear sessions when user logs out
+      setSessions([])
+      setActiveSession(null)
     }
   }, [user])
 
   const fetchSessions = async (userId?: number, status?: string) => {
-    if (!user && !userId) return
+    // Only fetch sessions for the current authenticated user
+    const targetUserId = userId || user?.id
+    if (!targetUserId) return
     
     setLoading(true)
     setError(null)
     
     try {
-      const response = await WorkSessionsAPI.getAll(userId, status)
+      const response = await WorkSessionsAPI.getAll(targetUserId, status)
       const fetchedSessions = Array.isArray(response) ? response : []
+    
       setSessions(fetchedSessions)
       
-      // Find active session
-      const active = fetchedSessions.find((session: WorkSession) => session && session.status === "active")
+      // Only set active session if it belongs to the current user
+      const active = fetchedSessions.find((session: WorkSession) => 
+        session && 
+        session.status === "active" && 
+        session.userId === targetUserId
+      )
       setActiveSession(active || null)
+    
     } catch (err) {
+    
       const errorMessage = err instanceof Error ? err.message : "Erro ao carregar sessões"
       setError(errorMessage)
+
       toast({
         title: "Erro",
         description: errorMessage,
@@ -57,11 +70,14 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
     setError(null)
     
     try {
+      // Ensure the session is created for the current user only
       const response = await WorkSessionsAPI.start({
         ...sessionData,
-        userId: sessionData.userId || user.id,
+        userId: user.id, // Always use current user's ID
       })
-      const newSession = response.data
+      
+      const newSession = response.data || response;
+      console.log(newSession)
       setSessions(prev => [newSession, ...prev])
       setActiveSession(newSession)
       await fetchSessions(user.id)
@@ -70,6 +86,7 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
         description: "Timer de trabalho iniciado com sucesso!",
       })
       return newSession
+
     } catch (err: any) {
       let errorMessage = err.message || "Erro ao iniciar sessão"
       if (err.response && err.response.data && err.response.data.error) {
@@ -88,28 +105,27 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
   }
 
   const endSession = async (id: number, activity?: string): Promise<WorkSession> => {
+    if (!user) throw new Error("Usuário não autenticado")
+    
     setLoading(true)
     setError(null)
     try {
-      // Calculate duration before ending session
-      const session = sessions.find(s => s.id === id)
-      let duration = 0
-      if (session && session.startTime) {
-        const startTime = new Date(session.startTime)
-        const endTime = new Date()
-        duration = Math.floor((endTime.getTime() - startTime.getTime()) / 1000) // duration in seconds
+      // Verify the session belongs to the current user
+      const sessionToEnd = sessions.find(s => s.id === id)
+      if (!sessionToEnd || sessionToEnd.userId !== user.id) {
+        throw new Error("Sessão não encontrada ou não pertence ao usuário atual")
       }
 
       const response = await WorkSessionsAPI.update(id, {
         status: "completed",
         endTime: new Date().toISOString(),
-        duration: duration,
         activity,
       })
+
       const updatedSession = response.data
       setSessions(prev => prev.map(session => session.id === id ? updatedSession : session))
       setActiveSession(null)
-      await fetchSessions(user?.id)
+      await fetchSessions(user.id)
       toast({
         title: "Sessão finalizada",
         description: "Timer de trabalho finalizado com sucesso!",
@@ -130,16 +146,26 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
   }
 
   const pauseSession = async (id: number): Promise<WorkSession> => {
+    if (!user) throw new Error("Usuário não autenticado")
+    
     setLoading(true)
     setError(null)
     try {
+      // Verify the session belongs to the current user
+      const sessionToPause = sessions.find(s => s.id === id)
+      if (!sessionToPause || sessionToPause.userId !== user.id) {
+        throw new Error("Sessão não encontrada ou não pertence ao usuário atual")
+      }
+
       const response = await WorkSessionsAPI.update(id, {
         status: "paused",
       })
       const updatedSession = response.data
       setSessions(prev => prev.map(session => session.id === id ? updatedSession : session))
       setActiveSession(null)
-      await fetchSessions(user?.id)
+
+      await fetchSessions(user.id)
+      
       toast({
         title: "Sessão pausada",
         description: "Timer de trabalho pausado com sucesso!",
@@ -160,16 +186,24 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
   }
 
   const resumeSession = async (id: number): Promise<WorkSession> => {
+    if (!user) throw new Error("Usuário não autenticado")
+    
     setLoading(true)
     setError(null)
     try {
+      // Verify the session belongs to the current user
+      const sessionToResume = sessions.find(s => s.id === id)
+      if (!sessionToResume || sessionToResume.userId !== user.id) {
+        throw new Error("Sessão não encontrada ou não pertence ao usuário atual")
+      }
+
       const response = await WorkSessionsAPI.update(id, {
         status: "active",
       })
       const updatedSession = response.data
       setSessions(prev => prev.map(session => session.id === id ? updatedSession : session))
       setActiveSession(updatedSession)
-      await fetchSessions(user?.id)
+      await fetchSessions(user.id)
       toast({
         title: "Sessão retomada",
         description: "Timer de trabalho retomado com sucesso!",

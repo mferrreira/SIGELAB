@@ -112,8 +112,8 @@ export function MobileMenu() {
       <SheetContent side="left" className="w-[280px] sm:w-[320px]">
         <SheetHeader className="text-left">
           <SheetTitle className="flex items-center gap-2">
-            <KanbanSquare className="h-5 w-5 text-primary" />
-            <span className="text-lg font-semibold">SIGELAB</span>
+            <img src="/LOGO.png" className="h-10 w-10 text-primary" />
+            <span className="text-lg font-semibold">Display Quest</span>
           </SheetTitle>
         </SheetHeader>
 

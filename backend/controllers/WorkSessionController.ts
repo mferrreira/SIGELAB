@@ -1,35 +1,53 @@
-import { WorkSessionModel } from '../models/WorkSessionModel';
+import SessionService from '../services/SessionService';
+import SessionRepository from '../repositories/SessionRespository';
+import Session from '../models/Session';
 
 export class WorkSessionController {
-  private workSessionModel = new WorkSessionModel();
+  private sessionService = new SessionService(new SessionRepository());
 
   async getSession(id: number) {
-    return this.workSessionModel.findById(id);
+    return this.sessionService.findById(id);
   }
 
   async getAllSessions() {
-    return this.workSessionModel.findAll();
+    return this.sessionService.findAll();
   }
 
   async createSession(data: any) {
-    // Add validation if needed
-    return this.workSessionModel.create(data);
+      const session = await this.sessionService.create(data);
+      return session?.toPrisma();
   }
 
   async updateSession(id: number, data: any) {
-    // Add validation if needed
-    return this.workSessionModel.update(id, data);
+      //TODO adicionar ao Repository do user
+
+      if(data.status === "completed")
+        this.sessionService.stopSession(id)
+      
+      return this.sessionService.update(id, data);
   }
 
   async deleteSession(id: number) {
-    return this.workSessionModel.delete(id);
+    return this.sessionService.delete(id);
   }
 
   async getSessionsByUser(userId: number) {
-    return this.workSessionModel.findByUserId(userId);
+    return this.sessionService.findByUserId(userId);
   }
 
   async getActiveSessions() {
-    return this.workSessionModel.findActiveSessions();
+    return this.sessionService.findActiveSessions();
+  }
+
+  async getSessionsByProjectLeader(leaderId: number) {
+    return this.sessionService.findSessionsByProjectLeader(leaderId);
+  }
+
+  async stopSession(sessionId: number) {
+    return await this.sessionService.stopSession(sessionId);
+  }
+
+  async getWeeklyHours() {
+
   }
 } 

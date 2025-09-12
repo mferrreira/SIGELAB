@@ -75,7 +75,12 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const params = await context.params;
     const id = parseInt(params.id)
     const body = await request.json()
-    const userId = body.userId
+    const { action, userId } = body
+
+    // Only process completion requests
+    if (action !== "complete") {
+      return NextResponse.json({ error: "Ação inválida. Use 'complete' para marcar tarefa como concluída." }, { status: 400 })
+    }
 
     // Find the task
     const task = await prisma.tasks.findUnique({ where: { id } })
@@ -94,13 +99,18 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     // Add points to the user who completed the task (userId from request)
     if (userId && task.points && task.points > 0) {
+      const userIdNumber = typeof userId === 'string' ? parseInt(userId) : userId
       await prisma.users.update({
-        where: { id: userId },
+        where: { id: userIdNumber },
         data: {
           points: { increment: task.points },
           completedTasks: { increment: 1 },
         },
       })
+      
+      console.log(`✅ Task ${id} completed by user ${userIdNumber}. Awarded ${task.points} points.`)
+    } else {
+      console.log(`⚠️ Task ${id} completed but no points awarded. userId: ${userId}, task.points: ${task.points}`)
     }
 
     return NextResponse.json({ task: { ...updatedTask, completed: true, status: "done" } })

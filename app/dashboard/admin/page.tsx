@@ -353,7 +353,6 @@ export default function AdminDashboardPage() {
   if (!isAdmin) {
     return (
       <div className="flex min-h-screen flex-col">
-        <AppHeader />
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Acesso Negado</h1>
@@ -366,7 +365,6 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <AppHeader />
       <main className="flex-1 container mx-auto p-4 md:p-6">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Painel Administrativo</h1>
@@ -380,7 +378,6 @@ export default function AdminDashboardPage() {
         <AdminStatsCards stats={stats} users={users} projects={projects} />
 
         {/* Weekly Work Hours Table */}
-        <AdminWeeklyHoursTable users={users} />
 
         <AdminTabs
           users={users}
@@ -398,6 +395,9 @@ export default function AdminDashboardPage() {
           activeSessions={activeSessions}
           // Add any other necessary props
         />
+        <div className="my-6">
+          <AdminWeeklyHoursTable users={users} />
+        </div>
       </main>
       
       {/* Dialog para Adicionar/Editar Horário */}

@@ -376,9 +376,11 @@ export const WorkSessionsAPI = {
   getAll: (userId?: number, status?: string) => {
     let url = "/api/work-sessions"
     const params = new URLSearchParams()
+
     if (userId) params.append("userId", userId.toString())
     if (status) params.append("status", status)
     if (params.toString()) url += `?${params.toString()}`
+    
     return fetchAPI<{ data: any[] }>(url)
   },
 
@@ -386,11 +388,14 @@ export const WorkSessionsAPI = {
   getById: (id: number) => fetchAPI<{ data: any }>(`/api/work-sessions/${id}`),
 
   // Iniciar uma nova sessão
-  start: (session: any) =>
-    fetchAPI<{ data: any }>("/api/work-sessions", {
+  start: async (session: any) => {
+    const res = await fetchAPI<{ data: any }>("/api/work-sessions", {
       method: "POST",
       body: JSON.stringify(session),
-    }),
+    })
+    console.log(res)
+    return res
+  },
 
   // Atualizar uma sessão
   update: (id: number, session: any) =>
@@ -408,6 +413,10 @@ export const WorkSessionsAPI = {
   getActiveSessions: async () => {
     const result = await fetchAPI<{ data: any[] }>(`/api/work-sessions?active=true`)
     return Array.isArray(result) ? result : result.data
+  },
+
+  getWeeklyHours: async () => {
+
   },
 }
 

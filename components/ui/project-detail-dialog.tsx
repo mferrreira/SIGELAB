@@ -7,16 +7,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Progress } from "@/components/ui/progress"
-import { 
-  Calendar, 
-  Users, 
-  CheckCircle2, 
-  Clock, 
-  AlertCircle, 
+import { Input } from "@/components/ui/input"
+import {
+  Calendar,
+  Users,
+  CheckCircle2,
+  Clock,
+  AlertCircle,
   FileText,
   Edit,
   Trash2,
-  Plus
+  Plus,
+  Link
 } from "lucide-react"
 import { useTask } from "@/contexts/task-context"
 import { TaskDialog } from "@/components/features/task-dialog"
@@ -33,12 +35,12 @@ interface ProjectDetailDialogProps {
   onDeleteProject: (projectId: number) => void
 }
 
-export function ProjectDetailDialog({ 
-  project, 
-  open, 
-  onOpenChange, 
-  onEditProject, 
-  onDeleteProject 
+export function ProjectDetailDialog({
+  project,
+  open,
+  onOpenChange,
+  onEditProject,
+  onDeleteProject
 }: ProjectDetailDialogProps) {
   const { tasks, createTask } = useTask()
   const { user } = useAuth()
@@ -51,7 +53,7 @@ export function ProjectDetailDialog({
   const totalTasks = projectTasks.length
   const completedTasks = projectTasks.filter(task => task.status === "done").length
   const pendingTasks = projectTasks.filter(task => task.status === "to-do").length
-  const inProgressTasks = projectTasks.filter(task => 
+  const inProgressTasks = projectTasks.filter(task =>
     task.status === "in-progress" || task.status === "in-review" || task.status === "adjust"
   ).length
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0
@@ -97,6 +99,11 @@ export function ProjectDetailDialog({
   const handleTaskDialogClose = () => {
     setIsTaskDialogOpen(false)
     setSelectedTask(null)
+  }
+
+  const handleAddLink = (e: any) => {
+    e.preventDefault()
+    console.log("Adicionou os link")
   }
 
   return (
@@ -268,10 +275,10 @@ export function ProjectDetailDialog({
                               {task.description}
                             </p>
                           )}
-                                                     <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                             <span>Responsável: {task.assignedTo || "Não atribuído"}</span>
-                             <span>Pontos: {task.points}</span>
-                           </div>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
+                            <span>Responsável: {task.assignedTo || "Não atribuído"}</span>
+                            <span>Pontos: {task.points}</span>
+                          </div>
                         </div>
                         <Button
                           variant="outline"
@@ -335,6 +342,63 @@ export function ProjectDetailDialog({
                   </div>
                 </div>
               </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Link className="h-5 w-5" />
+                    Links
+                  </div>
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent>
+                <div className="mb-4">
+
+                  {hasAccess(user?.roles || [], "EDIT_PROJECT") &&
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1">
+                        <Input 
+                        placeholder="Nome (ex: Figma, GitHub)"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                        placeholder="Link"
+                        />
+                      </div>
+                      <Button type="button" variant="outline" onClick={handleAddLink}>
+                        + Adicionar Link
+                      </Button>
+                    </div>  
+                  }
+
+                </div>
+                {project?.links?.length === 0 ? (
+                  <div className="text-muted-foreground">
+                    <p>Não há links para esse projeto</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-2">
+                    {project?.links?.map((link, i) => (
+
+                      <div key={i} className="flex gap-2 mb-2">
+                        <div className="flex-1 flex p-2 border rounded">
+                          {link.label}
+                        </div>
+                          <a href={link.url} target="_blank">
+                        <div className="flex-3 flex p-2 border rounded">
+                          {link.url}
+                        </div>
+                          </a>
+                      </div>
+                    ))}
+                    </div>
+)}
+              </CardContent>
+
             </Card>
             {/* Project Membership Management (only for allowed roles) */}
             {(user && hasAccess(user.roles, "MANAGE_PROJECT_MEMBERS")) && (

@@ -5,7 +5,6 @@ import type { Task } from "@/contexts/types"
 import { TasksAPI } from "@/contexts/api-client"
 import { useAuth } from "@/contexts/auth-context"
 import { useUser } from "@/contexts/user-context"
-import { globalCache, CacheKeys, CacheTTL, invalidateRelatedCache } from "@/lib/managers/cache-manager"
 
 interface TaskContextType {
   tasks: Task[]
@@ -14,7 +13,7 @@ interface TaskContextType {
   fetchTasks: () => Promise<void>
   createTask: (task: any) => Promise<Task>
   updateTask: (id: number, task: Partial<Task>) => Promise<Task>
-  completeTask: (id: number) => Promise<Task>
+  completeTask: (id: number, userId?: number) => Promise<Task>
   deleteTask: (id: number) => Promise<void>
 }
 
@@ -33,15 +32,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       setError(null)
 
       // Generate cache key based on user
-      const cacheKey = user ? CacheKeys.USER_TASKS(user.id) : CacheKeys.TASKS
       
       // Check cache first
-      const cachedTasks = globalCache.get<Task[]>(cacheKey)
-      if (cachedTasks) {
-        setTasks(cachedTasks)
-        setLoading(false)
-        return
-      }
 
       // Pass user info for role-based filtering
       const params = user ? `?userId=${user.id}&roles=${user.roles?.join(',')}` : ""
@@ -50,7 +42,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const tasks = response?.tasks || []
       
       // Cache the result
-      globalCache.set(cacheKey, tasks, CacheTTL.SHORT)
       setTasks(tasks)
     } catch (err) {
       console.error("Task context - Error fetching tasks:", err)
@@ -79,7 +70,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         setTasks((prevTasks) => [...prevTasks, task])
         
         // Invalidate related cache
-        invalidateRelatedCache('task')
         
         return task
       }
@@ -103,7 +93,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
         
         // Invalidate related cache
-        invalidateRelatedCache('task', id)
         
         return task
       }
@@ -121,14 +110,14 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     try {
       setLoading(true)
       setError(null)
-      const response = await TasksAPI.complete(id, userId)
+      // Use current user's ID if no userId provided
+      const targetUserId = userId || user?.id
+      const response = await TasksAPI.complete(id, targetUserId)
       const task = response?.task
       if (task) {
         setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
         
         // Invalidate related cache
-        invalidateRelatedCache('task', id)
-        invalidateRelatedCache('user')
         
         await fetchUsers(); // Refresh users after completing a task
         return task
@@ -151,8 +140,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       await TasksAPI.delete(id)
       setTasks((prevTasks) => prevTasks.filter((t) => t.id !== id))
       
-      // Invalidate related cache
-      invalidateRelatedCache('task', id)
     } catch (err) {
       setError("Erro ao excluir tarefa")
       console.error(err)
