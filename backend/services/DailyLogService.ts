@@ -1,8 +1,17 @@
 import { DailyLogRepository } from '../repositories/DailyLogRepository';
 import { DailyLog } from '../models/DailyLog';
+import { HistoryService } from './HistoryService';
+import { HistoryRepository } from '../repositories/HistoryRepository';
+import { UserRepository } from '../repositories/UserRepository';
 
 export class DailyLogService {
-    constructor(private repo: DailyLogRepository) {}
+    private historyService: HistoryService;
+
+    constructor(private repo: DailyLogRepository) {
+        const historyRepository = new HistoryRepository();
+        const userRepository = new UserRepository();
+        this.historyService = new HistoryService(historyRepository, userRepository);
+    }
 
     async findById(id: number): Promise<DailyLog | null> {
         return await this.repo.findById(id);
@@ -34,7 +43,12 @@ export class DailyLogService {
             throw new Error("Dados inválidos para o log diário");
         }
 
-        return await this.repo.create(dailyLog);
+        const createdLog = await this.repo.create(dailyLog);
+        
+        // Record creation in history
+        await this.historyService.recordEntityCreation('DAILY_LOG', createdLog.id!, data.userId, createdLog.toJSON());
+        
+        return createdLog;
     }
 
     async update(id: number, data: Partial<DailyLog>): Promise<DailyLog> {
@@ -43,13 +57,19 @@ export class DailyLogService {
             throw new Error("Log diário não encontrado");
         }
 
+        const oldLogData = currentLog.toJSON();
         Object.assign(currentLog, data);
 
         if (!currentLog.isValid()) {
             throw new Error("Dados inválidos para atualização");
         }
 
-        return await this.repo.update(currentLog);
+        const updatedLog = await this.repo.update(currentLog);
+        
+        // Record update in history
+        await this.historyService.recordEntityUpdate('DAILY_LOG', id, currentLog.userId, oldLogData, updatedLog.toJSON());
+        
+        return updatedLog;
     }
 
     async delete(id: number): Promise<void> {
@@ -58,7 +78,11 @@ export class DailyLogService {
             throw new Error("Log diário não encontrado");
         }
 
+        const logData = log.toJSON();
         await this.repo.delete(id);
+        
+        // Record deletion in history
+        await this.historyService.recordEntityDeletion('DAILY_LOG', id, log.userId, logData);
     }
 
     async findByUserId(userId: number): Promise<DailyLog[]> {

@@ -28,13 +28,15 @@ export class WeeklyHoursHistoryController {
 
   async getHistoryByWeek(weekStart: Date) {
     try {
-      const weekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
+      // Normalizar a data para comparar apenas a data (sem hora)
+      const normalizedWeekStart = new Date(weekStart);
+      normalizedWeekStart.setHours(0, 0, 0, 0);
       
       const history = await prisma.weekly_hours_history.findMany({
         where: {
           weekStart: {
-            gte: weekStart,
-            lte: weekEnd
+            gte: normalizedWeekStart,
+            lt: new Date(normalizedWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000) // +7 dias
           }
         },
         orderBy: {
@@ -122,8 +124,7 @@ export class WeeklyHoursHistoryController {
 
       const results = []
 
-      for (const user of users) {
-        // Buscar todas as sessões finalizadas do usuário na semana
+      for (const user of users) { 
         const sessions = await prisma.work_sessions.findMany({
           where: {
             userId: user.id,
@@ -140,7 +141,6 @@ export class WeeklyHoursHistoryController {
         const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0)
         const totalHours = totalSeconds / 3600
 
-        // Salvar no histórico apenas se trabalhou algo
         await prisma.weekly_hours_history.create({
           data: {
             userId: user.id,
@@ -173,10 +173,8 @@ export class WeeklyHoursHistoryController {
       const currentWeekStart = startOfWeek(now, { weekStartsOn: 1 })
       const currentWeekEnd = endOfWeek(now, { weekStartsOn: 1 })
 
-      // Estatísticas da semana atual
       const currentWeekHistory = await this.getHistoryByWeek(currentWeekStart)
       
-      // Estatísticas das últimas 4 semanas
       const last4Weeks = []
       for (let i = 1; i <= 4; i++) {
         const weekStart = subWeeks(now, i)

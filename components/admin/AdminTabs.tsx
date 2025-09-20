@@ -4,8 +4,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Progress } from "@/components/ui/progress";
-import { Activity, UserCheck, BarChart3, Clock, AlertCircle, Trash } from "lucide-react";
+import { Activity, UserCheck, BarChart3, Clock, AlertCircle, Trash, Award } from "lucide-react";
 import { UserApproval } from "@/components/features/user-approval";
+import { BadgeManager } from "@/components/admin/badge-manager";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -195,6 +196,7 @@ async function handleDelete(scheduleId: number) {
         <TabsTrigger value="projects">Projetos</TabsTrigger>
         <TabsTrigger value="responsibilities">Responsabilidades</TabsTrigger>
         <TabsTrigger value="schedule">Horários</TabsTrigger>
+        <TabsTrigger value="badges">Badges</TabsTrigger>
         <TabsTrigger value="logs">Logs de Atividade</TabsTrigger>
         <TabsTrigger value="users">Usuários</TabsTrigger>
       </TabsList>
@@ -601,6 +603,12 @@ async function handleDelete(scheduleId: number) {
           </CardContent>
         </Card>
       </TabsContent>
+      
+      {/* Badges Tab */}
+      <TabsContent value="badges" className="space-y-4">
+        <BadgeManager />
+      </TabsContent>
+      
       {/* Logs Tab */}
       <TabsContent value="logs" className="space-y-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

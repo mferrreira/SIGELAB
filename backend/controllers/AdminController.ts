@@ -4,20 +4,12 @@ import { prisma } from '@/lib/database/prisma';
 import { UserRole } from '@prisma/client';
 
 export class AdminController extends UserController {
-  async approveUser(id: string) {
-    const user = await prisma.users.update({
-      where: { id: Number(id) },
-      data: { status: 'active' },
-    });
-    return user;
+  async approveUser(id: number) {
+    return await super.approveUser(id);
   }
 
-  async rejectUser(id: string) {
-    const user = await prisma.users.update({
-      where: { id: Number(id) },
-      data: { status: 'rejected' },
-    });
-    return user;
+  async rejectUser(id: number) {
+    return await super.rejectUser(id);
   }
 
   async assignRole(id: string, roles: string[]) {

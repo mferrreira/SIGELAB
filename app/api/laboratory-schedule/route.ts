@@ -8,20 +8,37 @@ const laboratoryScheduleController = new LaboratoryScheduleController();
 export async function GET() {
   try {
     const schedules = await laboratoryScheduleController.getAllSchedules();
-    return new Response(JSON.stringify({ schedules }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" }
+    return NextResponse.json({ 
+      schedules: schedules.map(schedule => schedule.toJSON()) 
     });
   } catch (error: any) {
     console.error('Erro ao buscar horários do laboratório:', error);
-    return new Response(JSON.stringify({ error: 'Erro ao buscar horários do laboratório', details: error?.message }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" }
-    });
+    return NextResponse.json({ 
+      error: error.message || 'Erro ao buscar horários do laboratório' 
+    }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
-  const data = await request.json();
-  return NextResponse.json(await laboratoryScheduleController.createSchedule(data));
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
+    const data = await request.json();
+    const user = session.user as any;
+    
+    const schedule = await laboratoryScheduleController.createSchedule({
+      ...data,
+      userId: user.id
+    });
+    
+    return NextResponse.json({ schedule: schedule.toJSON() }, { status: 201 });
+  } catch (error: any) {
+    console.error('Erro ao criar horário do laboratório:', error);
+    return NextResponse.json({ 
+      error: error.message || 'Erro ao criar horário do laboratório' 
+    }, { status: 500 });
+  }
 } 

@@ -374,6 +374,7 @@ export default function AdminDashboardPage() {
           </Badge>
         </div>
 
+
         {/* Cards de Estatísticas */}
         <AdminStatsCards stats={stats} users={users} projects={projects} />
 

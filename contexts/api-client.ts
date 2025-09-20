@@ -430,3 +430,123 @@ export const LabEventsAPI = {
       body: JSON.stringify(event),
     }),
 }
+
+// API de Issues
+export const IssuesAPI = {
+  // Obter todos os issues
+  getAll: (params?: string) => fetchAPI<{ issues: any[] }>(`/api/issues${params || ""}`),
+
+  // Obter um issue específico
+  getById: (id: number) => fetchAPI<{ issue: any }>(`/api/issues/${id}`),
+
+  // Criar um novo issue
+  create: (issue: any) =>
+    fetchAPI<{ issue: any }>("/api/issues", {
+      method: "POST",
+      body: JSON.stringify(issue),
+    }),
+
+  // Atualizar um issue
+  update: (id: number, issue: any) =>
+    fetchAPI<{ issue: any }>(`/api/issues/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(issue),
+    }),
+
+  // Atribuir issue a um usuário
+  assign: (id: number, assignedTo: number) =>
+    fetchAPI<{ issue: any }>(`/api/issues/${id}/assign`, {
+      method: "POST",
+      body: JSON.stringify({ assigneeId: assignedTo }),
+    }),
+
+  // Atualizar status do issue
+  updateStatus: (id: number, status: string) => {
+    const actionMap: { [key: string]: string } = {
+      "in_progress": "start",
+      "closed": "closed",
+      "resolved": "resolve",
+      "open": "reopen"
+    };
+    const action = actionMap[status] || status;
+    return fetchAPI<{ issue: any }>(`/api/issues/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ action }),
+    });
+  },
+
+  // Resolver issue
+  resolve: (id: number, resolution?: string) =>
+    fetchAPI<{ issue: any }>(`/api/issues/${id}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ resolution }),
+    }),
+
+  // Excluir um issue
+  delete: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/api/issues/${id}`, {
+      method: "DELETE",
+    }),
+}
+
+// API de Badges
+export const BadgesAPI = {
+  // Obter todos os badges
+  getAll: () => fetchAPI<{ badges: any[] }>("/api/badges"),
+
+  // Obter um badge específico
+  getById: (id: number) => fetchAPI<{ badge: any }>(`/api/badges/${id}`),
+
+  // Criar um novo badge
+  create: (badge: any) =>
+    fetchAPI<{ badge: any }>("/api/badges", {
+      method: "POST",
+      body: JSON.stringify(badge),
+    }),
+
+  // Atualizar um badge
+  update: (id: number, badge: any) =>
+    fetchAPI<{ badge: any }>(`/api/badges/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(badge),
+    }),
+
+  // Excluir um badge
+  delete: (id: number) =>
+    fetchAPI<{ success: boolean }>(`/api/badges/${id}`, {
+      method: "DELETE",
+    }),
+
+  // Conceder badge a um usuário
+  award: (userId: number, badgeId: number) =>
+    fetchAPI<{ success: boolean }>("/api/badges/award", {
+      method: "POST",
+      body: JSON.stringify({ userId, badgeId }),
+    }),
+}
+
+// API de Perfis de Usuário
+export const UserProfilesAPI = {
+  // Obter perfil de um usuário
+  getProfile: (userId: number) => fetchAPI<{ profile: any }>(`/api/users/${userId}/profile`),
+
+  // Atualizar perfil de um usuário
+  updateProfile: (userId: number, profileData: any) =>
+    fetchAPI<{ profile: any }>(`/api/users/${userId}/profile`, {
+      method: "PUT",
+      body: JSON.stringify(profileData),
+    }),
+
+  // Buscar usuários por nome
+  searchUsers: (query: string) => fetchAPI<{ users: any[] }>(`/api/users/search?q=${encodeURIComponent(query)}`),
+
+  // Obter avatar de um usuário
+  getAvatar: (userId: number) => fetchAPI<{ avatar: string }>(`/api/users/${userId}/avatar`),
+
+  // Atualizar avatar de um usuário
+  updateAvatar: (userId: number, avatarData: FormData) =>
+    fetchAPI<{ avatar: string }>(`/api/users/${userId}/avatar`, {
+      method: "POST",
+      body: avatarData,
+    }),
+}

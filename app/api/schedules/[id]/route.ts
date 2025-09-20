@@ -1,23 +1,51 @@
 import { NextResponse } from "next/server"
 import { UserScheduleController } from "@/backend/controllers/UserScheduleController"
-import { handlePrismaError, createApiResponse, createApiError } from "@/lib/utils/utils"
 
 const userScheduleController = new UserScheduleController();
 
 // GET: Obter um horário específico
-export async function GET(context: { params: Promise<{ id: string }> }) {
-  const params = await context.params;
-  return NextResponse.json(userScheduleController.getSchedule(Number(params.id)));
+export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
+  try {
+    const params = await context.params;
+    const id = parseInt(params.id);
+
+    const schedule = await userScheduleController.getSchedule(id);
+    if (!schedule) {
+      return NextResponse.json({ error: "Horário não encontrado" }, { status: 404 });
+    }
+
+    return NextResponse.json({ schedule });
+  } catch (error) {
+    console.error("Erro ao buscar horário:", error);
+    return NextResponse.json({ error: "Erro ao buscar horário" }, { status: 500 });
+  }
 }
 
 // PUT: Atualizar um horário
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
-  const params = await context.params;
-  return NextResponse.json(userScheduleController.updateSchedule(Number(params.id), request));
+  try {
+    const params = await context.params;
+    const id = parseInt(params.id);
+    const body = await request.json();
+
+    const schedule = await userScheduleController.updateSchedule(id, body);
+    return NextResponse.json({ schedule });
+  } catch (error: any) {
+    console.error("Erro ao atualizar horário:", error);
+    return NextResponse.json({ error: error.message || "Erro ao atualizar horário" }, { status: 500 });
+  }
 }
 
 // DELETE: Excluir um horário
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
-  const params = await context.params;
-  return NextResponse.json(userScheduleController.deleteSchedule(Number(params.id)));
-} 
+  try {
+    const params = await context.params;
+    const id = parseInt(params.id);
+
+    await userScheduleController.deleteSchedule(id);
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error("Erro ao excluir horário:", error);
+    return NextResponse.json({ error: error.message || "Erro ao excluir horário" }, { status: 500 });
+  }
+}

@@ -14,8 +14,6 @@ export async function GET(request: Request) {
 
     if (active === "true") {
       sessions = await workSessionController.getActiveSessions();
-    } else if (managerId) {
-      sessions = await workSessionController.getSessionsByProjectLeader(Number(managerId));
     } else if (userId) {
       sessions = await workSessionController.getSessionsByUser(Number(userId));
     } else {

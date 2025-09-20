@@ -1,37 +1,48 @@
-import { TaskModel } from '../models/TaskModel';
+import { TaskService } from '../services/TaskService';
+import { TaskRepository } from '../repositories/TaskRepository';
+import { UserRepository } from '../repositories/UserRepository';
+import { ProjectRepository } from '../repositories/ProjectRepository';
+import { Task } from '../models/Task';
 
 export class TaskController {
-  private taskModel = new TaskModel();
+  private taskService: TaskService;
 
-  async getTask(id: number) {
-    return this.taskModel.findById(id);
+  constructor() {
+    const taskRepository = new TaskRepository();
+    const userRepository = new UserRepository();
+    const projectRepository = new ProjectRepository();
+    this.taskService = new TaskService(taskRepository, userRepository, projectRepository);
   }
 
-  async getAllTasks() {
-    return this.taskModel.findAll();
+  async getTask(id: number): Promise<Task | null> {
+    return await this.taskService.findById(id);
   }
 
-  async createTask(data: any) {
-    return this.taskModel.create(data);
+  async getAllTasks(): Promise<Task[]> {
+    return await this.taskService.findAll();
   }
 
-  async updateTask(id: number, data: any) {
-    return this.taskModel.update(id, data);
+  async createTask(data: any, creatorId: number): Promise<Task> {
+    return await this.taskService.create(data, creatorId);
   }
 
-  async deleteTask(id: number) {
-    return this.taskModel.delete(id);
+  async updateTask(id: number, data: any, userId: number): Promise<Task> {
+    return await this.taskService.update(id, data, userId);
   }
 
-  async getTasksByProject(projectId: number) {
-    return this.taskModel.findByProjectId(projectId);
+  async deleteTask(id: number, userId: number): Promise<void> {
+    return await this.taskService.delete(id, userId);
   }
 
-  async getTasksByAssignee(userId: number) {
-    return this.taskModel.findByAssigneeId(userId);
+  async getTasksByAssignee(userId: number): Promise<Task[]> {
+    return await this.taskService.findByAssigneeId(userId);
   }
 
-  async getTasksByStatus(status: string) {
-    return this.taskModel.findByStatus(status);
+  async getTasksByUser(userId: number): Promise<Task[]> {
+    return await this.taskService.getTasksByUser(userId);
+  }
+
+  async completeTask(taskId: number, userId: number): Promise<Task> {
+    return await this.taskService.completeTask(taskId, userId);
   }
 } 

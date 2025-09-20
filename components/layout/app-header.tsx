@@ -49,6 +49,7 @@ export function AppHeader() {
               Ranking
             </Link>
 
+
             {/* Link para loja (todos os usuários) */}
             <Link
               href="/dashboard/loja"

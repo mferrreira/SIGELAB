@@ -1,50 +1,35 @@
-import { createApiResponse, createApiError } from "@/lib/utils/utils";
+import { NextResponse } from "next/server";
 import { UserController } from "@/backend/controllers/UserController";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
 const userController = new UserController();
 
 // GET: Obter todos os usuários
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const users = await userController.userModel.findAll();
-    return createApiResponse({ users });
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    }
+
+    const users = await userController.getAllUsers();
+    return NextResponse.json({ users });
   } catch (error) {
     console.error("Erro ao buscar usuários:", error);
-    return createApiError("Erro ao buscar usuários");
+    return NextResponse.json({ error: "Erro ao buscar usuários" }, { status: 500 });
   }
 }
 
-// POST: Criar um novo usuário
+// POST: Criar um novo usuário (público - aprovação posterior)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log("Received user data:", {
-      name: body.name,
-      email: body.email,
-      password: body.password ? `${body.password.substring(0, 10)}...` : 'undefined',
-      roles: body.roles,
-      weekHours: body.weekHours
-    });
-    const user = await userController.userModel.create(body);
-    return createApiResponse({ user }, 201);
+    
+    const user = await userController.createUser(body);
+    return NextResponse.json({ user }, { status: 201 });
   } catch (error: any) {
     console.error("Erro ao criar usuário:", error);
-    return createApiError("Erro ao criar usuário");
-  }
-}
-
-// PATCH: Aprovar ou rejeitar usuário
-export async function PATCH(request: Request) {
-  try {
-    const body = await request.json();
-    const { id, action } = body;
-    if (!id || !["approve", "reject"].includes(action)) {
-      return createApiError("ID e ação são obrigatórios", 400);
-    }
-    const user = await userController.updateUserStatus(id, action);
-    return createApiResponse({ user });
-  } catch (error: any) {
-    console.error("Erro ao atualizar status do usuário:", error);
-    return createApiError("Erro ao atualizar status do usuário");
+    return NextResponse.json({ error: error.message || "Erro ao criar usuário" }, { status: 500 });
   }
 }

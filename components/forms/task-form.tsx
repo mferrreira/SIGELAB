@@ -183,7 +183,7 @@ export function TaskForm({
   projectId,
   open,
 }: TaskFormProps) {
-  const [formData, setFormData] = useState<TaskFormData & { taskVisibility?: string }>({
+  const [formData, setFormData] = useState<TaskFormData>({
     title: "",
     description: "",
     status: "to-do",
@@ -193,7 +193,6 @@ export function TaskForm({
     dueDate: "",
     points: 10,
     completed: false,
-    taskVisibility: "delegated",
   })
   const [isPastDate, setIsPastDate] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({})
@@ -222,7 +221,6 @@ export function TaskForm({
         dueDate: task.dueDate || "",
         points: task.points,
         completed: task.completed || false,
-        taskVisibility: task.taskVisibility || (task.assignedTo ? "delegated" : "public"),
       }
       setFormData(formDataToSet)
       checkIfPastDate(task.dueDate || null)
@@ -237,7 +235,6 @@ export function TaskForm({
         dueDate: "",
         points: 10,
         completed: false,
-        taskVisibility: "delegated",
       })
       setIsPastDate(false)
     }
@@ -253,13 +250,7 @@ export function TaskForm({
   }, [checkIfPastDate])
 
   const handleSelectChange = useCallback((name: string, value: string) => {
-    setFormData((prev) => {
-      // If changing visibility to public, clear assignedTo
-      if (name === "taskVisibility" && value === "public") {
-        return { ...prev, [name]: value, assignedTo: "" }
-      }
-      return { ...prev, [name]: value }
-    })
+    setFormData((prev) => ({ ...prev, [name]: value }))
   }, [])
 
   const handleNumberChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -272,7 +263,7 @@ export function TaskForm({
     // Validation
     const errors: { [key: string]: string } = {}
     if (!formData.title.trim()) errors.title = "Título é obrigatório."
-    if (formData.taskVisibility !== "public" && !formData.assignedTo) errors.assignedTo = "Selecione um responsável."
+    if (!formData.assignedTo) errors.assignedTo = "Selecione um responsável."
     if (!formData.project) errors.project = "Selecione um projeto."
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
@@ -291,10 +282,6 @@ export function TaskForm({
     { value: "low" as const, label: "Baixa" },
     { value: "medium" as const, label: "Média" },
     { value: "high" as const, label: "Alta" },
-  ]
-  const visibilityOptions = [
-    { value: "delegated", label: "Delegada (Atribuir a um voluntário)" },
-    { value: "public", label: "Pública (Todos os voluntários do projeto)" },
   ]
   // Only show volunteers for task delegation
   const userOptions = users
@@ -358,12 +345,6 @@ export function TaskForm({
 
       <div className="grid grid-cols-2 gap-4">
         <SelectField
-          label="Visibilidade"
-          value={formData.taskVisibility || "delegated"}
-          onValueChange={(value) => handleSelectChange("taskVisibility", value)}
-          options={visibilityOptions}
-        />
-        <SelectField
           label="Projeto"
           value={formData.project}
           onValueChange={(value) => handleSelectChange("project", value)}
@@ -371,20 +352,15 @@ export function TaskForm({
           options={projectOptions}
           error={fieldErrors.project}
         />
+        <SelectField
+          label="Responsável"
+          value={formData.assignedTo}
+          onValueChange={(value) => handleSelectChange("assignedTo", value)}
+          placeholder="Selecione um responsável"
+          options={userOptions}
+          error={fieldErrors.assignedTo}
+        />
       </div>
-      {/* Only show assignee if delegated */}
-      {formData.taskVisibility !== "public" && (
-        <div className="grid grid-cols-2 gap-4">
-          <SelectField
-            label="Responsável"
-            value={formData.assignedTo}
-            onValueChange={(value) => handleSelectChange("assignedTo", value)}
-            placeholder="Selecione um responsável"
-            options={userOptions}
-            error={fieldErrors.assignedTo}
-          />
-        </div>
-      )}
       <div className="grid grid-cols-2 gap-4">
         <FormField
           label="Data de Vencimento"

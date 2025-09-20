@@ -1,4 +1,4 @@
-import { createApiResponse, createApiError } from "@/lib/utils/utils";
+import { NextResponse } from "next/server";
 import { UserController } from "@/backend/controllers/UserController";
 
 const userController = new UserController();
@@ -7,13 +7,17 @@ const userController = new UserController();
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params;
-    const user = await userController.userModel.findById(params.id);
-    if (!user) return createApiError("Usuário não encontrado", 404);
-    // Garantir que currentWeekHours está presente
-    return createApiResponse({ user });
-  } catch (error: any) {
+    const id = parseInt(params.id);
+
+    const user = await userController.getUser(id);
+    if (!user) {
+      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+    }
+
+    return NextResponse.json({ user });
+  } catch (error) {
     console.error("Erro ao buscar usuário:", error);
-    return createApiError("Erro ao buscar usuário");
+    return NextResponse.json({ error: "Erro ao buscar usuário" }, { status: 500 });
   }
 }
 
@@ -21,27 +25,27 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params;
+    const id = parseInt(params.id);
     const body = await request.json();
-    const user = await userController.userModel.update(params.id, body);
-    return createApiResponse({ user });
+
+    const user = await userController.updateUser(id, body);
+    return NextResponse.json({ user });
   } catch (error: any) {
     console.error("Erro ao atualizar usuário:", error);
-    return createApiError("Erro ao atualizar usuário");
+    return NextResponse.json({ error: error.message || "Erro ao atualizar usuário" }, { status: 500 });
   }
 }
 
-// PATCH: Adicionar pontos a um usuário
-export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+// DELETE: Excluir um usuário
+export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params;
-    const body = await request.json();
-    if (body.action === "addPoints" && typeof body.points === "number") {
-      const user = await userController.addPoints(params.id, body.points);
-      return createApiResponse({ user });
-    }
-    return createApiError("Ação não suportada", 400);
+    const id = parseInt(params.id);
+
+    await userController.deleteUser(id);
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("Erro ao processar a ação no usuário:", error);
-    return createApiError("Erro ao processar a ação no usuário");
+    console.error("Erro ao excluir usuário:", error);
+    return NextResponse.json({ error: error.message || "Erro ao excluir usuário" }, { status: 500 });
   }
 }

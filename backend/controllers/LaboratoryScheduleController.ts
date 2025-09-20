@@ -1,34 +1,68 @@
-import { LaboratoryScheduleModel } from '../models/LaboratoryScheduleModel';
+import { LaboratorySchedule } from '../models/LaboratorySchedule';
+import { LaboratoryScheduleService, ILaboratoryScheduleService } from '../services/LaboratoryScheduleService';
+import { LaboratoryScheduleRepository } from '../repositories/LaboratoryScheduleRepository';
+import { UserRepository } from '../repositories/UserRepository';
+import { HistoryService } from '../services/HistoryService';
+import { HistoryRepository } from '../repositories/HistoryRepository';
 
 export class LaboratoryScheduleController {
-  private labScheduleModel = new LaboratoryScheduleModel();
+    private laboratoryScheduleService: ILaboratoryScheduleService;
 
-  async getSchedule(id: number) {
-    return this.labScheduleModel.findById(id);
-  }
-
-  async getAllSchedules() {
-    return this.labScheduleModel.findAll();
-  }
-
-  async createSchedule(data: any) {
-    const [startH, startM] = data.startTime.split(':').map(Number);
-    const [endH, endM] = data.endTime.split(':').map(Number);
-    if ((endH * 60 + endM) <= (startH * 60 + startM)) {
-      throw new Error('Horário final deve ser após o horário inicial');
+    constructor() {
+        const laboratoryScheduleRepo = new LaboratoryScheduleRepository();
+        const userRepo = new UserRepository();
+        const historyRepo = new HistoryRepository();
+        const historyService = new HistoryService(historyRepo, userRepo);
+        
+        this.laboratoryScheduleService = new LaboratoryScheduleService(laboratoryScheduleRepo, userRepo, historyService);
     }
-    return await this.labScheduleModel.create(data);
-  }
 
-  async updateSchedule(id: number, data: any) {
-    return this.labScheduleModel.update(id, data);
-  }
+    async getScheduleById(id: number): Promise<LaboratorySchedule> {
+        const schedule = await this.laboratoryScheduleService.findById(id);
+        if (!schedule) {
+            throw new Error("Horário do laboratório não encontrado");
+        }
+        return schedule;
+    }
 
-  async deleteSchedule(id: number) {
-    return this.labScheduleModel.delete(id);
-  }
+    async getAllSchedules(): Promise<LaboratorySchedule[]> {
+        return await this.laboratoryScheduleService.findAll();
+    }
 
-  async getSchedulesByDay(dayOfWeek: number) {
-    return this.labScheduleModel.findByDayOfWeek(dayOfWeek);
-  }
-} 
+    async createSchedule(data: {
+        dayOfWeek: number;
+        startTime: string;
+        endTime: string;
+        notes?: string;
+        userId?: number;
+    }): Promise<LaboratorySchedule> {
+        return await this.laboratoryScheduleService.create(data);
+    }
+
+    async updateSchedule(id: number, data: {
+        dayOfWeek?: number;
+        startTime?: string;
+        endTime?: string;
+        notes?: string;
+        userId?: number;
+    }): Promise<LaboratorySchedule> {
+        return await this.laboratoryScheduleService.update(id, data);
+    }
+
+    async deleteSchedule(id: number): Promise<void> {
+        await this.laboratoryScheduleService.delete(id);
+    }
+
+
+    async getSchedulesByDay(dayOfWeek: number): Promise<LaboratorySchedule[]> {
+        return await this.laboratoryScheduleService.getSchedulesByDay(dayOfWeek);
+    }
+
+    async getSchedulesByTimeRange(startTime: string, endTime: string): Promise<LaboratorySchedule[]> {
+        return await this.laboratoryScheduleService.getSchedulesByTimeRange(startTime, endTime);
+    }
+
+    async canUserManageSchedule(userId: number): Promise<boolean> {
+        return await this.laboratoryScheduleService.canUserManageSchedule(userId);
+    }
+}

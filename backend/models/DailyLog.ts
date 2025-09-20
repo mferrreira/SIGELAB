@@ -107,4 +107,16 @@ export class DailyLog {
     getFormattedDateTime(): string {
         return this.date.toISOString();
     }
+
+    toJSON(): any {
+        return {
+            id: this.id,
+            userId: this.userId,
+            projectId: this.projectId,
+            date: this.date,
+            note: this.note,
+            workSessionId: this.workSessionId,
+            createdAt: this.createdAt
+        };
+    }
 }

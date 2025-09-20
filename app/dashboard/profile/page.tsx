@@ -7,10 +7,16 @@ import { useAuth } from "@/contexts/auth-context"
 import { DailyLogForm } from "@/components/forms/daily-log-form"
 import { DailyLogList } from "@/components/ui/daily-log-list"
 import { UserApproval } from "@/components/features/user-approval"
+import { UserSearch } from "@/components/ui/user-search"
+import { UserProfileView } from "@/components/ui/user-profile-view"
+import { ProfilePictureUpload } from "@/components/forms/profile-picture-upload"
+import { UserProfileForm } from "@/components/forms/user-profile-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Calendar, CalendarDays } from "lucide-react"
-import type { DailyLog, DailyLogFormData } from "@/contexts/types"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Calendar, CalendarDays, User as UserIcon, Settings, Trophy, Target } from "lucide-react"
+import type { DailyLog, DailyLogFormData, User } from "@/contexts/types"
 import { TimerCard } from "@/components/ui/timer-card"
 import { useWorkSessions } from "@/contexts/work-session-context"
 
@@ -22,8 +28,10 @@ export default function ProfilePage() {
   const [editingLog, setEditingLog] = useState<DailyLog | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const { sessions, getWeeklyHours, endSession } = useWorkSessions()
-  const [user, setUser] = useState(authUser)
+  const [user, setUser] = useState<User | null>(authUser)
   const [weeklyHours, setWeeklyHours] = useState<number>(0)
+  const [viewingUser, setViewingUser] = useState<User | null>(null)
+  const [showProfileForm, setShowProfileForm] = useState(false)
 
   const today = new Date()
   const isoToday = today.toISOString().split("T")[0]
@@ -47,54 +55,51 @@ export default function ProfilePage() {
         s.startTime &&
         new Date(s.startTime).toISOString().split("T")[0] === isoToday
     )
+
   useEffect(() => {
     if (authUser) {
-      // UsersAPI.getById(authUser.id).then(({ user }) => setUser(user)) // Removed UsersAPI import
+      setUser(authUser)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUser])
 
   useEffect(() => {
     if (user) {
       getWeeklyHours(user.id, monday.toISOString(), sunday.toISOString()).then(setWeeklyHours)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, sessions])
+  }, [user, sessions, getWeeklyHours, monday, sunday])
+
 
   const handleSubmit = async (formData: DailyLogFormData) => {
     if (!user) return
     
     setSubmitting(true)
     setFormError(null)
-    
+
     try {
       if (editingLog) {
-        await updateLog(editingLog.id, { note: formData.note })
+        await updateLog(editingLog.id, formData)
         setEditingLog(null)
       } else {
         await createLog(formData)
-        setShowForm(false)
       }
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Erro ao salvar registro")
+      setShowForm(false)
+    } catch (err: any) {
+      setFormError(err.message || "Erro ao salvar log")
     } finally {
       setSubmitting(false)
     }
   }
 
-  const handleEdit = (log: DailyLog) => {
-    setEditingLog(log)
-    setShowForm(true)
+  const handleUpdate = async (formData: DailyLogFormData) => {
+    if (!editingLog) return
+    await handleSubmit(formData)
   }
 
-  const handleDelete = async (id: number) => {
-    setSubmitting(true)
+  const handleDelete = async (logId: number) => {
     try {
-      await deleteLog(id)
-    } catch (err) {
-      console.error("Erro ao excluir registro:", err)
-    } finally {
-      setSubmitting(false)
+      await deleteLog(logId)
+    } catch (err: any) {
+      console.error("Error deleting log:", err)
     }
   }
 
@@ -104,158 +109,272 @@ export default function ProfilePage() {
     setFormError(null)
   }
 
-  // Sort logs by latest add (createdAt descending)
-  const userLogs = logs
-    .filter((log) => log.userId === user?.id)
-    .sort((a, b) => {
-      const dateA = new Date(a.createdAt || a.date).getTime();
-      const dateB = new Date(b.createdAt || b.date).getTime();
-      return dateB - dateA;
-    });
+  const handleEdit = (log: DailyLog) => {
+    setEditingLog(log)
+    setShowForm(true)
+  }
 
-  // Substituir weeklyHours por user.currentWeekHours
-  const progressoSemanal = user?.currentWeekHours ?? 0;
-  const metaSemanal = user?.weekHours ?? 0;
+  const handleUserSelect = (selectedUser: User) => {
+    setViewingUser(selectedUser)
+  }
+
+  const handleBackToProfile = () => {
+    setViewingUser(null)
+  }
+
+  // Calculate weekly progress
+  const progressoSemanal = user?.currentWeekHours ?? 0
+  const metaSemanal = user?.weekHours ?? 0
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Carregando...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Carregando perfil...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (viewingUser) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="container mx-auto px-4 py-8">
+          <UserProfileView
+            user={viewingUser}
+            onBack={handleBackToProfile}
+            canEdit={false}
+          />
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <main className="flex-1 container mx-auto p-4 md:p-6">
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* User Profile Header */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-16h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  {/* Removed Plus icon */}
+    <div className="min-h-screen bg-gray-50">
+      
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* User Search */}
+          <div className="mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center space-x-2">
+                  <UserIcon className="h-5 w-5" />
+                  <span>Buscar Usuários</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <UserSearch
+                  onUserSelect={handleUserSelect}
+                  placeholder="Digite o nome ou email do usuário..."
+                />
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Current User Profile */}
+          <div className="mb-8">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center space-x-2">
+                    <UserIcon className="h-5 w-5" />
+                    <span>Meu Perfil</span>
+                  </CardTitle>
+                  <Button variant="outline" size="sm" onClick={() => setShowProfileForm(true)}>
+                    Editar Perfil
+                  </Button>
                 </div>
-                <div className="flex-1">
-                  <h1 className="text-2xl font-bold text-foreground">{user.name}</h1>
-                  <p className="text-muted-foreground">{user.email}</p>
-                  <div className="flex items-center gap-4 mt-2">
-                    <div className="flex items-center gap-1">
-                      {/* Removed Trophy icon */}
-                      <span className="text-sm font-medium">{user.points} pontos</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      {/* Removed Calendar icon */}
-                      <span className="text-sm font-medium">{user.completedTasks} tarefas concluídas</span>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center space-x-4">
+                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="w-16 h-16 rounded-full object-cover" />
+                    ) : (
+                      <UserIcon className="h-8 w-8 text-primary" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-xl font-bold text-foreground">{user?.name}</h2>
+                    <p className="text-muted-foreground">{user?.email}</p>
+                    <div className="flex items-center gap-4 mt-2">
+                      <div className="flex items-center gap-1">
+                        <Trophy className="h-4 w-4 text-yellow-600" />
+                        <span className="text-sm font-medium">{user?.points} pontos</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Target className="h-4 w-4 text-green-600" />
+                        <span className="text-sm font-medium">{user?.completedTasks} tarefas concluídas</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
-          {/* Weekly Hours Summary Card */}
-          <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="w-10h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <CalendarDays className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <div className="text-lg font-bold text-foreground">{progressoSemanal.toFixed(1)} h</div>
-                <div className="text-sm text-muted-foreground">Horas trabalhadas nesta semana</div>
-                <div className="text-sm mt-1">
-                  {metaSemanal !== undefined && (() => {
-                    const remaining = metaSemanal - progressoSemanal;
-                    if (remaining > 0) return `${remaining.toFixed(1)}h restantes`;
-                    if (remaining < 0) return `+${Math.abs(remaining).toFixed(1)}h extra`;
-                    return 'Meta semanal atingida!';
-                  })()}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Tabs for different sections */}
+          <Tabs defaultValue="activity" className="space-y-6">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="activity" className="flex items-center space-x-2">
+                <Calendar className="h-4 w-4" />
+                <span>Atividade</span>
+              </TabsTrigger>
+              <TabsTrigger value="logs" className="flex items-center space-x-2">
+                <CalendarDays className="h-4 w-4" />
+                <span>Logs Diários</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="flex items-center space-x-2">
+                <Settings className="h-4 w-4" />
+                <span>Configurações</span>
+              </TabsTrigger>
+              <TabsTrigger value="admin" className="flex items-center space-x-2">
+                <Settings className="h-4 w-4" />
+                <span>Administração</span>
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Timer Card */}
-          <TimerCard onSessionEnd={(updatedUser) => {
-            if (updatedUser) setUser(updatedUser)
-            else if (authUser) {
-              // UsersAPI.getById(authUser.id).then(({ user }) => setUser(user)) // Removed UsersAPI import
-            }
-          }} />
+            <TabsContent value="activity" className="space-y-6">
+              {/* Weekly Hours Summary Card */}
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-4 flex items-center gap-4">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <CalendarDays className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-foreground">{progressoSemanal.toFixed(1)} h</div>
+                    <div className="text-sm text-muted-foreground">Horas trabalhadas nesta semana</div>
+                    <div className="text-sm mt-1">
+                      {metaSemanal !== undefined && (() => {
+                        const remaining = metaSemanal - progressoSemanal;
+                        if (remaining > 0) return `${remaining.toFixed(1)}h restantes`;
+                        if (remaining < 0) return `+${Math.abs(remaining).toFixed(1)}h extra`;
+                        return 'Meta semanal atingida!';
+                      })()}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* User Approval Section - Only for admins and laboratorists */}
-          {(user.roles?.includes("COORDENADOR") || user.roles?.includes("LABORATORISTA")) && (
-            <UserApproval />
-          )}
+              {/* Timer Card */}
+              <TimerCard onSessionEnd={(updatedUser) => {
+                if (updatedUser) setUser(updatedUser)
+              }} />
+            </TabsContent>
 
-          {/* Daily Log Section */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  <span>Registros Diários</span>
-                </CardTitle>
-                {!showForm && (
-                  <Button onClick={() => setShowForm(true)} disabled={!hasCompletedSessionToday}>
-                    {/* Removed Plus icon */}
-                    Adicionar Registro
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">Carregando...</p>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8">
-                  <p className="text-red-500">{error}</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Today's Log Form */}
+            <TabsContent value="logs" className="space-y-6">
+              {/* Daily Log Section */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="h-5 w-5" />
+                      <span>Registros Diários</span>
+                    </CardTitle>
+                    {!showForm && (
+                      <Button onClick={() => setShowForm(true)} disabled={!hasCompletedSessionToday}>
+                        Adicionar Log
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
                   {showForm && (
-                    <Card className="border-primary/20 bg-primary/5">
-                      <CardContent className="p-4">
-                        <h3 className="font-medium text-blue-900 mb-4">
-                          {editingLog ? "Editar Registro" : "Novo Registro"}
-                        </h3>
-                        {hasCompletedSessionToday ? (
-                          <DailyLogForm
-                            initialNote={editingLog?.note || ""}
-                            onSubmit={handleSubmit}
-                            onCancel={handleCancel}
-                            isSubmitting={submitting}
-                            error={formError}
-                            userId={user.id}
-                            date={new Date().toISOString()}
-                          />
-                        ) : (
-                          <div className="text-blue-700 text-sm mt-2">
-                            Para registrar um log, inicie e finalize uma sessão de trabalho usando o timer acima.
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                    <DailyLogForm
+                      initialNote={editingLog?.note || ""}
+                      onSubmit={handleSubmit}
+                      onCancel={handleCancel}
+                      isSubmitting={submitting}
+                      error={formError}
+                      userId={user.id}
+                      date={isoToday}
+                    />
                   )}
-
-                  {/* Logs List */}
                   <DailyLogList
-                    logs={userLogs}
+                    logs={logs}
                     currentUser={user}
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     isSubmitting={submitting}
-                    showAuthor={user.roles?.includes('COORDENADOR')}
                   />
-                </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="settings" className="space-y-6">
+              {/* Profile Edit Form */}
+              {showProfileForm && user ? (
+                <UserProfileForm
+                  user={user}
+                  onUpdate={(updatedUser) => {
+                    setUser(updatedUser)
+                    setShowProfileForm(false)
+                  }}
+                  onCancel={() => setShowProfileForm(false)}
+                />
+              ) : (
+                <>
+                  {/* Profile Picture Upload */}
+                  {user && (
+                    <ProfilePictureUpload
+                      user={user}
+                      onUpdate={(updatedUser) => setUser(updatedUser)}
+                    />
+                  )}
+                  
+                  {/* Profile Information Display */}
+                  {user && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Informações do Perfil</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div>
+                          <Label className="text-sm font-medium">Nome</Label>
+                          <p className="text-sm text-gray-600">{user.name}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Email</Label>
+                          <p className="text-sm text-gray-600">{user.email}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Biografia</Label>
+                          <p className="text-sm text-gray-600">{user.bio || "Nenhuma biografia definida"}</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Visibilidade do Perfil</Label>
+                          <p className="text-sm text-gray-600">
+                            {user.profileVisibility === "public" && "Público"}
+                            {user.profileVisibility === "members_only" && "Apenas Membros"}
+                            {user.profileVisibility === "private" && "Privado"}
+                          </p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Horas Semanais</Label>
+                          <p className="text-sm text-gray-600">{user.weekHours} horas</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </>
               )}
-            </CardContent>
-          </Card>
+            </TabsContent>
+
+            <TabsContent value="admin" className="space-y-6">
+              {/* User Approval Section - Only for admins and laboratorists */}
+              {(user.roles?.includes("COORDENADOR") || user.roles?.includes("LABORATORISTA")) && (
+                <UserApproval />
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
-      </main>
+      </div>
+
+      {/* TODO: Add profile edit functionality */}
     </div>
+
   )
-} 
+}

@@ -37,13 +37,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // O registro permanece igual
   const register = async (name: string, email: string, password: string, roles: UserRole[], weekHours: number) => {
     const normalizedEmail = email.toLowerCase()
-    // Verificar se o usuário já existe
-    const { users } = await UsersAPI.getAll()
-    const existingUser = users.find((u) => u.email === normalizedEmail)
-    if (existingUser) {
-      throw new Error("Usuário já existe")
-    }
-    // Criar novo usuário
+    
+    // Criar novo usuário diretamente
+    // A verificação de usuário existente será feita no backend
     const { user } = await UsersAPI.create({
       name,
       email: normalizedEmail,

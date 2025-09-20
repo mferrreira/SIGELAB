@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server"
-import { prisma } from "@/lib/database/prisma"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { LabResponsibilityController } from "@/backend/controllers/LabResponsibilityController"
+
+const labResponsibilityController = new LabResponsibilityController();
 
 // GET: Obter todas as responsabilidades ou filtrar por período
 export async function GET(request: Request) {
@@ -10,84 +14,65 @@ export async function GET(request: Request) {
     const active = searchParams.get("active")
 
     if (active === "true") {
-      // Obter apenas a responsabilidade ativa (sem endTime) com informações do usuário
-      const activeResponsibility = await prisma.lab_responsibilities.findFirst({
-        where: { endTime: null },
-        include: {
-          user: true,
-        },
-        orderBy: { startTime: "desc" },
-      })
+      // Obter apenas a responsabilidade ativa
+      const activeResponsibility = await labResponsibilityController.getActiveResponsibility()
       if (activeResponsibility) {
-        const startTime = new Date(activeResponsibility.startTime).getTime()
-        const now = new Date().getTime()
-        const duration = Math.floor((now - startTime) / 1000)
         return NextResponse.json({
-          activeResponsibility: {
-            ...activeResponsibility,
-            duration,
-            userRole: activeResponsibility.user?.roles || "nenhuma",
-          },
+          activeResponsibility: activeResponsibility.toJSON()
         }, { status: 200 })
       } else {
         return NextResponse.json({ activeResponsibility: null }, { status: 200 })
       }
     } else if (startDate && endDate) {
       // Filtrar por período
-      const responsibilities = await prisma.lab_responsibilities.findMany({
-        where: {
-          startTime: { gte: startDate },
-          endTime: { lte: endDate },
-        },
-        orderBy: { startTime: "desc" },
-      })
-      return NextResponse.json({ responsibilities }, { status: 200 })
+      const responsibilities = await labResponsibilityController.getResponsibilitiesByDateRange(
+        new Date(startDate),
+        new Date(endDate)
+      )
+      return NextResponse.json({ 
+        responsibilities: responsibilities.map(r => r.toJSON()) 
+      }, { status: 200 })
     } else {
       // Obter todas
-      const responsibilities = await prisma.lab_responsibilities.findMany({
-        orderBy: { startTime: "desc" },
-      })
-      return NextResponse.json({ responsibilities }, { status: 200 })
+      const responsibilities = await labResponsibilityController.getAllResponsibilities()
+      return NextResponse.json({ 
+        responsibilities: responsibilities.map(r => r.toJSON()) 
+      }, { status: 200 })
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao buscar responsabilidades:", error)
-    return NextResponse.json({ error: "Erro ao buscar responsabilidades" }, { status: 500 })
+    return NextResponse.json({ 
+      error: error.message || "Erro ao buscar responsabilidades" 
+    }, { status: 500 })
   }
 }
 
 // POST: Iniciar uma nova responsabilidade
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 });
+    }
+
     const body = await request.json()
     if (!body.userId || !body.userName) {
       return NextResponse.json({ error: "ID do usuário e nome são obrigatórios" }, { status: 400 })
     }
 
-    // Verificar se o usuário tem permissão para iniciar responsabilidade
-    const user = await prisma.users.findUnique({
-      where: { id: Number(body.userId) }
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
-    }
-
-    if (!user.roles.includes("COORDENADOR") && !user.roles.includes("GERENTE")) {
-      return NextResponse.json({ error: "Apenas coordenadores e gerentes podem iniciar responsabilidades" }, { status: 403 })
-    }
-
-    const responsibility = await prisma.lab_responsibilities.create({
-      data: {
-        userId: Number(body.userId),
-        userName: body.userName,
-        startTime: new Date().toISOString(),
-        endTime: null,
-        notes: body.notes || "",
-      },
-    })
-    return NextResponse.json({ responsibility }, { status: 201 })
-  } catch (error) {
+    const responsibility = await labResponsibilityController.startResponsibility(
+      Number(body.userId),
+      body.userName,
+      body.notes || ""
+    )
+    
+    return NextResponse.json({ 
+      responsibility: responsibility.toJSON() 
+    }, { status: 201 })
+  } catch (error: any) {
     console.error("Erro ao iniciar responsabilidade:", error)
-    return NextResponse.json({ error: "Erro ao iniciar responsabilidade" }, { status: 500 })
+    return NextResponse.json({ 
+      error: error.message || "Erro ao iniciar responsabilidade" 
+    }, { status: 500 })
   }
 }

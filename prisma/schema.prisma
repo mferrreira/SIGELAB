@@ -19,13 +19,22 @@ model users {
   createdAt            DateTime               @default(now())
   currentWeekHours     Float                  @default(0)
   roles                UserRole[]
+  avatar               String?
+  bio                  String?
+  profileVisibility    ProfileVisibility      @default(public)
+  createdBadges        badges[]               @relation("UserCreatedBadges")
   daily_logs           daily_logs[]           @relation("UserDailyLogs")
+  history              history[]              @relation("UserHistory")
+  assignedIssues       issues[]               @relation("UserAssignedIssues")
+  reportedIssues       issues[]               @relation("UserReportedIssues")
   lab_events           lab_events[]           @relation("UserLabEvents")
   lab_responsibilities lab_responsibilities[] @relation("UserLabResponsibilities")
   projectMemberships   project_members[]      @relation("UserProjectMemberships")
   projects             projects[]             @relation("UserProjects")
   purchases            purchases[]            @relation("UserPurchases")
   tasks                tasks[]                @relation("UserTasks")
+  awardedBadges        user_badges[]          @relation("UserAwardedBadges")
+  badges               user_badges[]          @relation("UserBadges")
   schedules            user_schedules[]       @relation("UserSchedules")
   weekly_hours_history weekly_hours_history[] @relation("UserWeeklyHoursHistory")
   weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
@@ -150,6 +159,25 @@ model laboratory_schedules {
   updatedAt DateTime @updatedAt
 }
 
+model history {
+  id          Int      @id @default(autoincrement())
+  entityType  String
+  entityId    Int
+  action      String
+  performedBy Int
+  performedAt DateTime @default(now())
+  oldValues   Json?
+  newValues   Json?
+  description String?
+  metadata    Json?
+  performer   users    @relation("UserHistory", fields: [performedBy], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([performedBy])
+  @@index([performedAt])
+  @@index([action])
+}
+
 model work_sessions {
   id        Int         @id @default(autoincrement())
   userId    Int
@@ -195,6 +223,50 @@ model weekly_hours_history {
   user       users    @relation("UserWeeklyHoursHistory", fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model badges {
+  id          Int           @id @default(autoincrement())
+  name        String
+  description String
+  icon        String?
+  color       String?
+  category    BadgeCategory
+  criteria    Json?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  createdBy   Int
+  creator     users         @relation("UserCreatedBadges", fields: [createdBy], references: [id])
+  userBadges  user_badges[] @relation("BadgeUserBadges")
+}
+
+model user_badges {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  badgeId  Int
+  earnedAt DateTime @default(now())
+  earnedBy Int?
+  badge    badges   @relation("BadgeUserBadges", fields: [badgeId], references: [id], onDelete: Cascade)
+  awarder  users?   @relation("UserAwardedBadges", fields: [earnedBy], references: [id])
+  user     users    @relation("UserBadges", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model issues {
+  id          Int           @id @default(autoincrement())
+  title       String
+  description String
+  status      IssueStatus   @default(open)
+  priority    IssuePriority @default(medium)
+  category    String?
+  reporterId  Int
+  assigneeId  Int?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  resolvedAt  DateTime?
+  assignee    users?        @relation("UserAssignedIssues", fields: [assigneeId], references: [id])
+  reporter    users         @relation("UserReportedIssues", fields: [reporterId], references: [id])
+}
+
 enum UserRole {
   COORDENADOR
   GERENTE
@@ -203,4 +275,53 @@ enum UserRole {
   GERENTE_PROJETO
   COLABORADOR
   VOLUNTARIO
+}
+
+enum ProfileVisibility {
+  public
+  members_only
+  private
+}
+
+enum BadgeCategory {
+  achievement
+  milestone
+  special
+  social
+}
+
+enum IssueStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+enum IssuePriority {
+  low
+  medium
+  high
+  urgent
+}
+
+model user_schedules {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  dayOfWeek Int      // 0 = Sunday, 1 = Monday, etc.
+  startTime String   // HH:MM format
+  endTime   String   // HH:MM format
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      users    @relation("UserSchedules", fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model laboratory_schedules {
+  id        Int      @id @default(autoincrement())
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -12,6 +12,10 @@ export interface User {
   status: string;
   weekHours: number;
   currentWeekHours: number;
+  bio?: string | null;
+  avatar?: string | null;
+  profileVisibility: "public" | "private" | "members_only";
+  badges?: UserBadge[];
   createdAt: Date;
 }
 
@@ -21,6 +25,9 @@ export interface UserFormData {
   roles: UserRole[]
   password: string
   weekHours: number
+  bio?: string | null
+  avatar?: string | null
+  profileVisibility?: "public" | "private" | "members_only"
 }
 
 // Project types
@@ -39,6 +46,73 @@ export interface ProjectFormData {
   description: string
   status: "active" | "completed" | "archived"
   links?: { label: string; url: string }[] // Add links field
+}
+
+// Badge types
+export type BadgeCategory = 'achievement' | 'milestone' | 'special' | 'social';
+
+export interface BadgeCriteria {
+  points?: number;
+  tasks?: number;
+  projects?: number;
+  workSessions?: number;
+  weeklyHours?: number;
+  consecutiveDays?: number;
+  specialCondition?: string;
+}
+
+export interface Badge {
+  id?: number;
+  name: string;
+  description: string;
+  icon?: string | null;
+  color?: string | null;
+  category: BadgeCategory;
+  criteria?: BadgeCriteria | null;
+  isActive: boolean;
+  createdAt?: Date;
+  createdBy: number;
+}
+
+export interface UserBadge {
+  id?: number;
+  userId: number;
+  badgeId: number;
+  earnedAt?: Date;
+  earnedBy?: number | null;
+  badge: Badge;
+}
+
+
+// Issue types
+export interface Issue {
+  id: number
+  title: string
+  description: string
+  status: "open" | "in_progress" | "resolved" | "closed"
+  priority: "low" | "medium" | "high" | "urgent"
+  reporterId: number
+  assigneeId?: number | null
+  createdAt: Date
+  updatedAt: Date
+  reporter?: User
+  assignee?: User | null
+}
+
+// Enhanced User types
+export interface UserProfile {
+  id: number
+  name: string
+  email: string
+  bio?: string | null
+  avatar?: string | null
+  profileVisibility: "public" | "private" | "members_only"
+  points: number
+  completedTasks: number
+  status: string
+  roles: UserRole[]
+  badges: UserBadge[]
+  createdAt: Date
 }
 
 // Task types
@@ -469,4 +543,23 @@ export interface WorkSessionContextType {
   deleteSession: (id: number) => Promise<void>
   getActiveSession: (userId: number) => WorkSession | null
   getWeeklyHours: (userId: number, weekStart: string, weekEnd: string) => Promise<number>
+}
+
+// User Schedule types
+export interface UserSchedule {
+  id: number
+  userId: number
+  dayOfWeek: number // 0 = Sunday, 1 = Monday, etc.
+  startTime: string // HH:MM format
+  endTime: string // HH:MM format
+  isActive: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface UserScheduleFormData {
+  dayOfWeek: number
+  startTime: string
+  endTime: string
+  isActive: boolean
 }

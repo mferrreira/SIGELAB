@@ -1,21 +1,19 @@
 import { NextResponse } from "next/server"
-import { VolunteerController } from "@/backend/controllers/VolunteerController"
-import { prisma } from "@/lib/database/prisma"
+import { TaskController } from "@/backend/controllers/TaskController"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth/server-auth"
 
-const volunteerController = new VolunteerController();
+const taskController = new TaskController();
 
 // GET: Obter uma tarefa específica
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = parseInt(params.id)
-    const task = await prisma.tasks.findUnique({
-      where: { id },
-      include: { assignee: true, projectObj: true },
-    })
+    const task = await taskController.getTask(id)
     if (!task) {
       return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
     }
-    return NextResponse.json({ task })
+    return NextResponse.json({ task: task.toJSON() })
   } catch (error) {
     console.error("Erro ao buscar tarefa:", error)
     return NextResponse.json({ error: "Erro ao buscar tarefa" }, { status: 500 })
@@ -25,11 +23,16 @@ export async function GET(request: Request, { params }: { params: { id: string }
 // PUT: Atualizar uma tarefa
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
     const params = await context.params
     const id = parseInt(params.id)
-    let body = await request.json()
+    const body = await request.json()
 
-    // Remove invalid fields for Prisma update
+    // Remove invalid fields for update
     const allowedFields = [
       "title", "description", "status", "priority", "assignedTo", "projectId", "dueDate", "points", "completed", "taskVisibility"
     ];
@@ -38,40 +41,46 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       if (body[key] !== undefined) data[key] = body[key]
     }
 
-    // Use Prisma directly for now
-    const task = await prisma.tasks.update({
-      where: { id },
-      data,
-    })
-    return NextResponse.json({ task })
+    const task = await taskController.updateTask(id, data, parseInt(session.user.id))
+    return NextResponse.json({ task: task.toJSON() })
   } catch (error: any) {
-    if (error.code === 'P2025') {
+    if (error.message?.includes('not found')) {
       return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
     }
     console.error("Erro ao atualizar tarefa:", error)
-    return NextResponse.json({ error: "Erro ao atualizar tarefa" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Erro ao atualizar tarefa" }, { status: 500 })
   }
 }
 
 // DELETE: Excluir uma tarefa
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
     const params = await context.params
     const id = parseInt(params.id)
-    await prisma.tasks.delete({ where: { id } })
+    await taskController.deleteTask(id, parseInt(session.user.id))
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    if (error.code === 'P2025') {
+    if (error.message?.includes('not found')) {
       return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
     }
     console.error("Erro ao excluir tarefa:", error)
-    return NextResponse.json({ error: "Erro ao excluir tarefa" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Erro ao excluir tarefa" }, { status: 500 })
   }
 }
 
 // PATCH: Marcar tarefa como concluída e adicionar pontos ao voluntário
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
     const params = await context.params;
     const id = parseInt(params.id)
     const body = await request.json()
@@ -82,40 +91,19 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
       return NextResponse.json({ error: "Ação inválida. Use 'complete' para marcar tarefa como concluída." }, { status: 400 })
     }
 
-    // Find the task
-    const task = await prisma.tasks.findUnique({ where: { id } })
-    if (!task) {
+    // Use the userId from request body or fallback to session user
+    const userToAward = userId ? parseInt(userId) : parseInt(session.user.id);
+    
+    const task = await taskController.completeTask(id, userToAward)
+    
+    console.log(`✅ Task ${id} completed by user ${userToAward}. Awarded ${task.points} points.`)
+    
+    return NextResponse.json({ task: task.toJSON() })
+  } catch (error: any) {
+    if (error.message?.includes('not found')) {
       return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
     }
-    if (task.completed) {
-      return NextResponse.json({ task }) // Already completed
-    }
-
-    // Mark as completed
-    const updatedTask = await prisma.tasks.update({
-      where: { id },
-      data: { status: "done", completed: true },
-    })
-
-    // Add points to the user who completed the task (userId from request)
-    if (userId && task.points && task.points > 0) {
-      const userIdNumber = typeof userId === 'string' ? parseInt(userId) : userId
-      await prisma.users.update({
-        where: { id: userIdNumber },
-        data: {
-          points: { increment: task.points },
-          completedTasks: { increment: 1 },
-        },
-      })
-      
-      console.log(`✅ Task ${id} completed by user ${userIdNumber}. Awarded ${task.points} points.`)
-    } else {
-      console.log(`⚠️ Task ${id} completed but no points awarded. userId: ${userId}, task.points: ${task.points}`)
-    }
-
-    return NextResponse.json({ task: { ...updatedTask, completed: true, status: "done" } })
-  } catch (error) {
     console.error("Erro ao completar tarefa:", error)
-    return NextResponse.json({ error: "Erro ao completar tarefa" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Erro ao completar tarefa" }, { status: 500 })
   }
 }

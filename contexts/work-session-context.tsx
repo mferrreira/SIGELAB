@@ -74,6 +74,7 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
       const response = await WorkSessionsAPI.start({
         ...sessionData,
         userId: user.id, // Always use current user's ID
+        userName: user.name, // Include user name
       })
       
       const newSession = response.data || response;
@@ -116,7 +117,9 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
         throw new Error("Sessão não encontrada ou não pertence ao usuário atual")
       }
 
+
       const response = await WorkSessionsAPI.update(id, {
+        userId: user.id,
         status: "completed",
         endTime: new Date().toISOString(),
         activity,

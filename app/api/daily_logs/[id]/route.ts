@@ -10,9 +10,12 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   try {
     const params = await context.params;
     const log = await dailyLogController.getLog(Number(params.id));
+   
     if (!log) return NextResponse.json({ error: "Log não encontrado" }, { status: 404 });
+   
     return NextResponse.json({ log });
   } catch (error) {
+   
     console.error("Erro ao buscar log diário:", error);
     return NextResponse.json({ error: "Erro ao buscar log diário" }, { status: 500 });
   }
@@ -25,18 +28,25 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     if (!session?.user) {
       return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
     }
+    
     const user = session.user as User;
+    
     const log = await dailyLogController.getLog(Number(params.id));
+    
     if (!log) return NextResponse.json({ error: "Log não encontrado" }, { status: 404 });
+    
     if (!user.roles.includes('COORDENADOR') && user.id !== log.userId) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
+    
     const body = await request.json();
+    
     const updated = await dailyLogController.updateLog(Number(params.id), {
       note: body.note ?? log.note,
       date: body.date ? new Date(body.date) : log.date,
       projectId: body.projectId ?? log.projectId,
     });
+    
     return NextResponse.json({ log: updated });
   } catch (error) {
     console.error("Erro ao atualizar log diário:", error);

@@ -1,56 +1,146 @@
-import { UserModel } from '../models/UserModel';
-import { UserCreateInput, UserUpdateInput } from '../types/user';
-import { NextApiRequest, NextApiResponse } from 'next';
-import bcrypt from "bcryptjs";
-import { validateEmail, validateRole } from '@/lib/utils/utils';
-import { prisma } from "@/lib/database/prisma";
-import { parseTimeToMinutes, validateTimeOrder, validateRequiredFields } from '@/lib/utils/utils';
+import { UserService } from '../services/UserService';
+import { UserRepository } from '../repositories/UserRepository';
+import { BadgeRepository, UserBadgeRepository } from '../repositories/BadgeRepository';
+import { User } from '../models/user/User';
+import { UserRole } from '@prisma/client';
 
 export class UserController {
-  public userModel = new UserModel();
+    private userService: UserService;
 
-  async getUser(req: NextApiRequest, res: NextApiResponse) {
-    const { id } = req.query;
-    const user = await this.userModel.findById(id as string);
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    constructor() {
+        const userRepo = new UserRepository();
+        const badgeRepo = new BadgeRepository();
+        const userBadgeRepo = new UserBadgeRepository();
+        this.userService = new UserService(userRepo, badgeRepo, userBadgeRepo);
     }
-    return res.json(user);
-  }
 
-  async getAllUsers(req: NextApiRequest, res: NextApiResponse) {
-    const users = await this.userModel.findAll();
-    return res.json(users);
-  }
+    async getUser(id: number): Promise<User | null> {
+        return await this.userService.findById(id);
+    }
 
-  async createUser(req: NextApiRequest, res: NextApiResponse) {
-    const data: UserCreateInput = req.body;
-    const user = await this.userModel.create(data);
-    return res.status(201).json(user);
-  }
+    async getAllUsers(): Promise<any[]> {
+        const users = await this.userService.findAll();
+        return users.map(user => user.toJSON());
+    }
 
-  async updateUser(req: NextApiRequest, res: NextApiResponse) {
-    const { id } = req.query;
-    const data: UserUpdateInput = req.body;
-    const user = await this.userModel.update(id as string, data);
-    return res.json(user);
-  }
+    async createUser(data: any): Promise<any> {
+        const user = await this.userService.create(data);
+        return user.toJSON();
+    }
 
-  async deleteUser(req: NextApiRequest, res: NextApiResponse) {
-    const { id } = req.query;
-    await this.userModel.delete(id as string);
-    return res.status(204).end();
-  }
+    async updateUser(id: number, data: any): Promise<any> {
+        const user = await this.userService.update(id, data);
+        return user.toJSON();
+    }
 
-  async updateUserStatus(id: string, action: 'approve' | 'reject') {
-    const status = action === 'approve' ? 'active' : 'rejected';
-    return this.userModel.update(id, { status });
-  }
+    async deleteUser(id: number): Promise<void> {
+        return await this.userService.delete(id);
+    }
 
-  async addPoints(id: string, points: number) {
-    const user = await this.userModel.findById(id);
-    if (!user) throw new Error('Usuário não encontrado');
-    const newPoints = (user.points || 0) + points;
-    return this.userModel.update(id, { points: newPoints });
-  }
+    async authenticateUser(email: string, password: string): Promise<User | null> {
+        return await this.userService.authenticate(email, password);
+    }
+
+    async approveUser(id: number): Promise<any> {
+        const user = await this.userService.approveUser(id);
+        return user.toJSON();
+    }
+
+    async rejectUser(id: number): Promise<any> {
+        const user = await this.userService.rejectUser(id);
+        return user.toJSON();
+    }
+
+    async suspendUser(id: number): Promise<any> {
+        const user = await this.userService.suspendUser(id);
+        return user.toJSON();
+    }
+
+    async activateUser(id: number): Promise<any> {
+        const user = await this.userService.activateUser(id);
+        return user.toJSON();
+    }
+
+    async addRole(id: number, role: UserRole): Promise<any> {
+        const user = await this.userService.addRole(id, role);
+        return user.toJSON();
+    }
+
+    async removeRole(id: number, role: UserRole): Promise<any> {
+        const user = await this.userService.removeRole(id, role);
+        return user.toJSON();
+    }
+
+    async setRoles(id: number, roles: UserRole[]): Promise<any> {
+        const user = await this.userService.setRoles(id, roles);
+        return user.toJSON();
+    }
+
+    async addPoints(id: number, points: number): Promise<any> {
+        const user = await this.userService.addPoints(id, points);
+        return user.toJSON();
+    }
+
+    async removePoints(id: number, points: number): Promise<any> {
+        const user = await this.userService.removePoints(id, points);
+        return user.toJSON();
+    }
+
+    async setPoints(id: number, points: number): Promise<any> {
+        const user = await this.userService.setPoints(id, points);
+        return user.toJSON();
+    }
+
+    async getTopUsersByPoints(limit?: number): Promise<any[]> {
+        const users = await this.userService.getTopUsersByPoints(limit);
+        return users.map(user => user.toJSON());
+    }
+
+    async getTopUsersByTasks(limit?: number): Promise<any[]> {
+        const users = await this.userService.getTopUsersByTasks(limit);
+        return users.map(user => user.toJSON());
+    }
+
+    async getUserStatistics(): Promise<{
+        total: number;
+        active: number;
+        pending: number;
+        rejected: number;
+        suspended: number;
+        inactive: number;
+        totalPoints: number;
+        totalTasks: number;
+        averagePoints: number;
+        averageTasks: number;
+    }> {
+        return await this.userService.getUserStatistics();
+    }
+
+    async getUsersByRoleStatistics(): Promise<Record<UserRole, number>> {
+        return await this.userService.getUsersByRoleStatistics();
+    }
+
+    async getUsersByStatusStatistics(): Promise<Record<string, number>> {
+        return await this.userService.getUsersByStatusStatistics();
+    }
+
+    async getPublicProfiles(): Promise<any[]> {
+        const users = await this.userService.getPublicProfiles();
+        return users.map(user => user.toJSON());
+    }
+
+    async getMemberProfiles(): Promise<any[]> {
+        const users = await this.userService.getMemberProfiles();
+        return users.map(user => user.toJSON());
+    }
+
+    async updateProfile(id: number, data: {
+        name?: string;
+        bio?: string | null;
+        avatar?: string | null;
+        profileVisibility?: any;
+    }): Promise<any> {
+        const user = await this.userService.updateProfile(id, data);
+        return user.toJSON();
+    }
 }

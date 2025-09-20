@@ -19,13 +19,11 @@ export class PurchaseController {
   }
 
   async createPurchase(data: any) {
-    // Validate purchase creation
     const validation = await this.purchaseService.validatePurchaseCreation(data.userId, data.rewardId);
     if (!validation.canPurchase) {
       throw new Error(validation.message);
     }
 
-    // Deduct points from user
     const user = validation.user!;
     const reward = validation.reward!;
     
@@ -36,7 +34,6 @@ export class PurchaseController {
       }
     });
 
-    // Create purchase
     const purchase = await this.purchaseService.create(data);
     return purchase.toPrisma();
   }
@@ -123,7 +120,6 @@ export class PurchaseController {
     return purchase.toPrisma();
   }
 
-  // Analytics methods
   async getPurchaseStatistics() {
     return this.purchaseService.getPurchaseStatistics();
   }
@@ -136,7 +132,6 @@ export class PurchaseController {
     return this.purchaseService.getRewardPurchaseStatistics(rewardId);
   }
 
-  // Search and filter methods
   async searchPurchases(query: {
     userId?: number;
     rewardId?: number;
@@ -147,7 +142,6 @@ export class PurchaseController {
     return this.purchaseService.searchPurchases(query);
   }
 
-  // Bulk operations
   async bulkApprovePurchases(purchaseIds: number[]) {
     const purchases = await this.purchaseService.bulkApprovePurchases(purchaseIds);
     return purchases.map(purchase => purchase.toPrisma());
@@ -156,7 +150,6 @@ export class PurchaseController {
   async bulkRejectPurchases(purchaseIds: number[]) {
     const purchases = await this.purchaseService.bulkRejectPurchases(purchaseIds);
     
-    // Refund points for all rejected purchases
     for (const purchase of purchases) {
       await prisma.users.update({
         where: { id: purchase.userId },
@@ -171,7 +164,6 @@ export class PurchaseController {
     return purchases.map(purchase => purchase.toPrisma());
   }
 
-  // Validation methods
   async validatePurchaseCreation(userId: number, rewardId: number) {
     return this.purchaseService.validatePurchaseCreation(userId, rewardId);
   }

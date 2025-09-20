@@ -47,9 +47,9 @@ export class Reward {
             data.price,
             data.available,
             data.description,
-            data.categoryId || null,
-            data.stock || null,
-            data.imageUrl || null,
+            null, // categoryId - not in schema
+            null, // stock - not in schema
+            null, // imageUrl - not in schema
             data.id
         );
         return reward;
@@ -146,10 +146,10 @@ export class Reward {
             // Unlimited stock
             return this;
         }
-        if (this.stock < amount) {
+        if (this.stock! < amount) {
             throw new Error("Estoque insuficiente");
         }
-        this.stock -= amount;
+        this.stock! -= amount;
         return this;
     }
 
@@ -158,7 +158,7 @@ export class Reward {
             // Unlimited stock
             return this;
         }
-        this.stock += amount;
+        this.stock! += amount;
         return this;
     }
 
@@ -177,7 +177,7 @@ export class Reward {
 
     // Stock management
     isInStock(): boolean {
-        return this.stock === null || this.stock > 0;
+        return this.stock === null || this.stock! > 0;
     }
 
     getStockStatus(): string {

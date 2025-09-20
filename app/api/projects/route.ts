@@ -2,10 +2,10 @@ import { NextResponse } from "next/server"
 import { prisma } from "@/lib/database/prisma"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { ProjectManagerController } from "@/backend/controllers/ProjectManagerController"
+import { ProjectController } from "@/backend/controllers/ProjectController"
 import { hasAccess } from "@/lib/utils/access-control"
 
-const projectManagerController = new ProjectManagerController();
+const projectController = new ProjectController();
 
 export async function GET() {
   try {
@@ -28,89 +28,25 @@ export async function GET() {
     if (!user) {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
     }
+
     let projects: any[] = []
 
     if (user.roles && hasAccess(user.roles, "MANAGE_TASKS")) {
-
-      projects = await prisma.projects.findMany({
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          },
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  roles: true
-                }
-              }
-            }
-          },
-          _count: {
-            select: {
-              tasks: true
-            }
-          }
-        },
-        orderBy: {
-          createdAt: "desc"
-        }
-      })
+      // User can see all projects
+      projects = await projectController.getAllProjects()
     } else {
-
-      const userProjectIds = user.projectMemberships.map((membership: any) => membership.project.id)
-      if (user.roles && user.roles.includes("GERENTE_PROJETO")) {
-        const createdProjects = await prisma.projects.findMany({
-          where: { createdBy: user.id },
-          select: { id: true }
-        })
-        const createdProjectIds = createdProjects.map(p => p.id)
-        userProjectIds.push(...createdProjectIds)
-      }
-      projects = await prisma.projects.findMany({
-        where: {
-          id: {
-            in: userProjectIds
-          }
-        },
-        include: {
-          creator: {
-            select: {
-              id: true,
-              name: true,
-              email: true
-            }
-          },
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  name: true,
-                  email: true,
-                  roles: true
-                }
-              }
-            }
-          },
-          _count: {
-            select: {
-              tasks: true
-            }
-          }
-        },
-        orderBy: {
-          createdAt: "desc"
-        }
-      })
+      // User can only see projects they're a member of or created
+      const userProjects = await projectController.getProjectsByUser(user.id)
+      const createdProjects = await projectController.getProjectsByCreator(user.id)
+      
+      // Merge and deduplicate projects
+      const allProjects = [...userProjects, ...createdProjects]
+      const uniqueProjects = allProjects.filter((project, index, self) => 
+        index === self.findIndex(p => p.id === project.id)
+      )
+      projects = uniqueProjects
     }
+    
     return NextResponse.json({ projects }, { status: 200 })
   } catch (error) {
     console.error("Erro ao buscar projetos:", error)
@@ -125,30 +61,33 @@ export async function POST(request: Request) {
     if (!sessionUser?.id) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
+    
     const body = await request.json()
     if (!body.name) {
       return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 })
     }
-    // Use controller for project creation
-    const project = await projectManagerController.createProject({
+
+    // Use new controller for project creation
+    const project = await projectController.createProject({
       name: body.name,
       description: body.description || "",
-      createdAt: new Date().toISOString(),
-      createdBy: sessionUser.id,
       status: body.status || "active",
-      links: body.links || [], // Pass links to the database
-    });
-    // Automatically add the creator as a project manager member
-    await prisma.project_members.create({
-      data: {
-        projectId: project.id,
-        userId: sessionUser.id,
-        roles: ["GERENTE_PROJETO"]
-      }
-    })
+      links: body.links || [],
+    }, sessionUser.id);
+
     return NextResponse.json({ project }, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Erro ao criar projeto:", error)
-    return NextResponse.json({ error: "Erro ao criar projeto" }, { status: 500 })
+    
+    // Handle validation errors specifically
+    if (error.message && error.message.includes('Dados inválidos')) {
+      return NextResponse.json({ 
+        error: error.message 
+      }, { status: 400 })
+    }
+    
+    return NextResponse.json({ 
+      error: error.message || "Erro ao criar projeto" 
+    }, { status: 500 })
   }
 }

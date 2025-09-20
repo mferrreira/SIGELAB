@@ -1,46 +1,15 @@
 import { NextResponse } from "next/server"
-import { VolunteerController } from "@/backend/controllers/VolunteerController"
-import { prisma } from "@/lib/database/prisma"
+import { TaskController } from "@/backend/controllers/TaskController"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
-const volunteerController = new VolunteerController();
+const taskController = new TaskController();
 
-// GET: Obter tarefas filtradas por usuário e papel
-export async function GET(request: Request) {
+// GET: Obter todas as tarefas
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-    const role = searchParams.get("role")
-
-    if (userId && role === "gerente_projeto") {
-      const projectMemberships = await prisma.project_members.findMany({ where: { userId: Number(userId) } })
-      const projectIds = projectMemberships.map((m) => m.projectId)
-      const tasks = await prisma.tasks.findMany({
-        where: { projectId: { in: projectIds } },
-        include: { assignee: true, projectObj: true },
-        orderBy: { id: 'desc' }
-      })
-      return NextResponse.json({ tasks })
-    }
-
-    if (userId && role === "voluntario") {
-      const assignedTasks = await prisma.tasks.findMany({
-        where: { assignedTo: Number(userId) },
-        include: { assignee: true, projectObj: true },
-        orderBy: { id: 'desc' },
-      })
-      const publicTasks = await prisma.tasks.findMany({
-        where: { assignedTo: null, taskVisibility: "public" },
-        include: { assignee: true, projectObj: true },
-        orderBy: { id: 'desc' },
-      })
-      const allTasks = [...assignedTasks, ...publicTasks].filter((task, idx, arr) => arr.findIndex(t => t.id === task.id) === idx)
-      return NextResponse.json({ tasks: allTasks })
-    }
-    const tasks = await prisma.tasks.findMany({
-      include: { assignee: true, projectObj: true },
-      orderBy: { id: 'desc' }
-    })
-    return NextResponse.json({ tasks })
+    const tasks = await taskController.getAllTasks();
+    return NextResponse.json({ tasks: tasks.map(task => task.toJSON()) })
   } catch (error) {
     console.error("Erro ao buscar tarefas:", error)
     return NextResponse.json({ error: "Erro ao buscar tarefas" }, { status: 500 })
@@ -50,6 +19,11 @@ export async function GET(request: Request) {
 // POST: Criar uma nova tarefa
 export async function POST(request: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
     const body = await request.json()
 
     const {
@@ -65,23 +39,22 @@ export async function POST(request: Request) {
       taskVisibility
     } = body
 
-    const task = await prisma.tasks.create({
-      data: {
-        title,
-        description,
-        status,
-        priority,
-        assignedTo,
-        projectId,
-        dueDate,
-        points,
-        completed,
-        taskVisibility
-      },
-    })
-    return NextResponse.json({ task }, { status: 201 })
-  } catch (error) {
+    const task = await taskController.createTask({
+      title,
+      description,
+      status,
+      priority,
+      assignedTo,
+      projectId,
+      dueDate,
+      points,
+      completed,
+      taskVisibility
+    }, parseInt(session.user.id));
+
+    return NextResponse.json({ task: task.toJSON() }, { status: 201 })
+  } catch (error: any) {
     console.error("Erro ao criar tarefa:", error)
-    return NextResponse.json({ error: "Erro ao criar tarefa" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Erro ao criar tarefa" }, { status: 500 })
   }
 }

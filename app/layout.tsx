@@ -2,6 +2,12 @@ import type { Metadata } from "next"
 import { Inter } from "next/font/google"
 import "./globals.css"
 import ClientLayout from "./client-layout"
+import { initCronService } from "@/lib/services/init-cron"
+
+// Inicializar o serviço de cron no servidor
+if (typeof window === 'undefined') {
+  initCronService()
+}
 
 const inter = Inter({ subsets: ["latin"] })
 

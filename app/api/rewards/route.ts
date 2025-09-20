@@ -4,31 +4,9 @@ import { RewardController } from "@/backend/controllers/RewardController"
 const rewardController = new RewardController();
 
 // GET: Obter todas as recompensas
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const available = searchParams.get("available");
-    const userPoints = searchParams.get("userPoints");
-    const name = searchParams.get("name");
-    const minPrice = searchParams.get("minPrice");
-    const maxPrice = searchParams.get("maxPrice");
-
-    let rewards;
-    
-    if (available === "true") {
-      rewards = await rewardController.getAvailableRewards();
-    } else if (available === "false") {
-      rewards = await rewardController.getUnavailableRewards();
-    } else if (userPoints) {
-      rewards = await rewardController.findAffordable(Number(userPoints));
-    } else if (name) {
-      rewards = await rewardController.findByName(name);
-    } else if (minPrice && maxPrice) {
-      rewards = await rewardController.findByPriceRange(Number(minPrice), Number(maxPrice));
-    } else {
-      rewards = await rewardController.getAllRewards();
-    }
-
+    const rewards = await rewardController.getAllRewards();
     return NextResponse.json({ rewards });
   } catch (error: any) {
     console.error('Erro ao buscar recompensas:', error);

@@ -23,6 +23,12 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
 
   const fetchUsers = useCallback(async () => {
+    if (!user) {
+      setUsers([])
+      setLoading(false)
+      return
+    }
+
     try {
       setLoading(true)
       setError(null)
@@ -36,15 +42,11 @@ export function UserProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user])
 
   useEffect(() => {
-    if (user) {
-      fetchUsers()
-    } else {
-      setUsers([])
-    }
-  }, [user, fetchUsers])
+    fetchUsers()
+  }, [fetchUsers])
 
   const updateUser = async (id: number, userData: Partial<User>) => {
     try {

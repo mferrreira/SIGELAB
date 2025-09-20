@@ -14,6 +14,7 @@ import { WeeklyReportProvider } from "@/contexts/weekly-report-context"
 import { WorkSessionProvider } from "@/contexts/work-session-context"
 import { SessionProvider } from "next-auth/react"
 import { LabEventsProvider } from "@/contexts/lab-events-context"
+import { IssueProvider } from "@/contexts/issue-context"
 import { AppHeader } from "@/components/layout/app-header"
 
 export default function ClientLayout({
@@ -26,6 +27,7 @@ export default function ClientLayout({
       <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
         <AuthProvider>
           <LabEventsProvider>
+            <IssueProvider>
            <UserProvider>
             <ProjectProvider>
               <TaskProvider>
@@ -48,7 +50,8 @@ export default function ClientLayout({
               </TaskProvider>
             </ProjectProvider>
           </UserProvider>
-         </LabEventsProvider>
+            </IssueProvider>
+          </LabEventsProvider>
         </AuthProvider>
       </ThemeProvider>
     </SessionProvider>

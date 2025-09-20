@@ -8,6 +8,7 @@ import { useResponsibility } from "@/contexts/responsibility-context"
 import { useDailyLogs } from "@/contexts/daily-log-context"
 import { useLaboratorySchedule } from "@/contexts/laboratory-schedule-context"
 import { useLabEvents } from "@/contexts/lab-events-context";
+import { useIssues } from "@/contexts/issue-context";
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
@@ -15,7 +16,10 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, Clock, Play, Square, AlertCircle, FileText } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Loader2, Clock, Play, Square, AlertCircle, FileText, Bug, Plus } from "lucide-react"
+import { IssueManagement } from "@/components/features/issue-management"
+import { IssueForm } from "@/components/forms/issue-form"
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isSameDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import DayViewCalendar from "@/components/ui/day-view-calendar"
@@ -41,8 +45,10 @@ export default function LabResponsibilityPage() {
   const { logs: dailyLogs, loading: logsLoading, createLog, fetchAllLogs, fetchProjectLogs, fetchLogs } = useDailyLogs()
   const { schedules: labSchedules, getSchedulesByDay } = useLaboratorySchedule()
   const { events: labEvents, fetchEvents, createEvent, loading: eventsLoading, error: eventsError } = useLabEvents();
+  const { issues, loading: issuesLoading, error: issuesError } = useIssues();
 
   const [date, setDate] = useState<Date | null>(null)
+  const [showIssueForm, setShowIssueForm] = useState(false)
   const [isStarting, setIsStarting] = useState(false)
   const [isEnding, setIsEnding] = useState(false)
   const [notes, setNotes] = useState("")
@@ -254,16 +260,24 @@ export default function LabResponsibilityPage() {
   return (
     <div className="flex min-h-screen flex-col">
       <main className="flex-1 container mx-auto p-4 md:p-6">
-        <h1 className="text-2xl font-bold mb-6">Responsabilidade do Laboratório</h1>
+        <h1 className="text-2xl font-bold mb-6">Laboratório</h1>
 
-        {error && (
+        {(error || issuesError) && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
+            <AlertDescription>{error || issuesError}</AlertDescription>
           </Alert>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Tabs defaultValue="responsibility" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="responsibility">Responsabilidade</TabsTrigger>
+            <TabsTrigger value="issues">Issues</TabsTrigger>
+            <TabsTrigger value="schedule">Agenda</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="responsibility" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Coluna 1: Status atual e controles */}
           <div className="space-y-4">
             <Card>
@@ -445,7 +459,71 @@ export default function LabResponsibilityPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="issues" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">Gerenciamento de Issues</h2>
+                <p className="text-sm text-muted-foreground">
+                  Reporte e gerencie problemas do laboratório
+                </p>
+              </div>
+              <Button onClick={() => setShowIssueForm(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Issue
+              </Button>
+            </div>
+
+            <IssueManagement />
+
+            {showIssueForm && (
+              <Dialog open={showIssueForm} onOpenChange={setShowIssueForm}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle>Reportar Nova Issue</DialogTitle>
+                  </DialogHeader>
+                  <IssueForm 
+                    onSuccess={() => setShowIssueForm(false)}
+                    onCancel={() => setShowIssueForm(false)}
+                  />
+                </DialogContent>
+              </Dialog>
+            )}
+          </TabsContent>
+
+          <TabsContent value="schedule" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Day View Calendar */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Agenda do Dia</CardTitle>
+                  <CardDescription>
+                    Slots padrão e eventos do dia selecionado. Clique em "+ Adicionar evento" para registrar um log ou responsabilidade.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DayViewCalendar
+                    date={date || new Date()}
+                    events={events}
+                    labSchedules={labSchedules}
+                    onAddEvent={(slot) => {
+                      setEventDialogTime(slot)
+                      setShowEventDialog(true)
+                    }}
+                    onDateChange={handleDateChange}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Horários do Laboratório */}
+              <Card>
+                <LaboratorySchedule />
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Diálogo para editar notas */}
         <Dialog open={isNotesDialogOpen} onOpenChange={setIsNotesDialogOpen}>
