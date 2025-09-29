@@ -39,6 +39,7 @@ import { AdminStatsCards } from "@/components/admin/AdminStatsCards"
 import { AdminWeeklyHoursTable } from "@/components/admin/AdminWeeklyHoursTable"
 import { AdminProjectManagement } from "@/components/admin/AdminProjectManagement"
 import { AdminHoursManagement } from "@/components/admin/AdminHoursManagement"
+import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { hasAccess } from "@/lib/utils/access-control"
 
@@ -395,6 +396,11 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Grade de Horários */}
+              {canManageSchedule && (
+                <ScheduleGrid users={users} />
+              )}
             </>
           )}
         </TabsContent>

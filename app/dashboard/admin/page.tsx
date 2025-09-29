@@ -29,7 +29,6 @@ export default function AdminDashboardPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col">
-        <AppHeader />
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -45,7 +44,6 @@ export default function AdminDashboardPage() {
   if (!isAdmin) {
     return (
       <div className="flex min-h-screen flex-col">
-        <AppHeader />
         <main className="flex-1 container mx-auto p-4 md:p-6">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -79,7 +77,6 @@ export default function AdminDashboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <AppHeader />
       <main className="flex-1 container mx-auto p-4 md:p-6">
         <ModernAdminPanel
           users={users}
