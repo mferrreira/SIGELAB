@@ -163,37 +163,67 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
         {/* Tab Visão Geral */}
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Usuários ativos */}
+            {/* Usuários com sessões ativas */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="h-5 w-5" />
-                  Usuários Ativos
+                  Sessões Ativas
                 </CardTitle>
                 <CardDescription>
-                  Usuários conectados e trabalhando no momento
+                  Usuários trabalhando no momento
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {users.filter(u => u.status === 'active').slice(0, 5).map((user) => (
-                    <div key={user.id} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                          <span className="text-sm font-medium text-blue-600">
-                            {user.name.split(' ').map((n: string) => n[0]).join('')}
-                          </span>
+                  {sessions
+                    .filter(session => session.status === 'active')
+                    .slice(0, 5)
+                    .map((session) => {
+                      const user = users.find(u => u.id === session.userId)
+                      if (!user) return null
+                      
+                      const startTime = new Date(session.startTime)
+                      const formatDate = startTime.toLocaleDateString('pt-BR')
+                      const formatTime = startTime.toLocaleTimeString('pt-BR', { 
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      })
+                      
+                      return (
+                        <div key={session.id} className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                              <span className="text-sm font-medium text-green-600">
+                                {user.name.split(' ').map((n: string) => n[0]).join('')}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-medium">{user.name}</p>
+                              <p className="text-sm text-muted-foreground">
+                                Iniciado: {formatDate} às {formatTime}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                              {user.roles?.[0] || 'Usuário'}
+                            </Badge>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Trabalhando
+                            </p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
-                        </div>
-                      </div>
-                      <Badge variant="outline">
-                        {user.roles?.[0] || 'Usuário'}
-                      </Badge>
+                      )
+                    })}
+                  {sessions.filter(session => session.status === 'active').length === 0 && (
+                    <div className="text-center py-4">
+                      <Users className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">
+                        Nenhuma sessão ativa no momento
+                      </p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </CardContent>
             </Card>
