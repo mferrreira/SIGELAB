@@ -107,6 +107,12 @@ export class UserService {
         if (data.profileVisibility !== undefined) {
             currentUser.updateProfileVisibility(data.profileVisibility);
         }
+        if (data.weekHours !== undefined) {
+            currentUser.updateWeekHours(data.weekHours);
+        }
+        if (data.status !== undefined) {
+            currentUser.updateStatus(data.status);
+        }
         if (data.roles !== undefined) {
             // Clear existing roles and add new ones
             const currentRoles = currentUser.roles;

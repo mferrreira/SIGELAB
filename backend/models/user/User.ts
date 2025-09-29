@@ -158,6 +158,16 @@ export abstract class User {
         return this;
     }
 
+    updateWeekHours(weekHours: number): User {
+        this.hoursManager.setWeekHours(weekHours);
+        return this;
+    }
+
+    updateStatus(status: string): User {
+        this.statusManager.setStatus(status);
+        return this;
+    }
+
     // Roles
     addRole(role: UserRole): User {
         this.rolesManager.addRole(role);
