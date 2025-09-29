@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type { Task, KanbanCardProps } from "@/contexts/types"
+import { useAuth } from "@/contexts/auth-context"
+import { useProject } from "@/contexts/project-context"
 
 interface DraggableKanbanCardProps extends KanbanCardProps {
   index: number
@@ -22,6 +24,26 @@ interface DraggableKanbanCardProps extends KanbanCardProps {
 
 export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCardProps) {
   const [isHovered, setIsHovered] = useState(false)
+  const { user } = useAuth()
+  const { projects } = useProject()
+
+  // Verificar se o usuário pode aprovar/rejeitar tasks
+  const canApproveRejectTask = () => {
+    if (!user) return false
+    
+    // Coordenadores e gerentes podem aprovar/rejeitar qualquer task
+    if (user.roles?.includes('COORDENADOR') || user.roles?.includes('GERENTE')) {
+      return true
+    }
+    
+    // Gerentes de projeto podem aprovar/rejeitar tasks do seu projeto
+    if (user.roles?.includes('GERENTE_PROJETO') && task.projectId) {
+      const project = projects.find(p => p.id === task.projectId)
+      return project?.leaderId === user.id
+    }
+    
+    return false
+  }
 
   const handleApproveTask = async (taskId: number) => {
     try {
@@ -255,7 +277,7 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
                   </div>
 
                   {/* Botões de aprovação/rejeição para tarefas em revisão */}
-                  {task.status === "in-review" && (
+                  {task.status === "in-review" && canApproveRejectTask() && (
                     <div className="flex gap-2 mt-3">
                       <Button
                         size="sm"
