@@ -47,7 +47,7 @@ export function UserApprovalDialog({ user, open, onOpenChange, onApproved }: Use
   
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
   const [weekHours, setWeekHours] = useState<number>(20)
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("")
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("none")
   const [processing, setProcessing] = useState(false)
 
   // Reset form when user changes
@@ -111,7 +111,7 @@ export function UserApprovalDialog({ user, open, onOpenChange, onApproved }: Use
       await UsersAPI.updateUserWeekHours(user.id, weekHours)
       
       // Se um projeto foi selecionado, adicionar o usuário ao projeto
-      if (selectedProjectId) {
+      if (selectedProjectId && selectedProjectId !== "none") {
         await UsersAPI.addUserToProject(user.id, parseInt(selectedProjectId))
       }
 
@@ -164,7 +164,7 @@ export function UserApprovalDialog({ user, open, onOpenChange, onApproved }: Use
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl h-[90vh]" style={{ overflowY: 'auto' }}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserCheck className="h-5 w-5" />
@@ -303,7 +303,7 @@ export function UserApprovalDialog({ user, open, onOpenChange, onApproved }: Use
                     <SelectValue placeholder="Selecione um projeto (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum projeto</SelectItem>
+                    <SelectItem value="none">Nenhum projeto</SelectItem>
                     {projects.map((project) => (
                       <SelectItem key={project.id} value={project.id.toString()}>
                         {project.name}

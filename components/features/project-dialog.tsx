@@ -104,7 +104,7 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
 
   return (
     <Dialog open={open} onOpenChange={(newOpen) => !isSubmitting && onOpenChange(newOpen)}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] h-[90vh]" style={{ overflowY: 'auto' }}>
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>{project ? "Editar Projeto" : "Adicionar Novo Projeto"}</DialogTitle>

@@ -108,7 +108,7 @@ export function TaskDialog({ open, onOpenChange, task, projectId }: TaskDialogPr
 
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] h-[90vh]" style={{ overflowY: 'auto' }}>
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>

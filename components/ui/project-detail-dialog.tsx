@@ -111,7 +111,7 @@ export function ProjectDetailDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh]">
+        <DialogContent className="max-w-4xl h-[90vh]" style={{ overflowY: 'auto' }}>
           <DialogHeader>
             <div className="flex justify-between items-start">
               <div className="flex-1">
