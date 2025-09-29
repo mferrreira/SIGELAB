@@ -193,7 +193,8 @@ export class TaskService implements ITaskService {
                                    userRoles.includes('GERENTE') || 
                                    userRoles.includes('GERENTE_PROJETO') || 
                                    userRoles.includes('LABORATORISTA') ||
-                                   userRoles.includes('COLABORADOR');
+                                   userRoles.includes('COLABORADOR') ||
+                                   userRoles.includes('VOLUNTARIO');
 
     if (hasManageTasksPermission) {
       // Busca todas as tarefas
