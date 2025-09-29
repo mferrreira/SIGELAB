@@ -254,6 +254,11 @@ export abstract class User {
         return this;
     }
 
+    deductHours(hours: number): User {
+        this.hoursManager.deductHours(hours);
+        return this;
+    }
+
     // Getters
     get name(): string { return this.profile.getName(); }
     get email(): string { return this.profile.getEmail(); }

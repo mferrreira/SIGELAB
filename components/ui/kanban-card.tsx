@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
-import { MoreHorizontal, Edit, AlertTriangle, Calendar, User, Flag, Users, Star, Crown, Zap } from "lucide-react"
+import { MoreHorizontal, Edit, AlertTriangle, Calendar, User, Flag, Users, Star, Crown, Zap, Check, X } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,9 +23,57 @@ interface DraggableKanbanCardProps extends KanbanCardProps {
 export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCardProps) {
   const [isHovered, setIsHovered] = useState(false)
 
+  const handleApproveTask = async (taskId: number) => {
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (response.ok) {
+        // Recarregar a página ou atualizar o estado
+        window.location.reload()
+      } else {
+        const error = await response.json()
+        alert(`Erro ao aprovar tarefa: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Erro ao aprovar tarefa:', error)
+      alert('Erro ao aprovar tarefa')
+    }
+  }
+
+  const handleRejectTask = async (taskId: number) => {
+    const reason = prompt('Motivo da rejeição (opcional):')
+    
+    try {
+      const response = await fetch(`/api/tasks/${taskId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: reason || undefined }),
+      })
+
+      if (response.ok) {
+        // Recarregar a página ou atualizar o estado
+        window.location.reload()
+      } else {
+        const error = await response.json()
+        alert(`Erro ao rejeitar tarefa: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Erro ao rejeitar tarefa:', error)
+      alert('Erro ao rejeitar tarefa')
+    }
+  }
+
   const isPublicTask = task.taskVisibility === "public"
   const isHighPriority = task.priority === "high"
   const isHighPoints = task.points >= 50
+  const isGlobalTask = task.isGlobal
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
@@ -106,6 +154,11 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-yellow-200/20 to-transparent animate-pulse pointer-events-none" />
                 )}
                 
+                {/* Global Task Special Effects */}
+                {isGlobalTask && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-200/20 to-transparent animate-pulse pointer-events-none" />
+                )}
+                
                 <CardContent className="p-4 relative">
                   {/* Public Task Crown */}
                   {isPublicTask && (
@@ -120,6 +173,7 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
                     <h3 className="font-bold text-sm text-gray-900 dark:text-gray-100 line-clamp-2 flex-1 mr-2">
                       {task.title}
                       {isPublicTask && <span className="ml-1">⚡</span>}
+                      {isGlobalTask && <span className="ml-1">🌍</span>}
                     </h3>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -186,6 +240,12 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
                         PÚBLICA
                       </Badge>
                     )}
+                    {isGlobalTask && (
+                      <Badge className="text-xs font-bold bg-gradient-to-r from-blue-500 to-indigo-500 text-white border-blue-300 shadow-lg shadow-blue-500/25 animate-pulse">
+                        <Zap className="mr-1 h-3 w-3" />
+                        QUEST GLOBAL
+                      </Badge>
+                    )}
                     {task.points > 0 && (
                       <Badge className={`text-xs font-bold ${getPointsStyle()}`}>
                         {isHighPoints && <Star className="mr-1 h-3 w-3" />}
@@ -193,6 +253,35 @@ export function KanbanCard({ task, onEdit, isOverdue, index }: DraggableKanbanCa
                       </Badge>
                     )}
                   </div>
+
+                  {/* Botões de aprovação/rejeição para tarefas em revisão */}
+                  {task.status === "in-review" && (
+                    <div className="flex gap-2 mt-3">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-green-500 hover:bg-green-600 text-white text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleApproveTask(task.id)
+                        }}
+                      >
+                        <Check className="h-3 w-3 mr-1" />
+                        Aprovar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        className="flex-1 text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleRejectTask(task.id)
+                        }}
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Rejeitar
+                      </Button>
+                    </div>
+                  )}
 
                   <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
                     <div className="flex items-center space-x-2">

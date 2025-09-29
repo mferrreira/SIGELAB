@@ -6,6 +6,8 @@ export interface IProjectMembership {
     userId: number;
     joinedAt?: Date;
     roles: UserRole[];
+    user?: any; // User data from include
+    project?: any; // Project data from include
 }
 
 export class ProjectMembership {
@@ -14,6 +16,8 @@ export class ProjectMembership {
     private _userId: number;
     private _joinedAt: Date;
     private _roles: UserRole[];
+    private _user?: any; // User data from include
+    private _project?: any; // Project data from include
 
     constructor(data: IProjectMembership) {
         this._id = data.id;
@@ -21,6 +25,8 @@ export class ProjectMembership {
         this._userId = data.userId;
         this._joinedAt = data.joinedAt || new Date();
         this._roles = data.roles || [];
+        this._user = data.user;
+        this._project = data.project;
     }
 
     // Getters
@@ -42,6 +48,14 @@ export class ProjectMembership {
 
     get roles(): UserRole[] {
         return [...this._roles]; // Return a copy to prevent external modification
+    }
+
+    get user(): any {
+        return this._user;
+    }
+
+    get project(): any {
+        return this._project;
     }
 
     // Business Logic Methods
@@ -168,17 +182,21 @@ export class ProjectMembership {
             userId: this._userId,
             joinedAt: this._joinedAt,
             roles: this._roles,
+            user: this._user,
+            project: this._project,
         };
     }
 
     // Static factory methods
-    static fromPrisma(data: project_members): ProjectMembership {
+    static fromPrisma(data: any): ProjectMembership {
         return new ProjectMembership({
             id: data.id,
             projectId: data.projectId,
             userId: data.userId,
             joinedAt: data.joinedAt,
             roles: data.roles,
+            user: data.user,
+            project: data.project,
         });
     }
 

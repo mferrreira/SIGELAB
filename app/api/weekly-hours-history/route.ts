@@ -13,8 +13,8 @@ export async function GET(request: Request) {
     }
 
     const user = session.user as any
-    if (!user.roles.includes('COORDENADOR')) {
-      return NextResponse.json({ error: 'Apenas coordenadores podem acessar.' }, { status: 403 });
+    if (!user.roles.includes('COORDENADOR') && !user.roles.includes('GERENTE')) {
+      return NextResponse.json({ error: 'Apenas coordenadores e gerentes podem acessar.' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url)
@@ -67,6 +67,19 @@ export async function POST(request: Request) {
       const results = await weeklyHoursHistoryController.resetWeeklyHours()
       return NextResponse.json({ 
         message: "Horas semanais resetadas com sucesso",
+        results 
+      })
+    }
+
+    if (action === "create_week_history") {
+      const { weekStart } = body
+      if (!weekStart) {
+        return NextResponse.json({ error: "weekStart é obrigatório" }, { status: 400 })
+      }
+      
+      const results = await weeklyHoursHistoryController.createWeekHistory(new Date(weekStart))
+      return NextResponse.json({ 
+        message: "Histórico semanal criado com sucesso",
         results 
       })
     }

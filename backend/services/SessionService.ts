@@ -1,5 +1,5 @@
 import SessionRepository from "@/backend/repositories/SessionRespository"
-import Session from "../models/Session"
+import { WorkSession } from "../models/WorkSession" 
 import { DailyLogService } from "./DailyLogService"
 import { DailyLogRepository } from "../repositories/DailyLogRepository"
 
@@ -10,19 +10,15 @@ export default class SessionService {
         this.dailyLogService = new DailyLogService(new DailyLogRepository());
     }
 
-    async create(data: any): Promise<Session | null> {
+    async create(data: any): Promise<WorkSession | null> {
         console.log("SessionService.create called with:", data);
         
-        // Validate user exists
         const user = await this.repo.findUserById(data.userId);
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
 
-        const session = Session.create({
-            ...data,
-            userName: user.name
-        });
+        const session = WorkSession.create(data.userId, user.name, data.activity, data.location);
         
         console.log("Session created:", session);
         
@@ -32,12 +28,11 @@ export default class SessionService {
         return result;
     }
 
-    async update(id: number, data: Partial<Session>) {
+    async update(id: number, data: Partial<WorkSession>) {
         const currentSession = await this.repo.findById(id);
         if (!currentSession)
             throw new Error("Sessão não encontrada");
 
-        // Update the session with new data
         Object.assign(currentSession, data);
         
         return await this.repo.update(currentSession);
@@ -47,7 +42,7 @@ export default class SessionService {
         return await this.repo.delete(id);
     }
 
-    async stopSession(sessionId: number): Promise<Session> {
+    async stopSession(sessionId: number): Promise<WorkSession> {
         const session = await this.repo.findById(sessionId);
 
         if (!session) 
@@ -57,26 +52,24 @@ export default class SessionService {
 
         const updated = await this.repo.update(session);
 
-        // Auto-create daily log when session is completed
         try {
             await this.dailyLogService.createFromWorkSession({
                 id: updated.id,
                 userId: updated.userId,
-                projectId: null, // Could be enhanced to track project in work sessions
+                projectId: null,
                 duration: updated.duration,
                 activity: updated.activity,
                 location: updated.location
             });
         } catch (error) {
             console.error("Failed to create daily log from work session:", error);
-            // Don't fail the session stop if daily log creation fails
         }
 
         return updated;
     }
 
 
-    async findByUserId(userId: number): Promise<Session[] | null> {
+    async findByUserId(userId: number): Promise<WorkSession[] | null> {
         const sessions = await this.repo.findByUserId(userId);
         return sessions;
     }
@@ -85,7 +78,7 @@ export default class SessionService {
         await this.repo.delete(id);
     }
 
-    async findById(id: number): Promise<Session | null> {
+    async findById(id: number): Promise<WorkSession | null> {
         const session = await this.repo.findById(id);
         return session;
     }

@@ -11,7 +11,7 @@ export const ACCESS_CONTROL = {
   MANAGE_REWARDS: ['COORDENADOR', 'GERENTE', 'LABORATORISTA'],
   MANAGE_USERS: ['COORDENADOR', 'GERENTE'],
   MANAGE_PROJECTS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO'],
-  MANAGE_TASKS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO', 'COLABORADOR'],
+  MANAGE_TASKS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO', 'COLABORADOR', "PESQUISADOR"],
   MANAGE_PROJECT_MEMBERS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO'],
   
   // Visualização
@@ -45,26 +45,22 @@ export const ACCESS_CONTROL = {
   EDIT_OWN_LOGS: ['COORDENADOR', 'LABORATORISTA', 'GERENTE', 'GERENTE_PROJETO', 'COLABORADOR', 'VOLUNTARIO'],
 };
 
-// Utility to check if a user has access to a feature
 export function hasAccess(userRoles: string[], feature: keyof typeof ACCESS_CONTROL): boolean {
   if (!userRoles || !Array.isArray(userRoles)) return false;
   const allowedRoles = ACCESS_CONTROL[feature];
   return userRoles.some((role) => allowedRoles.includes(role));
 }
 
-// Utility to check if user has any of the specified roles
 export function hasAnyRole(userRoles: string[], roles: string[]): boolean {
   if (!userRoles || !Array.isArray(userRoles)) return false;
   return userRoles.some((role) => roles.includes(role));
 }
 
-// Utility to check if user has all of the specified roles
 export function hasAllRoles(userRoles: string[], roles: string[]): boolean {
   if (!userRoles || !Array.isArray(userRoles)) return false;
   return roles.every((role) => userRoles.includes(role));
 }
 
-// Utility to get user's highest priority role for display purposes
 export function getPrimaryRole(userRoles: string[]): string {
   if (!userRoles || !Array.isArray(userRoles)) return 'USUARIO';
   
@@ -87,7 +83,6 @@ export function getPrimaryRole(userRoles: string[]): string {
   return 'USUARIO';
 }
 
-// Utility to get display name for a role
 export function getRoleDisplayName(role: string): string {
   const roleNames: Record<string, string> = {
     'COORDENADOR': 'Coordenador',

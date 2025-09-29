@@ -41,11 +41,9 @@ export default function AdminDashboardPage() {
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23, 59, 59, 999)
   
-  // Load all sessions for admin dashboard
   const loadAllSessions = async () => {
     try {
       const response = await WorkSessionsAPI.getAll()
-      // Store all sessions locally for admin dashboard
       const sessions = Array.isArray(response) ? response : (response?.data || [])
       setAllSessions(sessions)
       setAllSessionsLoaded(true)
@@ -60,7 +58,6 @@ export default function AdminDashboardPage() {
     }
   }, [users, allSessionsLoaded])
   
-  // Custom function to calculate weekly hours using all sessions
   const calculateWeeklyHours = (userId: number, weekStart: string, weekEnd: string): number => {
     
     const weekSessions = allSessions.filter(session => {
@@ -91,7 +88,6 @@ export default function AdminDashboardPage() {
     if (users.length > 0 && allSessionsLoaded) {
       fetchAllWeeklyHours()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [users, allSessions, allSessionsLoaded])
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [selectedUserId, setSelectedUserId] = useState<string>("")
@@ -105,12 +101,10 @@ export default function AdminDashboardPage() {
   })
   const [scheduleError, setScheduleError] = useState<string | null>(null)
   useEffect(() => {
-    // Redirecionar para login se não estiver autenticado
     if (!loading && !user) {
       router.push("/login")
     }
   }, [user, loading, router])
-  // Verificar se é administrador de laboratório
   const isAdmin = user?.roles.includes("COORDENADOR") || user?.roles.includes("GERENTE")
   const stats = useMemo(() => {
     const totalUsers = users.length
@@ -202,7 +196,6 @@ export default function AdminDashboardPage() {
     }
   }, [selectedUserSchedules, selectedUser])
 
-  // Funções para gerenciar horários
   const handleCreateSchedule = async () => {
     if (!selectedUserId) return
     
@@ -263,14 +256,12 @@ export default function AdminDashboardPage() {
     setAddEditScheduleDialogOpen(true)
   }
 
-  // Carregar horários quando usuário for selecionado
   useEffect(() => {
     if (selectedUserId) {
       fetchSchedules(parseInt(selectedUserId))
     }
   }, [selectedUserId, fetchSchedules])
 
-  // Usuários por projeto
   const usersByProject = useMemo(() => {
     return projects.map(project => {
       const projectTasks = tasks.filter(t => t.projectId === project.id)
@@ -286,7 +277,6 @@ export default function AdminDashboardPage() {
     })
   }, [projects, tasks, users])
 
-  // Active sessions for admin
   const [activeSessions, setActiveSessions] = useState<any[]>([])
   useEffect(() => {
     let interval: NodeJS.Timeout
@@ -305,14 +295,12 @@ export default function AdminDashboardPage() {
   const [historyByWeek, setHistoryByWeek] = useState<any[]>([])
   const [resettingHours, setResettingHours] = useState(false)
   
-  // Atualizar tabela ao mudar semana
   useEffect(() => {
     if (allWeeks.length > 0) {
       setHistoryByWeek(allWeeks[selectedHistoryWeekIdx]?.users || [])
     }
   }, [selectedHistoryWeekIdx, allWeeks])
 
-  // Função para reset manual das horas semanais
   const handleResetWeeklyHours = async () => {
     try {
       setResettingHours(true)
@@ -327,9 +315,10 @@ export default function AdminDashboardPage() {
       const data = await response.json()
       
       if (response.ok) {
-        alert(`Reset realizado com sucesso!\n\n${data.results.length} usuários processados.\nTotal de horas salvas: ${data.results.reduce((sum: number, r: any) => sum + parseFloat(r.savedHours), 0).toFixed(1)}h`)
-        // setResetDialogOpen(false) // Removed because setResetDialogOpen is not defined
-        // Recarregar dados
+        alert(`Reset realizado com sucesso!
+          \n\n${data.results.length} usuários processados.
+          \nTotal de horas salvas: ${data.results.reduce((sum: number, r: any) => 
+            sum + parseFloat(r.savedHours), 0).toFixed(1)}h`)
         window.location.reload()
       } else {
         alert(`Erro ao resetar horas: ${data.error}`)
@@ -374,11 +363,7 @@ export default function AdminDashboardPage() {
           </Badge>
         </div>
 
-
-        {/* Cards de Estatísticas */}
         <AdminStatsCards stats={stats} users={users} projects={projects} />
-
-        {/* Weekly Work Hours Table */}
 
         <AdminTabs
           users={users}
@@ -394,14 +379,12 @@ export default function AdminDashboardPage() {
           recentDailyLogs={recentDailyLogs}
           weekSchedule={weekSchedule}
           activeSessions={activeSessions}
-          // Add any other necessary props
         />
         <div className="my-6">
           <AdminWeeklyHoursTable users={users} />
         </div>
       </main>
       
-      {/* Dialog para Adicionar/Editar Horário */}
       <AddEditScheduleDialog
         open={addEditScheduleDialogOpen}
         onOpenChange={setAddEditScheduleDialogOpen}
@@ -413,7 +396,6 @@ export default function AdminDashboardPage() {
         handleCreateSchedule={handleCreateSchedule}
         handleUpdateSchedule={handleUpdateSchedule}
         setAddEditScheduleDialogOpen={setAddEditScheduleDialogOpen}
-        // Add any other necessary props
       />
     </div>
   )

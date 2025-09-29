@@ -34,19 +34,16 @@ export class LabResponsibilityService implements ILabResponsibilityService {
     }
 
     async create(data: Omit<LabResponsibility, 'id' | 'createdAt' | 'updatedAt'>): Promise<LabResponsibility> {
-        // Validate user exists
         const user = await this.userRepo.findById(data.userId);
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
 
-        // Check if user can start responsibility
         const canStart = await this.canUserStartResponsibility(data.userId);
         if (!canStart) {
             throw new Error("Usuário não tem permissão para iniciar responsabilidades");
         }
 
-        // Check if there's already an active responsibility
         const activeResponsibility = await this.labResponsibilityRepo.findActiveResponsibility();
         if (activeResponsibility) {
             throw new Error("Já existe uma responsabilidade ativa. Finalize a responsabilidade atual antes de iniciar uma nova.");
@@ -55,12 +52,11 @@ export class LabResponsibilityService implements ILabResponsibilityService {
         const labResponsibility = LabResponsibility.create(data);
         const created = await this.labResponsibilityRepo.create(labResponsibility);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordAction(
                 "LAB_RESPONSIBILITY",
                 created.id!,
-                "START",
+                "CREATE",
                 data.userId,
                 `Responsabilidade iniciada por ${data.userName}`,
                 { responsibility: created.toJSON() }
@@ -78,19 +74,17 @@ export class LabResponsibilityService implements ILabResponsibilityService {
 
         const oldData = existingResponsibility.toJSON();
 
-        // Update fields
         if (data.notes !== undefined) {
-            existingResponsibility.updateNotes(data.notes);
+            existingResponsibility.updateNotes(data.notes!);
         }
 
         const updated = await this.labResponsibilityRepo.update(existingResponsibility);
 
-        // Record history
-        if (this.historyService && data.userId) {
+        if (this.historyService && data.userId!) {
             await this.historyService.recordEntityUpdate(
                 "LAB_RESPONSIBILITY",
                 id,
-                data.userId,
+                data.userId!,
                 oldData,
                 updated.toJSON()
             );
@@ -108,12 +102,11 @@ export class LabResponsibilityService implements ILabResponsibilityService {
         const responsibilityData = existingResponsibility.toJSON();
         await this.labResponsibilityRepo.delete(id);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordEntityDeletion(
                 "LAB_RESPONSIBILITY",
                 id,
-                existingResponsibility.userId,
+                existingResponsibility.userId!,
                 responsibilityData
             );
         }
@@ -155,12 +148,11 @@ export class LabResponsibilityService implements ILabResponsibilityService {
         existingResponsibility.endResponsibility(notes);
         const updated = await this.labResponsibilityRepo.update(existingResponsibility);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordAction(
                 "LAB_RESPONSIBILITY",
                 id,
-                "END",
+                "UPDATE",
                 existingResponsibility.userId,
                 `Responsabilidade finalizada por ${existingResponsibility.userName}`,
                 { 
@@ -178,7 +170,6 @@ export class LabResponsibilityService implements ILabResponsibilityService {
         const user = await this.userRepo.findById(userId);
         if (!user) return false;
 
-        // Only coordinators and managers can start responsibilities
         const hasPermission = user.roles.some(role => 
             ['COORDENADOR', 'GERENTE'].includes(role)
         );
@@ -193,10 +184,8 @@ export class LabResponsibilityService implements ILabResponsibilityService {
         const responsibility = await this.labResponsibilityRepo.findById(responsibilityId);
         if (!responsibility) return false;
 
-        // Users can end their own responsibilities or if they have admin roles
         if (responsibility.userId === userId) return true;
 
-        // Check if user has admin roles
         const hasAdminRole = user.roles.some(role => 
             ['COORDENADOR', 'GERENTE', 'LABORATORISTA'].includes(role)
         );

@@ -28,13 +28,11 @@ export class UserScheduleService implements IUserScheduleService {
     }
 
     async create(data: Omit<UserSchedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<UserSchedule> {
-        // Validate user exists
         const user = await this.userRepo.findById(data.userId);
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
 
-        // Check if user can manage this schedule
         const canManage = await this.canUserManageSchedule(data.userId, data.userId);
         if (!canManage) {
             throw new Error("Usuário não tem permissão para gerenciar este horário");
@@ -43,7 +41,6 @@ export class UserScheduleService implements IUserScheduleService {
         const userSchedule = UserSchedule.create(data);
         const created = await this.userScheduleRepo.create(userSchedule);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordEntityCreation(
                 "USER_SCHEDULE",
@@ -62,7 +59,6 @@ export class UserScheduleService implements IUserScheduleService {
             throw new Error("Horário não encontrado");
         }
 
-        // Check if user can manage this schedule
         const canManage = await this.canUserManageSchedule(data.userId || existingSchedule.userId, existingSchedule.userId);
         if (!canManage) {
             throw new Error("Usuário não tem permissão para gerenciar este horário");
@@ -70,7 +66,6 @@ export class UserScheduleService implements IUserScheduleService {
 
         const oldData = existingSchedule.toJSON();
 
-        // Update fields
         if (data.startTime !== undefined || data.endTime !== undefined) {
             existingSchedule.updateSchedule(
                 data.startTime || existingSchedule.startTime,
@@ -78,17 +73,9 @@ export class UserScheduleService implements IUserScheduleService {
             );
         }
 
-        if (data.isActive !== undefined) {
-            if (data.isActive) {
-                existingSchedule.activate();
-            } else {
-                existingSchedule.deactivate();
-            }
-        }
 
         const updated = await this.userScheduleRepo.update(existingSchedule);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordEntityUpdate(
                 "USER_SCHEDULE",
@@ -111,7 +98,6 @@ export class UserScheduleService implements IUserScheduleService {
         const scheduleData = schedule.toJSON();
         await this.userScheduleRepo.delete(id);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordEntityDeletion(
                 "USER_SCHEDULE",
@@ -132,12 +118,10 @@ export class UserScheduleService implements IUserScheduleService {
             return false;
         }
 
-        // Admin and coordinators can manage any schedule
         if (user.hasAnyRole(['COORDENADOR'])) {
             return true;
         }
 
-        // Users can manage their own schedules
         if (!targetUserId || userId === targetUserId) {
             return true;
         }

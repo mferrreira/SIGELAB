@@ -6,6 +6,7 @@ export interface IProject {
     description?: string | null;
     createdAt: string;
     createdBy: number;
+    leaderId?: number | null;
     status: ProjectStatus;
     links?: ProjectLink[] | null;
 }
@@ -28,6 +29,7 @@ export class Project {
     private _description?: string | null;
     private _createdAt: string;
     private _createdBy: number;
+    private _leaderId?: number | null;
     private _status: ProjectStatus;
     private _links?: ProjectLink[] | null;
 
@@ -37,6 +39,7 @@ export class Project {
         this._description = data.description;
         this._createdAt = data.createdAt;
         this._createdBy = data.createdBy;
+        this._leaderId = data.leaderId;
         this._status = data.status;
         this._links = data.links;
     }
@@ -62,6 +65,10 @@ export class Project {
         return this._createdBy;
     }
 
+    get leaderId(): number | null {
+        return this._leaderId || null;
+    }
+
     get status(): ProjectStatus {
         return this._status;
     }
@@ -70,7 +77,6 @@ export class Project {
         return this._links || [];
     }
 
-    // Business Logic Methods
     updateName(newName: string): void {
         if (!newName || newName.trim().length === 0) {
             throw new Error('Nome do projeto não pode estar vazio');
@@ -95,8 +101,14 @@ export class Project {
         this._status = newStatus;
     }
 
+    updateLeader(leaderId: number | null): void {
+        if (leaderId !== null && leaderId <= 0) {
+            throw new Error('ID do líder deve ser um número positivo');
+        }
+        this._leaderId = leaderId;
+    }
+
     updateLinks(links: ProjectLink[]): void {
-        // Validate all links
         for (const link of links) {
             if (!link.label || link.label.trim().length === 0) {
                 throw new Error('Label do link não pode estar vazio');
@@ -169,8 +181,7 @@ export class Project {
         if (linkIndex === -1) {
             throw new Error('Link não encontrado');
         }
-
-        // Check if new label already exists (excluding the current one)
+// Check if new label already exists (excluding the current one)
         if (links.some((link, index) => link.label === newLabel && index !== linkIndex)) {
             throw new Error('Já existe um link com este label');
         }
@@ -206,14 +217,11 @@ export class Project {
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
 
-    // Validation Methods
     private isValidUrl(url: string): boolean {
         try {
-            // First try the URL as-is
             new URL(url);
             return true;
         } catch {
-            // If that fails, try with https:// prefix
             try {
                 new URL('https://' + url);
                 return true;
@@ -269,7 +277,6 @@ export class Project {
         return errors;
     }
 
-    // Serialization
     toJSON(): any {
         const result = {
             id: this._id,
@@ -277,6 +284,7 @@ export class Project {
             description: this._description,
             createdAt: this._createdAt,
             createdBy: this._createdBy,
+            leaderId: this._leaderId,
             status: this._status,
             links: this._links,
         };
@@ -287,7 +295,6 @@ export class Project {
         return result;
     }
 
-    // Static factory methods
     static fromPrisma(data: projects): Project {
         console.log('Project.fromPrisma - raw data.links:', data.links);
         console.log('Project.fromPrisma - data.links type:', typeof data.links);
@@ -298,6 +305,7 @@ export class Project {
             description: data.description,
             createdAt: data.createdAt,
             createdBy: data.createdBy,
+            leaderId: data.leaderId,
             status: data.status as ProjectStatus,
             links: data.links ? (data.links as unknown as ProjectLink[]) : null,
         });

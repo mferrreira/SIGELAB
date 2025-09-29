@@ -24,20 +24,18 @@ export const authOptions: AuthOptions = {
           throw new Error("Senha incorreta.")
         }
         
-        // Check if user is approved
         if (user.status !== "active") {
           throw new Error("Sua conta ainda não foi aprovada. Entre em contato com um administrador ou laboratorista.")
         }
         
-        // Remove sensitive info
         const { password, ...safeUser } = user
-        return safeUser as any // Type assertion to allow extra fields for JWT
+        return safeUser as any 
       },
     }),
   ],
   session: {
     strategy: "jwt" as SessionStrategy,
-    maxAge: 60 * 60 * 48, // 2 days in seconds
+    maxAge: 60 * 60 * 48, // 2 dias
   },
   pages: {
     signIn: "/login",
@@ -49,6 +47,7 @@ export const authOptions: AuthOptions = {
         token.roles = (user as any).roles
         token.name = (user as any).name
         token.email = (user as any).email
+        token.avatar = (user as any).avatar
       }
       return token
     },
@@ -60,6 +59,8 @@ export const authOptions: AuthOptions = {
         session.user.roles = token.roles
         // @ts-ignore: custom fields
         session.user.id = token.id
+        // @ts-ignore: custom fields
+        session.user.avatar = token.avatar
       }
       return session
     },

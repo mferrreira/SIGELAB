@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/contexts/use-toast"
-import { UserCheck, UserX, Clock, Users } from "lucide-react"
+import { UserCheck, UserX, Clock, Users, Settings } from "lucide-react"
 import { hasAccess } from "@/lib/utils/utils"
+import { UserApprovalDialog } from "./user-approval-dialog"
 
 interface PendingUser {
   id: number
@@ -26,6 +27,8 @@ export function UserApproval() {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([])
   const [loading, setLoading] = useState(true)
   const [processing, setProcessing] = useState<number | null>(null)
+  const [selectedUser, setSelectedUser] = useState<PendingUser | null>(null)
+  const [showApprovalDialog, setShowApprovalDialog] = useState(false)
 
   // Check if user can approve others using standardized access control
   const canApprove = hasAccess(user?.roles || [], 'MANAGE_USERS')
@@ -207,27 +210,18 @@ export function UserApproval() {
                   </TableCell>
                   <TableCell>{formatDate(pendingUser.createdAt)}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        onClick={() => handleApprove(pendingUser.id)}
-                        disabled={processing === pendingUser.id}
-                        className="gap-1"
-                      >
-                        <UserCheck className="h-3 w-3" />
-                        {processing === pendingUser.id ? "Aprovando..." : "Aprovar"}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleReject(pendingUser.id)}
-                        disabled={processing === pendingUser.id}
-                        className="gap-1"
-                      >
-                        <UserX className="h-3 w-3" />
-                        {processing === pendingUser.id ? "Rejeitando..." : "Rejeitar"}
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setSelectedUser(pendingUser)
+                        setShowApprovalDialog(true)
+                      }}
+                      disabled={processing === pendingUser.id}
+                      className="gap-1"
+                    >
+                      <Settings className="h-3 w-3" />
+                      Configurar
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -235,6 +229,14 @@ export function UserApproval() {
           </Table>
         )}
       </CardContent>
+      
+      {/* Dialog de Aprovação */}
+      <UserApprovalDialog
+        user={selectedUser}
+        open={showApprovalDialog}
+        onOpenChange={setShowApprovalDialog}
+        onApproved={fetchPendingUsers}
+      />
     </Card>
   )
 } 

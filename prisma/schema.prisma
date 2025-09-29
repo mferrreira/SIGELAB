@@ -31,6 +31,7 @@ model users {
   lab_responsibilities lab_responsibilities[] @relation("UserLabResponsibilities")
   projectMemberships   project_members[]      @relation("UserProjectMemberships")
   projects             projects[]             @relation("UserProjects")
+  ledProjects          projects[]             @relation("UserProjectLeadership")
   purchases            purchases[]            @relation("UserPurchases")
   tasks                tasks[]                @relation("UserTasks")
   awardedBadges        user_badges[]          @relation("UserAwardedBadges")
@@ -39,6 +40,7 @@ model users {
   weekly_hours_history weekly_hours_history[] @relation("UserWeeklyHoursHistory")
   weekly_reports       weekly_reports[]       @relation("UserWeeklyReports")
   work_sessions        work_sessions[]        @relation("UserWorkSessions")
+  notifications        notifications[]        @relation("UserNotifications")
 }
 
 model projects {
@@ -47,12 +49,15 @@ model projects {
   description String?
   createdAt   String
   createdBy   Int
+  leaderId    Int?
   status      String
   links       Json?
   daily_logs  daily_logs[]      @relation("ProjectDailyLogs")
   members     project_members[] @relation("ProjectMemberships")
   creator     users             @relation("UserProjects", fields: [createdBy], references: [id])
+  leader      users?            @relation("UserProjectLeadership", fields: [leaderId], references: [id])
   tasks       tasks[]           @relation("ProjectTasks")
+  work_sessions work_sessions[] @relation("WorkSessionProject")
 }
 
 model project_members {
@@ -79,6 +84,7 @@ model tasks {
   points         Int       @default(0)
   completed      Boolean   @default(false)
   taskVisibility String    @default("delegated")
+  isGlobal       Boolean   @default(false)
   assignee       users?    @relation("UserTasks", fields: [assignedTo], references: [id])
   projectObj     projects? @relation("ProjectTasks", fields: [projectId], references: [id])
 }
@@ -187,11 +193,13 @@ model work_sessions {
   duration  Float?
   activity  String?
   location  String?
+  projectId Int?
   status    String      @default("active")
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
   dailyLog  daily_logs? @relation("WorkSessionDailyLog")
   user      users       @relation("UserWorkSessions", fields: [userId], references: [id], onDelete: Cascade)
+  project   projects?   @relation("WorkSessionProject", fields: [projectId], references: [id])
 }
 
 model kanban_boards {
@@ -304,24 +312,19 @@ enum IssuePriority {
   urgent
 }
 
-model user_schedules {
-  id        Int      @id @default(autoincrement())
+model notifications {
+  id        Int       @id @default(autoincrement())
   userId    Int
-  dayOfWeek Int      // 0 = Sunday, 1 = Monday, etc.
-  startTime String   // HH:MM format
-  endTime   String   // HH:MM format
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  user      users    @relation("UserSchedules", fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  data      String?   // JSON data
+  read      Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  readAt    DateTime?
+  
+  user      users     @relation("UserNotifications", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("notifications")
 }
 
-model laboratory_schedules {
-  id        Int      @id @default(autoincrement())
-  dayOfWeek Int
-  startTime String
-  endTime   String
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}

@@ -60,14 +60,12 @@ export default function LabResponsibilityPage() {
   const [eventDialogNote, setEventDialogNote] = useState("")
   const [editingEvent, setEditingEvent] = useState<any|null>(null)
 
-  // Redirecionar para login se não estiver autenticado
   useEffect(() => {
     if (!authLoading && !user) {
       router.push("/login")
     }
   }, [user, authLoading, router])
 
-  // Carregar responsabilidades e responsabilidade ativa
   useEffect(() => {
     if (user) {
       fetchResponsibilities()
@@ -224,7 +222,6 @@ export default function LabResponsibilityPage() {
     setShowEventDialog(false)
   }
 
-  // Handle edit event (optional, for future inline editing)
   // const handleEditEvent = (event: DayViewEvent) => {
   //   setEventDialogTime(event.time)
   //   setEventDialogType(event.type || "log")
@@ -233,7 +230,6 @@ export default function LabResponsibilityPage() {
   //   setShowEventDialog(true)
   // }
 
-  // Save event (log or responsibility)
   const handleSaveEvent = async () => {
     if (!user) return
     const eventDate = new Date(date || new Date())
@@ -244,9 +240,22 @@ export default function LabResponsibilityPage() {
     setShowEventDialog(false)
   }
 
-  // Handle day change
   const handleDateChange = (newDate: Date) => {
     setDate(newDate)
+  }
+
+  const getTabsGridCols = () => {
+    const canManageLab = hasAccess(user?.roles || [], 'MANAGE_LABORATORY')
+    const totalTabs = 2 + (canManageLab ? 1 : 0) // Agenda + Issues + (Responsabilidade se permitido)
+    
+    switch (totalTabs) {
+      case 2:
+        return 'grid-cols-2'
+      case 3:
+        return 'grid-cols-3'
+      default:
+        return 'grid-cols-2'
+    }
   }
 
   if (authLoading) {
@@ -269,14 +278,50 @@ export default function LabResponsibilityPage() {
           </Alert>
         )}
 
-        <Tabs defaultValue="responsibility" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="responsibility">Responsabilidade</TabsTrigger>
-            <TabsTrigger value="issues">Issues</TabsTrigger>
+        <Tabs defaultValue="schedule" className="space-y-6">
+          <TabsList className={`grid w-full ${getTabsGridCols()}`}>
             <TabsTrigger value="schedule">Agenda</TabsTrigger>
+            {hasAccess(user?.roles || [], 'MANAGE_LABORATORY') && (
+              <TabsTrigger value="responsibility">Responsabilidade</TabsTrigger>
+            )}
+            <TabsTrigger value="issues">Issues</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="responsibility" className="space-y-6">
+          <TabsContent value="schedule" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Day View Calendar */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Agenda do Dia</CardTitle>
+                  <CardDescription>
+                    {hasAccess(user?.roles || [], 'VIEW_ALL_DATA')
+                      ? "Slots padrão e eventos do dia selecionado. Clique em '+ Adicionar evento' para registrar um log ou responsabilidade."
+                      : "Visualize a agenda e eventos do laboratório."}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DayViewCalendar
+                    date={date || new Date()}
+                    events={events}
+                    labSchedules={labSchedules}
+                    onAddEvent={hasAccess(user?.roles || [], 'VIEW_ALL_DATA') ? (slot) => {
+                      setEventDialogTime(slot)
+                      setShowEventDialog(true)
+                    } : undefined}
+                    onDateChange={handleDateChange}
+                  />
+                </CardContent>
+              </Card>
+
+              {/* Horários do Laboratório */}
+              <Card>
+                <LaboratorySchedule />
+              </Card>
+            </div>
+          </TabsContent>
+
+          {hasAccess(user?.roles || [], 'MANAGE_LABORATORY') && (
+            <TabsContent value="responsibility" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Coluna 1: Status atual e controles */}
           <div className="space-y-4">
@@ -460,14 +505,17 @@ export default function LabResponsibilityPage() {
             </CardContent>
           </Card>
             </div>
-          </TabsContent>
+            </TabsContent>
+          )}
 
           <TabsContent value="issues" className="space-y-6">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-xl font-semibold">Gerenciamento de Issues</h2>
                 <p className="text-sm text-muted-foreground">
-                  Reporte e gerencie problemas do laboratório
+                  {hasAccess(user?.roles || [], 'VIEW_ALL_DATA') 
+                    ? "Gerencie e resolva problemas do laboratório"
+                    : "Reporte problemas do laboratório"}
                 </p>
               </div>
               <Button onClick={() => setShowIssueForm(true)}>
@@ -491,37 +539,6 @@ export default function LabResponsibilityPage() {
                 </DialogContent>
               </Dialog>
             )}
-          </TabsContent>
-
-          <TabsContent value="schedule" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Day View Calendar */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Agenda do Dia</CardTitle>
-                  <CardDescription>
-                    Slots padrão e eventos do dia selecionado. Clique em "+ Adicionar evento" para registrar um log ou responsabilidade.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <DayViewCalendar
-                    date={date || new Date()}
-                    events={events}
-                    labSchedules={labSchedules}
-                    onAddEvent={(slot) => {
-                      setEventDialogTime(slot)
-                      setShowEventDialog(true)
-                    }}
-                    onDateChange={handleDateChange}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Horários do Laboratório */}
-              <Card>
-                <LaboratorySchedule />
-              </Card>
-            </div>
           </TabsContent>
         </Tabs>
 

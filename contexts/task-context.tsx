@@ -10,7 +10,7 @@ interface TaskContextType {
   tasks: Task[]
   loading: boolean
   error: string | null
-  fetchTasks: () => Promise<void>
+  fetchTasks: (projectId?: number | null) => Promise<void>
   createTask: (task: any) => Promise<Task>
   updateTask: (id: number, task: Partial<Task>) => Promise<Task>
   completeTask: (id: number, userId?: number) => Promise<Task>
@@ -26,22 +26,27 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
   const { fetchUsers } = useUser();
 
-  const fetchTasks = useCallback(async () => {
+  const fetchTasks = useCallback(async (projectId?: number | null) => {
     try {
       setLoading(true)
       setError(null)
 
-      // Generate cache key based on user
+      // Build query parameters
+      const params = new URLSearchParams()
+      if (user) {
+        params.append('userId', user.id.toString())
+        params.append('roles', user.roles?.join(',') || '')
+      }
+      if (projectId !== undefined && projectId !== null) {
+        params.append('projectId', projectId.toString())
+      }
       
-      // Check cache first
-
-      // Pass user info for role-based filtering
-      const params = user ? `?userId=${user.id}&roles=${user.roles?.join(',')}` : ""
+      const queryString = params.toString()
+      const finalParams = queryString ? `?${queryString}` : ""
       
-      const response = await TasksAPI.getAll(params)
+      const response = await TasksAPI.getAll(finalParams)
       const tasks = response?.tasks || []
       
-      // Cache the result
       setTasks(tasks)
     } catch (err) {
       console.error("Task context - Error fetching tasks:", err)
@@ -68,9 +73,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       const task = response?.task
       if (task) {
         setTasks((prevTasks) => [...prevTasks, task])
-        
-        // Invalidate related cache
-        
         return task
       }
       throw new Error("Erro ao criar tarefa: resposta inválida")

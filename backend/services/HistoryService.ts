@@ -37,7 +37,6 @@ export class HistoryService implements IHistoryService {
   }
 
   async create(data: Omit<History, 'id' | 'performedAt'>, performerId: number): Promise<History> {
-    // Validate performer exists
     const performer = await this.userRepository.findById(performerId);
     if (!performer) {
       throw new Error('Performer not found');
@@ -134,7 +133,6 @@ export class HistoryService implements IHistoryService {
       return false;
     }
 
-    // Admin and project managers can view all history
-    return user.roles.includes('ADMIN') || user.roles.includes('GERENTE_PROJETO');
+    return user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE');
   }
 }

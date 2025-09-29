@@ -5,7 +5,6 @@ export interface ILabEvent {
     date: Date;
     note: string;
     createdAt?: Date;
-    updatedAt?: Date;
 }
 
 export class LabEvent {
@@ -15,7 +14,6 @@ export class LabEvent {
     private _date: Date;
     private _note: string;
     private _createdAt?: Date;
-    private _updatedAt?: Date;
 
     constructor(data: ILabEvent) {
         this._id = data.id;
@@ -24,14 +22,12 @@ export class LabEvent {
         this._date = data.date;
         this._note = data.note;
         this._createdAt = data.createdAt;
-        this._updatedAt = data.updatedAt;
     }
 
-    static create(data: Omit<ILabEvent, 'id' | 'createdAt' | 'updatedAt'>): LabEvent {
+    static create(data: Omit<ILabEvent, 'id' | 'createdAt'>): LabEvent {
         return new LabEvent({
             ...data,
             createdAt: new Date(),
-            updatedAt: new Date(),
         });
     }
 
@@ -43,7 +39,6 @@ export class LabEvent {
             date: new Date(data.date),
             note: data.note,
             createdAt: data.createdAt ? new Date(data.createdAt) : undefined,
-            updatedAt: data.updatedAt ? new Date(data.updatedAt) : undefined,
         });
     }
 
@@ -54,7 +49,6 @@ export class LabEvent {
     get date(): Date { return this._date; }
     get note(): string { return this._note; }
     get createdAt(): Date | undefined { return this._createdAt; }
-    get updatedAt(): Date | undefined { return this._updatedAt; }
 
     // Business logic methods
     updateNote(note: string): LabEvent {
@@ -62,7 +56,6 @@ export class LabEvent {
             throw new Error("Nota do evento é obrigatória");
         }
         this._note = note.trim();
-        this._updatedAt = new Date();
         return this;
     }
 
@@ -71,7 +64,6 @@ export class LabEvent {
             throw new Error("Data do evento é obrigatória e deve ser válida");
         }
         this._date = date;
-        this._updatedAt = new Date();
         return this;
     }
 
@@ -131,7 +123,6 @@ export class LabEvent {
             date: this._date.toISOString(),
             note: this._note,
             createdAt: this._createdAt?.toISOString(),
-            updatedAt: this._updatedAt?.toISOString(),
         };
     }
 
@@ -143,7 +134,6 @@ export class LabEvent {
             date: this._date,
             note: this._note,
             createdAt: this._createdAt,
-            updatedAt: this._updatedAt,
         };
     }
 }

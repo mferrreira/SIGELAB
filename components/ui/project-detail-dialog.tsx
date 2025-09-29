@@ -25,6 +25,8 @@ import { TaskDialog } from "@/components/features/task-dialog"
 import type { Project, Task } from "@/contexts/types"
 import { useAuth } from "@/contexts/auth-context"
 import { ProjectMembersManager } from "@/components/forms/project-members-manager"
+import { ProjectMembersManagement } from "@/components/features/project-members-management"
+import { ProjectHoursStats } from "@/components/features/project-hours-stats"
 import { hasAccess } from "@/lib/utils/utils"
 
 interface ProjectDetailDialogProps {
@@ -400,9 +402,19 @@ export function ProjectDetailDialog({
               </CardContent>
 
             </Card>
+            
+            {/* Project Hours Statistics */}
+            <ProjectHoursStats project={project} />
+            
             {/* Project Membership Management (only for allowed roles) */}
-            {(user && hasAccess(user.roles, "MANAGE_PROJECT_MEMBERS")) && (
-              <ProjectMembersManager projectId={project.id} />
+            {(user && (hasAccess(user.roles, "MANAGE_PROJECT_MEMBERS") || user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE'))) && (
+              <ProjectMembersManagement 
+                project={project} 
+                onUpdate={() => {
+                  // Atualizar dados do projeto se necessário
+                  console.log('Projeto atualizado')
+                }} 
+              />
             )}
           </div>
         </DialogContent>

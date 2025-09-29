@@ -18,29 +18,29 @@ export class PurchaseService {
     }
 
     async create(data: any): Promise<Purchase> {
-        // Validate required fields
+
         if (!data.userId || !data.rewardId) {
             throw new Error("userId e rewardId são obrigatórios");
         }
 
-        // Validate user exists
+
         const user = await this.purchaseRepo.findUserById(data.userId);
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
 
-        // Validate reward exists
+
         const reward = await this.rewardRepo.findById(data.rewardId);
         if (!reward) {
             throw new Error("Recompensa não encontrada");
         }
 
-        // Validate purchase
+
         if (!reward.canBePurchased(user.points)) {
             throw new Error(reward.getPurchaseValidationMessage(user.points));
         }
 
-        // Create purchase
+
         const purchase = Purchase.create({
             userId: data.userId,
             rewardId: data.rewardId,
@@ -63,7 +63,7 @@ export class PurchaseService {
             throw new Error("Compra não encontrada");
         }
 
-        // Apply updates to current purchase
+
         Object.assign(currentPurchase, data);
 
         if (!currentPurchase.isValid()) {
@@ -110,7 +110,7 @@ export class PurchaseService {
         return await this.purchaseRepo.findRejected();
     }
 
-    // Business logic methods
+
     async approvePurchase(id: number): Promise<Purchase> {
         const purchase = await this.purchaseRepo.findById(id);
         if (!purchase) {
@@ -138,7 +138,7 @@ export class PurchaseService {
         purchase.reject();
         const updatedPurchase = await this.purchaseRepo.update(purchase);
 
-        // Refund points to user
+
         await this.refundPoints(purchase.userId, purchase.price);
 
         return updatedPurchase;
@@ -171,7 +171,7 @@ export class PurchaseService {
         purchase.cancel();
         const updatedPurchase = await this.purchaseRepo.update(purchase);
 
-        // Refund points if purchase was approved
+
         if (purchase.isApproved()) {
             await this.refundPoints(purchase.userId, purchase.price);
         }
@@ -179,7 +179,7 @@ export class PurchaseService {
         return updatedPurchase;
     }
 
-    // Point management methods
+
     private async deductPoints(userId: number, points: number): Promise<void> {
         const user = await this.purchaseRepo.findUserById(userId);
         if (!user) {
@@ -189,9 +189,6 @@ export class PurchaseService {
         if (user.points < points) {
             throw new Error("Pontos insuficientes");
         }
-
-        // This would need to be implemented in a UserRepository
-        // For now, we'll handle it in the controller layer
     }
 
     private async refundPoints(userId: number, points: number): Promise<void> {
@@ -199,12 +196,14 @@ export class PurchaseService {
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
-
-        // This would need to be implemented in a UserRepository
-        // For now, we'll handle it in the controller layer
+        const purchase = await this.purchaseRepo.findById(userId);
+        if (!purchase || purchase.status !== 'approved') {
+            throw new Error("Compra não encontrada");
+        }
+        user.points -= points;
+        await this.purchaseRepo.update(purchase);
     }
 
-    // Analytics methods
     async getPurchaseStatistics(): Promise<{
         totalPurchases: number;
         pendingPurchases: number;
@@ -235,7 +234,6 @@ export class PurchaseService {
         return await this.purchaseRepo.getRewardPurchaseStatistics(rewardId);
     }
 
-    // Search and filter methods
     async searchPurchases(query: {
         userId?: number;
         rewardId?: number;
@@ -255,7 +253,6 @@ export class PurchaseService {
             purchases = await this.purchaseRepo.findAll();
         }
 
-        // Apply date filter
         if (query.startDate && query.endDate) {
             purchases = purchases.filter(purchase => 
                 purchase.purchaseDate >= query.startDate! && 
@@ -266,7 +263,7 @@ export class PurchaseService {
         return purchases;
     }
 
-    // Bulk operations
+
     async bulkApprovePurchases(purchaseIds: number[]): Promise<Purchase[]> {
         const approvedPurchases: Purchase[] = [];
 
@@ -297,7 +294,7 @@ export class PurchaseService {
         return rejectedPurchases;
     }
 
-    // Validation methods
+
     async validatePurchaseCreation(userId: number, rewardId: number): Promise<{
         canPurchase: boolean;
         message: string;

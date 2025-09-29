@@ -8,6 +8,7 @@ import { TaskDialog } from "@/components/features/task-dialog"
 import { Loader2, AlertTriangle } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { useTask } from "@/contexts/task-context"
+import { useProject } from "@/contexts/project-context"
 import type { Task } from "@/contexts/types"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/contexts/use-toast"
@@ -24,19 +25,21 @@ const COLUMNS = [
 export function KanbanBoard() {
   const { user } = useAuth()
   const { tasks, loading, error, fetchTasks, updateTask, completeTask } = useTask()
+  const { projects } = useProject()
   const { toast } = useToast()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [showOverdueOnly, setShowOverdueOnly] = useState(false)
   const [isUpdating, setIsUpdating] = useState(false)
   const [optimisticTasks, setOptimisticTasks] = useState<Task[]>([])
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
+  const [isCompactView, setIsCompactView] = useState(false)
 
-  // Load tasks when user changes - optimized with useCallback
   const loadTasks = useCallback(() => {
     if (user) {
-      fetchTasks()
+      fetchTasks(selectedProjectId)
     }
-  }, [user, fetchTasks])
+  }, [user, fetchTasks, selectedProjectId])
 
   useEffect(() => {
     loadTasks()
@@ -78,6 +81,19 @@ export function KanbanBoard() {
 
   // Check if user can create tasks
   const canCreateTasks = hasAccess(user?.roles || [], 'MANAGE_TASKS')
+  
+  // Check if user can see project selector (managers and coordinators)
+  const canSeeProjectSelector = hasAccess(user?.roles || [], 'MANAGE_TASKS')
+  
+  // Handle project selection change
+  const handleProjectChange = useCallback((projectId: number | null) => {
+    setSelectedProjectId(projectId)
+  }, [])
+
+  // Handle view mode toggle
+  const handleViewModeToggle = useCallback(() => {
+    setIsCompactView(!isCompactView)
+  }, [isCompactView])
 
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result
@@ -140,7 +156,7 @@ export function KanbanBoard() {
         if (newStatus === "done") {
           // Determine which user should get the points
           const userToAward = taskToUpdate.assignedTo || (taskToUpdate.taskVisibility === "public" && hasAccess(user?.roles || [], 'COMPLETE_PUBLIC_TASKS') ? user?.id : null)
-          await completeTask(taskToUpdate.id, userToAward)
+          await completeTask(taskToUpdate.id, userToAward!)
         } else {
           await updateTask(taskToUpdate.id, updateData)
         }
@@ -156,9 +172,6 @@ export function KanbanBoard() {
             })
           }
         }
-        
-        // Don't refresh tasks here - the optimistic update is sufficient
-        // Only refresh if there's an error
       }
     } catch (error) {
       console.error("Erro ao atualizar status da tarefa:", error)
@@ -210,6 +223,12 @@ export function KanbanBoard() {
         canCreateTasks={canCreateTasks}
         onCreateTask={handleAddTask}
         isUpdating={isUpdating}
+        projects={projects}
+        selectedProjectId={selectedProjectId}
+        onProjectChange={handleProjectChange}
+        showProjectSelector={canSeeProjectSelector}
+        isCompactView={isCompactView}
+        onViewModeToggle={handleViewModeToggle}
       />
 
       <DragDropContext onDragEnd={handleDragEnd}>
@@ -218,7 +237,7 @@ export function KanbanBoard() {
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => e.preventDefault()}
         >
-          {COLUMNS.map((column) => {
+              {COLUMNS.map((column) => {
             const columnTasks = filteredTasks.filter((task) => task.status === column.status)
             return (
               <KanbanColumn
@@ -228,6 +247,7 @@ export function KanbanBoard() {
                 onEdit={handleEditTask}
                 onAddTask={handleAddTask}
                 canAddTask={canCreateTasks}
+                isCompactView={isCompactView}
               />
             )
           })}
@@ -247,6 +267,6 @@ function isTaskOverdue(task: Task): boolean {
   if (!task.dueDate) return false
   const dueDate = new Date(task.dueDate)
   const today = new Date()
-  today.setHours(23, 59, 59, 999) // End of today
+  today.setHours(23, 59, 59, 999) 
   return dueDate < today && task.status !== "done"
 }

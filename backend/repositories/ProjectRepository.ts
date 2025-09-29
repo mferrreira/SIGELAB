@@ -9,6 +9,7 @@ export interface IProjectRepository {
     findByStatus(status: ProjectStatus): Promise<Project[]>;
     findByUserId(userId: number): Promise<Project[]>;
     findByCreatorId(creatorId: number): Promise<Project[]>;
+    findByLeaderId(leaderId: number): Promise<Project[]>;
     create(project: Project): Promise<Project>;
     update(project: Project): Promise<Project>;
     delete(id: number): Promise<void>;
@@ -133,6 +134,16 @@ export class ProjectRepository implements IProjectRepository {
         return projects.map(project => Project.fromPrisma(project));
     }
 
+    async findByLeaderId(leaderId: number): Promise<Project[]> {
+        const projects = await prisma.projects.findMany({
+            where: { leaderId },
+            include: this.getIncludeOptions(),
+            orderBy: { createdAt: 'desc' }
+        });
+
+        return projects.map(project => Project.fromPrisma(project));
+    }
+
     async create(project: Project): Promise<Project> {
         const errors = project.validate();
         if (errors.length > 0) {
@@ -148,6 +159,7 @@ export class ProjectRepository implements IProjectRepository {
                 description: projectData.description,
                 createdAt: projectData.createdAt,
                 createdBy: projectData.createdBy,
+                leaderId: projectData.leaderId,
                 status: projectData.status,
                 links: projectData.links
             },
@@ -176,6 +188,7 @@ export class ProjectRepository implements IProjectRepository {
             data: {
                 name: projectData.name,
                 description: projectData.description,
+                leaderId: projectData.leaderId,
                 status: projectData.status,
                 links: projectData.links
             },

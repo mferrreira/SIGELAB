@@ -8,6 +8,8 @@ import { AppHeader } from "@/components/layout/app-header"
 import { ProjectList } from "@/components/features/project-list"
 import { ProjectDetailDialog } from "@/components/ui/project-detail-dialog"
 import { ProjectDialog } from "@/components/features/project-dialog"
+import { ProjectManagerDashboard } from "@/components/features/project-manager-dashboard"
+import { VolunteersManagement } from "@/components/features/volunteers-management"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -24,10 +26,20 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  Archive
+  Archive,
+  UserPlus,
+  Settings,
+  TrendingUp,
+  Target,
+  Award
 } from "lucide-react"
 import type { Project } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/access-control"
+
+// Helper para verificar se usuário tem GOD MODE (coordenador ou gerente)
+const hasGodMode = (userRoles: string[]) => {
+  return userRoles?.includes('COORDENADOR') || userRoles?.includes('GERENTE')
+}
 
 
 export default function ProjetosPage() {
@@ -42,15 +54,14 @@ export default function ProjetosPage() {
   const [isProjectDialogOpen, setIsProjectDialogOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<Project | null>(null)
 
-  // Filter projects based on search and status
+  // A API já filtra os projetos baseado no usuário, então só aplicamos filtros de busca e status
   const filteredProjects = projects.filter(project => {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.description?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "all" || project.status === statusFilter
     return matchesSearch && matchesStatus
-  })
+  });
 
-  // Get project statistics
   const getProjectStats = (projectId: number) => {
     const projectTasks = tasks.filter(task => task.projectId === projectId)
     const totalTasks = projectTasks.length
@@ -69,7 +80,6 @@ export default function ProjetosPage() {
     }
   }
 
-  // Overall statistics
   const overallStats = {
     total: projects.length,
     active: projects.filter(p => p.status === "active").length,
@@ -92,7 +102,6 @@ export default function ProjetosPage() {
   const handleDeleteProject = async (projectId: number) => {
     if (confirm("Tem certeza que deseja excluir este projeto?")) {
       try {
-        // This will be handled by the ProjectDetailDialog
         setIsDetailDialogOpen(false)
       } catch (error) {
         console.error("Erro ao excluir projeto:", error)
@@ -118,7 +127,6 @@ export default function ProjetosPage() {
     )
   }
 
-  // Only allow access to PESQUISADOR, COORDENADOR, GERENTE_PROJETO, GERENTE
   if (!hasAccess(user?.roles || [], "VIEW_PROJECT_DASHBOARD")) {
     return (
       <div className="flex min-h-screen flex-col">
@@ -140,9 +148,14 @@ export default function ProjetosPage() {
           {/* Header */}
           <div className="flex flex-col gap-4">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight">Gerenciamento de Projetos</h1>
+              <h1 className="text-3xl font-bold tracking-tight">
+                {user?.roles?.includes('GERENTE_PROJETO') ? 'Meus Projetos' : 'Gerenciamento de Projetos'}
+              </h1>
               <p className="text-muted-foreground">
-                Organize e acompanhe todos os projetos do laboratório
+                {user?.roles?.includes('GERENTE_PROJETO') 
+                  ? 'Gerencie seus projetos e equipe de voluntários'
+                  : 'Organize e acompanhe todos os projetos do laboratório'
+                }
               </p>
             </div>
 
@@ -241,19 +254,44 @@ export default function ProjetosPage() {
           </div>
 
           {/* Projects Content */}
-          <Tabs defaultValue="list" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="list">Lista de Projetos</TabsTrigger>
-              {hasAccess(user?.roles || [], "EDIT_PROJECT") &&
-                <TabsTrigger value="grid">Visualização em Grid</TabsTrigger>
+          <Tabs defaultValue={user?.roles?.includes('GERENTE_PROJETO') ? "dashboard" : "list"} className="space-y-4">
+            <TabsList className={`grid w-full ${user?.roles?.includes('GERENTE_PROJETO') ? 'grid-cols-4' : 'grid-cols-3'}`}>
+              {user?.roles?.includes('GERENTE_PROJETO') &&
+                <TabsTrigger value="dashboard" className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Dashboard
+                </TabsTrigger>
+              }
+              <TabsTrigger value="list" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Lista de Projetos
+              </TabsTrigger>
+              <TabsTrigger value="grid" className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Visualização em Grid
+              </TabsTrigger>
+              {(user?.roles?.includes('GERENTE_PROJETO') || hasGodMode(user?.roles || [])) &&
+                <TabsTrigger value="volunteers" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Voluntários
+                </TabsTrigger>
               }
             </TabsList>
+
+            {/* Tab Dashboard - Apenas para Gerentes de Projeto */}
+            {user?.roles?.includes('GERENTE_PROJETO') &&
+            <TabsContent value="dashboard" className="space-y-4">
+              <ProjectManagerDashboard 
+                projects={projects} 
+                tasks={tasks} 
+                user={user} 
+              />
+            </TabsContent>
+            }
 
             <TabsContent value="list" className="space-y-4">
               <ProjectList />
             </TabsContent>
-            
-            {hasAccess(user?.roles || [], "EDIT_PROJECT") &&
             
             <TabsContent value="grid" className="space-y-4">
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -306,6 +344,7 @@ export default function ProjetosPage() {
                           <div className="text-center">
                             <div className="font-semibold text-blue-600">{stats.total}</div>
                             <div className="text-muted-foreground">Total</div>
+          
                           </div>
                           <div className="text-center">
                             <div className="font-semibold text-green-600">{stats.completed}</div>
@@ -341,6 +380,13 @@ export default function ProjetosPage() {
                 </Card>
               )}
             </TabsContent>
+            
+
+            {/* Tab Voluntários - Apenas para Gerentes de Projeto */}
+            {(user?.roles?.includes('GERENTE_PROJETO') || hasGodMode(user?.roles || [])) &&
+            <TabsContent value="volunteers" className="space-y-6">
+              <VolunteersManagement />
+            </TabsContent>
             }
           </Tabs>
         </div>
@@ -359,7 +405,6 @@ export default function ProjetosPage() {
           onOpenChange={setIsProjectDialogOpen}
           project={editingProject}
         />
-
 
       </main>
     </div>

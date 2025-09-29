@@ -15,10 +15,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, CalendarDays, User as UserIcon, Settings, Trophy, Target } from "lucide-react"
 import type { DailyLog, DailyLogFormData, User } from "@/contexts/types"
 import { TimerCard } from "@/components/ui/timer-card"
 import { useWorkSessions } from "@/contexts/work-session-context"
+import { UserBadges } from "@/components/ui/user-badges"
 
 export default function ProfilePage() {
   const { user: authUser } = useAuth()
@@ -60,6 +62,7 @@ export default function ProfilePage() {
     if (authUser) {
       setUser(authUser)
     }
+    console.log("authUser", authUser)
   }, [authUser])
 
   useEffect(() => {
@@ -122,8 +125,7 @@ export default function ProfilePage() {
     setViewingUser(null)
   }
 
-  // Calculate weekly progress
-  const progressoSemanal = user?.currentWeekHours ?? 0
+  const progressoSemanal = weeklyHours
   const metaSemanal = user?.weekHours ?? 0
 
   if (!user) {
@@ -156,7 +158,7 @@ export default function ProfilePage() {
       
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          {/* User Search */}
+
           <div className="mb-6">
             <Card>
               <CardHeader>
@@ -174,29 +176,37 @@ export default function ProfilePage() {
             </Card>
           </div>
 
-          {/* Current User Profile */}
+
           <div className="mb-8">
-            <Card>
-              <CardHeader>
+            <Card className={showProfileForm ? "border-blue-200 bg-blue-50/50" : ""}>
+              <CardHeader className={showProfileForm ? "bg-blue-50/30" : ""}>
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center space-x-2">
                     <UserIcon className="h-5 w-5" />
                     <span>Meu Perfil</span>
+                    {showProfileForm && <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">Editando</span>}
                   </CardTitle>
-                  <Button variant="outline" size="sm" onClick={() => setShowProfileForm(true)}>
-                    Editar Perfil
+                  <Button 
+                    variant={showProfileForm ? "default" : "outline"} 
+                    size="sm" 
+                    onClick={() => setShowProfileForm(!showProfileForm)}
+                    className={showProfileForm ? "bg-blue-600 hover:bg-blue-700" : ""}
+                  >
+                    {showProfileForm ? "Cancelar Edição" : "Editar Perfil"}
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                    {user?.avatar ? (
-                      <img src={user.avatar} alt={user.name} className="w-16 h-16 rounded-full object-cover" />
-                    ) : (
-                      <UserIcon className="h-8 w-8 text-primary" />
-                    )}
-                  </div>
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage 
+                      src={user?.avatar || undefined} 
+                      alt={user?.name || ''}
+                    />
+                    <AvatarFallback className="text-lg font-semibold">
+                      {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="flex-1">
                     <h2 className="text-xl font-bold text-foreground">{user?.name}</h2>
                     <p className="text-muted-foreground">{user?.email}</p>
@@ -211,6 +221,13 @@ export default function ProfilePage() {
                       </div>
                     </div>
                   </div>
+                  
+                  {/* Badges do usuário */}
+                  {user && (
+                    <div className="mt-4">
+                      <UserBadges userId={user.id} limit={4} />
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -307,25 +324,26 @@ export default function ProfilePage() {
             <TabsContent value="settings" className="space-y-6">
               {/* Profile Edit Form */}
               {showProfileForm && user ? (
-                <UserProfileForm
-                  user={user}
-                  onUpdate={(updatedUser) => {
-                    setUser(updatedUser)
-                    setShowProfileForm(false)
-                  }}
-                  onCancel={() => setShowProfileForm(false)}
-                />
-              ) : (
-                <>
-                  {/* Profile Picture Upload */}
-                  {user && (
-                    <ProfilePictureUpload
-                      user={user}
-                      onUpdate={(updatedUser) => setUser(updatedUser)}
-                    />
-                  )}
+                <div className="space-y-6">
+                  {/* Upload de Avatar - Agora dentro do modo de edição */}
+                  <ProfilePictureUpload
+                    user={user}
+                    onUpdate={(updatedUser) => setUser(updatedUser)}
+                  />
                   
-                  {/* Profile Information Display */}
+                  {/* Formulário de Edição */}
+                  <UserProfileForm
+                    user={user}
+                    onUpdate={(updatedUser) => {
+                      setUser(updatedUser)
+                      setShowProfileForm(false)
+                    }}
+                    onCancel={() => setShowProfileForm(false)}
+                  />
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Informações do Perfil - Modo visualização */}
                   {user && (
                     <Card>
                       <CardHeader>
@@ -359,7 +377,7 @@ export default function ProfilePage() {
                       </CardContent>
                     </Card>
                   )}
-                </>
+                </div>
               )}
             </TabsContent>
 

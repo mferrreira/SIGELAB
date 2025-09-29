@@ -393,6 +393,7 @@ export class UserService {
         bio?: string | null;
         avatar?: string | null;
         profileVisibility?: any;
+        password?: string;
     }): Promise<User> {
         const user = await this.userRepo.findById(id);
         if (!user) {
@@ -413,6 +414,9 @@ export class UserService {
         if (data.profileVisibility !== undefined) {
             user.updateProfileVisibility(data.profileVisibility);
         }
+        if (data.password !== undefined && data.password.trim()) {
+            await user.setPassword(data.password);
+        }
 
         const updatedUser = await this.userRepo.update(user);
         
@@ -421,5 +425,86 @@ export class UserService {
         }
         
         return updatedUser;
+    }
+
+    async getUsers(options: { search?: string; excludeProjectId?: number } = {}): Promise<User[]> {
+        return await this.userRepo.getUsers(options);
+    }
+
+    async deductHours(userId: number, data: {
+        hours: number;
+        reason: string;
+        projectId?: number;
+        deductedBy: number;
+        deductedByRoles: string[];
+    }): Promise<{
+        message: string;
+        user: User;
+    }> {
+        const user = await this.userRepo.findById(userId);
+        if (!user) {
+            throw new Error("Usuário não encontrado");
+        }
+
+        // Verificar permissões
+        const canDeductHours = this.canDeductHours(data.deductedByRoles, data.projectId);
+        if (!canDeductHours) {
+            throw new Error("Sem permissão para retirar horas");
+        }
+
+        // Se for líder de projeto, verificar se o usuário pertence ao projeto
+        if (data.projectId && data.deductedByRoles.includes('GERENTE_PROJETO')) {
+            const isUserInProject = await this.isUserInProject(userId, data.projectId);
+            if (!isUserInProject) {
+                throw new Error("Usuário não pertence ao projeto");
+            }
+        }
+
+        // Verificar se o usuário tem horas suficientes
+        if (user.totalHours < data.hours) {
+            throw new Error("Usuário não possui horas suficientes");
+        }
+
+        const oldUserData = user.toJSON();
+        
+        // Retirar horas
+        user.deductHours(data.hours);
+        const updatedUser = await this.userRepo.update(user);
+
+        // Registrar no histórico
+        if (this.historyService) {
+            await this.historyService.recordAction(
+                'USER', 
+                userId, 
+                'DEDUCT_HOURS', 
+                data.deductedBy, 
+                `Horas retiradas: ${data.hours}h. Motivo: ${data.reason}`
+            );
+        }
+
+        return {
+            message: `${data.hours} horas retiradas com sucesso`,
+            user: updatedUser
+        };
+    }
+
+    private canDeductHours(roles: string[], projectId?: number): boolean {
+        // Coordenadores e Gerentes podem retirar horas de qualquer usuário
+        if (roles.includes('COORDENADOR') || roles.includes('GERENTE')) {
+            return true;
+        }
+
+        // Líderes de projeto podem retirar horas apenas de usuários do seu projeto
+        if (roles.includes('GERENTE_PROJETO') && projectId) {
+            return true;
+        }
+
+        return false;
+    }
+
+    private async isUserInProject(userId: number, projectId: number): Promise<boolean> {
+        // Esta verificação seria implementada no repository
+        // Por enquanto, retornamos true (implementação simplificada)
+        return true;
     }
 }

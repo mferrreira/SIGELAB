@@ -15,6 +15,7 @@ import { WorkSessionProvider } from "@/contexts/work-session-context"
 import { SessionProvider } from "next-auth/react"
 import { LabEventsProvider } from "@/contexts/lab-events-context"
 import { IssueProvider } from "@/contexts/issue-context"
+import { NotificationProvider } from "@/contexts/notification-context"
 import { AppHeader } from "@/components/layout/app-header"
 
 export default function ClientLayout({
@@ -28,28 +29,30 @@ export default function ClientLayout({
         <AuthProvider>
           <LabEventsProvider>
             <IssueProvider>
-           <UserProvider>
-            <ProjectProvider>
-              <TaskProvider>
-                <RewardProvider>
-                  <ResponsibilityProvider>
-                    <DailyLogProvider>
-                      <ScheduleProvider>
-                        <LaboratoryScheduleProvider>
-                          <WorkSessionProvider>
-                            <WeeklyReportProvider>
-                              <AppHeader />
-                              {children}
-                            </WeeklyReportProvider>
-                          </WorkSessionProvider>
-                        </LaboratoryScheduleProvider>
-                      </ScheduleProvider>
-                    </DailyLogProvider>
-                  </ResponsibilityProvider>
-                </RewardProvider>
-              </TaskProvider>
-            </ProjectProvider>
-          </UserProvider>
+              <NotificationProvider>
+                <UserProvider>
+                  <ProjectProvider>
+                    <TaskProvider>
+                      <RewardProvider>
+                        <ResponsibilityProvider>
+                          <DailyLogProvider>
+                            <ScheduleProvider>
+                              <LaboratoryScheduleProvider>
+                                <WorkSessionProvider>
+                                  <WeeklyReportProvider>
+                                    <AppHeader />
+                                    {children}
+                                  </WeeklyReportProvider>
+                                </WorkSessionProvider>
+                              </LaboratoryScheduleProvider>
+                            </ScheduleProvider>
+                          </DailyLogProvider>
+                        </ResponsibilityProvider>
+                      </RewardProvider>
+                    </TaskProvider>
+                  </ProjectProvider>
+                </UserProvider>
+              </NotificationProvider>
             </IssueProvider>
           </LabEventsProvider>
         </AuthProvider>

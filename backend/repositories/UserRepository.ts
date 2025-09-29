@@ -396,4 +396,37 @@ export class UserRepository implements IUserRepository {
             return 0;
         }
     }
+
+    async getUsers(options: { search?: string; excludeProjectId?: number } = {}): Promise<User[]> {
+        const whereConditions: any = {
+            status: 'active' // Apenas usuários ativos
+        };
+
+        // Adicionar busca por nome ou email se fornecida
+        if (options.search) {
+            whereConditions.OR = [
+                { name: { contains: options.search, mode: 'insensitive' } },
+                { email: { contains: options.search, mode: 'insensitive' } }
+            ];
+        }
+
+        // Excluir usuários que já são membros do projeto se excludeProjectId for fornecido
+        if (options.excludeProjectId) {
+            whereConditions.NOT = {
+                projectMemberships: {
+                    some: {
+                        projectId: options.excludeProjectId
+                    }
+                }
+            };
+        }
+
+        const users = await prisma.users.findMany({
+            where: whereConditions,
+            include: this.getIncludeOptions(),
+            orderBy: { name: 'asc' }
+        });
+
+        return users.map(user => User.fromPrisma(user));
+    }
 }

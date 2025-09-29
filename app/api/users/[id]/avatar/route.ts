@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth/server-auth"
-import { unlink } from "fs/promises"
-import { join } from "path"
-import { existsSync } from "fs"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { UserController } from "@/backend/controllers/UserController"
+import { ImageProcessor } from "@/lib/utils/image-processor"
 
 export async function DELETE(
   request: NextRequest,
@@ -11,32 +10,23 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    if (!session?.user || !(session.user as any).id) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
     const userId = parseInt(params.id)
-    if (userId !== session.user.id) {
+    if (userId !== (session.user as any).id) {
       return NextResponse.json({ error: "Usuário não autorizado" }, { status: 403 })
     }
 
-    // TODO: Get current avatar URL from database
-    // For now, we'll assume the avatar file exists and try to delete it
-    // In a real implementation, you'd fetch the user's current avatar URL from the database
-
-    // Example: if you had the avatar URL, you could extract the filename and delete it
-    // const avatarUrl = user.avatar // from database
-    // if (avatarUrl) {
-    //   const fileName = avatarUrl.split('/').pop()
-    //   const filePath = join(process.cwd(), "public", "uploads", "avatars", fileName)
-    //   
-    //   if (existsSync(filePath)) {
-    //     await unlink(filePath)
-    //   }
-    // }
-
-    // TODO: Update user avatar to null in database
-    // await userService.updateAvatar(userId, null)
+    const userController = new UserController()
+    const currentUser = await userController.getUser(userId)
+    
+    if (currentUser?.avatar) {
+      await ImageProcessor.deleteImage(currentUser.avatar)
+    }
+    
+    await userController.updateProfile(userId, { avatar: null })
 
     return NextResponse.json({ 
       success: true, 

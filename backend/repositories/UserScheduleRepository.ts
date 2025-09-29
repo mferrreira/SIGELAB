@@ -53,10 +53,7 @@ export class UserScheduleRepository implements IUserScheduleRepository {
                 userId: data.userId,
                 dayOfWeek: data.dayOfWeek,
                 startTime: data.startTime,
-                endTime: data.endTime,
-                isActive: data.isActive,
-                createdAt: new Date(),
-                updatedAt: new Date()
+                endTime: data.endTime
             },
             include: this.getIncludeOptions()
         });
@@ -81,9 +78,7 @@ export class UserScheduleRepository implements IUserScheduleRepository {
                 userId: data.userId,
                 dayOfWeek: data.dayOfWeek,
                 startTime: data.startTime,
-                endTime: data.endTime,
-                isActive: data.isActive,
-                updatedAt: new Date()
+                endTime: data.endTime
             },
             include: this.getIncludeOptions()
         });
@@ -126,8 +121,7 @@ export class UserScheduleRepository implements IUserScheduleRepository {
     async findActiveByUserId(userId: number): Promise<UserSchedule[]> {
         const userSchedules = await prisma.user_schedules.findMany({
             where: { 
-                userId,
-                isActive: true
+                userId
             },
             include: this.getIncludeOptions(),
             orderBy: [

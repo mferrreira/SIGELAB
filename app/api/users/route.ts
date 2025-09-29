@@ -1,35 +1,53 @@
-import { NextResponse } from "next/server";
-import { UserController } from "@/backend/controllers/UserController";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { prisma } from '@/lib/database/prisma'
 
-const userController = new UserController();
-
-// GET: Obter todos os usuários
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const users = await userController.getAllUsers();
-    return NextResponse.json({ users });
-  } catch (error) {
-    console.error("Erro ao buscar usuários:", error);
-    return NextResponse.json({ error: "Erro ao buscar usuários" }, { status: 500 });
-  }
-}
+    const user = await prisma.users.findUnique({
+      where: { email: session.user.email }
+    })
 
-// POST: Criar um novo usuário (público - aprovação posterior)
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    
-    const user = await userController.createUser(body);
-    return NextResponse.json({ user }, { status: 201 });
+    if (!user) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    }
+
+    // Verificar se o usuário tem permissão para ver outros usuários
+    const canViewUsers = user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE')
+
+    if (!canViewUsers) {
+      return NextResponse.json({ error: 'Apenas coordenadores e gerentes podem visualizar usuários' }, { status: 403 })
+    }
+
+    // Buscar todos os usuários ativos
+    const users = await prisma.users.findMany({
+      where: {
+        status: 'active'
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        roles: true,
+        status: true
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    })
+
+    return NextResponse.json({ users }, { status: 200 })
   } catch (error: any) {
-    console.error("Erro ao criar usuário:", error);
-    return NextResponse.json({ error: error.message || "Erro ao criar usuário" }, { status: 500 });
+    console.error('Erro na API de usuários:', error)
+    return NextResponse.json(
+      { error: error.message || 'Erro interno do servidor' },
+      { status: 500 }
+    )
   }
 }

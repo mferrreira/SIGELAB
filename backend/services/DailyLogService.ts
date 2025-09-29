@@ -45,7 +45,7 @@ export class DailyLogService {
 
         const createdLog = await this.repo.create(dailyLog);
         
-        // Record creation in history
+
         await this.historyService.recordEntityCreation('DAILY_LOG', createdLog.id!, data.userId, createdLog.toJSON());
         
         return createdLog;
@@ -66,7 +66,7 @@ export class DailyLogService {
 
         const updatedLog = await this.repo.update(currentLog);
         
-        // Record update in history
+
         await this.historyService.recordEntityUpdate('DAILY_LOG', id, currentLog.userId, oldLogData, updatedLog.toJSON());
         
         return updatedLog;
@@ -81,7 +81,7 @@ export class DailyLogService {
         const logData = log.toJSON();
         await this.repo.delete(id);
         
-        // Record deletion in history
+
         await this.historyService.recordEntityDeletion('DAILY_LOG', id, log.userId, logData);
     }
 

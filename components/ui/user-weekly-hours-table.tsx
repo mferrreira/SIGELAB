@@ -2,6 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useWorkSessions } from "@/contexts/work-session-context";
 import type { User } from "@/contexts/types";
 
 interface UserWeeklyHoursTableProps {
@@ -17,6 +18,7 @@ interface WeeklyHistory {
 }
 
 export function UserWeeklyHoursTable({ users }: UserWeeklyHoursTableProps) {
+  const { sessions } = useWorkSessions();
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
     // Inicializar com a segunda-feira da semana atual
     const today = new Date();
@@ -54,7 +56,42 @@ export function UserWeeklyHoursTable({ users }: UserWeeklyHoursTableProps) {
       try {
         const response = await fetch(`/api/weekly-hours-history?weekStart=${currentWeekStart.toISOString()}`);
         const data = await response.json();
-        setWeeklyHistory(data.history || []);
+        
+        // Se não há histórico para esta semana, tentar criar automaticamente
+        if (!data.history || data.history.length === 0) {
+          console.log(`Nenhum histórico encontrado para semana ${currentWeekStart.toISOString().split('T')[0]}, tentando criar automaticamente...`);
+          
+          try {
+            const createResponse = await fetch('/api/weekly-hours-history', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ 
+                action: 'create_week_history',
+                weekStart: currentWeekStart.toISOString()
+              }),
+            });
+            
+            if (createResponse.ok) {
+              const createData = await createResponse.json();
+              console.log(`Histórico criado automaticamente:`, createData);
+              
+              // Buscar novamente após criar
+              const retryResponse = await fetch(`/api/weekly-hours-history?weekStart=${currentWeekStart.toISOString()}`);
+              const retryData = await retryResponse.json();
+              setWeeklyHistory(retryData.history || []);
+            } else {
+              console.log(`Não foi possível criar histórico automaticamente`);
+              setWeeklyHistory([]);
+            }
+          } catch (createError) {
+            console.error("Erro ao criar histórico automaticamente:", createError);
+            setWeeklyHistory([]);
+          }
+        } else {
+          setWeeklyHistory(data.history || []);
+        }
       } catch (error) {
         console.error("Erro ao buscar histórico semanal:", error);
         setWeeklyHistory([]);
@@ -79,8 +116,26 @@ export function UserWeeklyHoursTable({ users }: UserWeeklyHoursTableProps) {
 
   const getUserHours = (userId: number) => {
     if (isCurrentWeek) {
-      const user = users.find(u => u.id === userId);
-      return user?.currentWeekHours ?? 0;
+      // Calcular horas dinamicamente a partir das work sessions
+      const weekEnd = new Date(currentWeekStart);
+      weekEnd.setDate(currentWeekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
+      
+      const completedSessions = sessions.filter(session => 
+        session &&
+        session.userId === userId &&
+        session.status === 'completed' &&
+        session.startTime &&
+        session.duration &&
+        new Date(session.startTime) >= currentWeekStart &&
+        new Date(session.startTime) <= weekEnd
+      );
+      
+      const totalHours = completedSessions.reduce((sum, session) => {
+        return sum + (session.duration || 0);
+      }, 0);
+      
+      return totalHours;
     }
     
     const historyEntry = weeklyHistory.find(h => h.userId === userId);

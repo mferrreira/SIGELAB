@@ -21,7 +21,6 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
   const [addRoles, setAddRoles] = useState<string[]>(["VOLUNTARIO"])
   const { users, loading: usersLoading } = useUser()
 
-  // Check if user has permission to manage project members
   const canManageMembers = user && user.roles && user.roles.some((r: string) => ["GERENTE", "GERENTE_PROJETO", "COORDENADOR"].includes(r))
 
   if (!canManageMembers) {
@@ -148,7 +147,7 @@ export function ProjectMembersManager({ projectId }: ProjectMembersManagerProps)
             members.map((member) => (
               <div key={member.userId} className="flex items-center justify-between p-2 border rounded">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{member.user.name}</span>
+                  <span className="font-medium">{member.user.name} ({member.user.email})</span>
                   {Array.isArray(member.roles)
                     ? member.roles.map((r: string) => <Badge key={r}>{r}</Badge>)
                     : <Badge>{member.role}</Badge>}

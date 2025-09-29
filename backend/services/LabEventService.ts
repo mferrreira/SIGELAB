@@ -32,13 +32,11 @@ export class LabEventService implements ILabEventService {
     }
 
     async create(data: Omit<LabEvent, 'id' | 'createdAt' | 'updatedAt'>): Promise<LabEvent> {
-        // Validate user exists
         const user = await this.userRepo.findById(data.userId);
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
 
-        // Check if user can create events
         const canCreate = await this.canUserCreateEvent(data.userId);
         if (!canCreate) {
             throw new Error("Usuário não tem permissão para criar eventos");
@@ -47,7 +45,6 @@ export class LabEventService implements ILabEventService {
         const labEvent = LabEvent.create(data);
         const created = await this.labEventRepo.create(labEvent);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordEntityCreation(
                 "LAB_EVENT",
@@ -66,7 +63,6 @@ export class LabEventService implements ILabEventService {
             throw new Error("Evento não encontrado");
         }
 
-        // Check if user can update this event
         const canUpdate = await this.canUserViewEvent(id, data.userId || existingEvent.userId);
         if (!canUpdate) {
             throw new Error("Usuário não tem permissão para atualizar este evento");
@@ -74,7 +70,6 @@ export class LabEventService implements ILabEventService {
 
         const oldData = existingEvent.toJSON();
 
-        // Update fields
         if (data.note !== undefined) {
             existingEvent.updateNote(data.note);
         }
@@ -84,7 +79,6 @@ export class LabEventService implements ILabEventService {
 
         const updated = await this.labEventRepo.update(existingEvent);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordEntityUpdate(
                 "LAB_EVENT",
@@ -107,7 +101,6 @@ export class LabEventService implements ILabEventService {
         const eventData = existingEvent.toJSON();
         await this.labEventRepo.delete(id);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordEntityDeletion(
                 "LAB_EVENT",
@@ -134,7 +127,6 @@ export class LabEventService implements ILabEventService {
         const user = await this.userRepo.findById(userId);
         if (!user) return false;
 
-        // All active users can create lab events
         return user.status === 'active';
     }
 
@@ -145,10 +137,8 @@ export class LabEventService implements ILabEventService {
         const event = await this.labEventRepo.findById(eventId);
         if (!event) return false;
 
-        // Users can view their own events or if they have admin roles
         if (event.userId === userId) return true;
 
-        // Check if user has admin roles
         const hasAdminRole = user.roles.some(role => 
             ['COORDENADOR', 'GERENTE', 'LABORATORISTA'].includes(role)
         );

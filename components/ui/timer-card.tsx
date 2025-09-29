@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useWorkSessions } from "@/contexts/work-session-context"
 import { useDailyLogs } from "@/contexts/daily-log-context"
 import { useAuth } from "@/contexts/auth-context"
@@ -39,11 +40,36 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const [pendingSessionEnd, setPendingSessionEnd] = useState(false)
   const [showManualLogDialog, setShowManualLogDialog] = useState(false)
   const [manualLogNote, setManualLogNote] = useState("")
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("")
+  const [projects, setProjects] = useState<any[]>([])
+  const [loadingProjects, setLoadingProjects] = useState(false)
 
   // Always fetch sessions on mount
   useEffect(() => {
     if (user) fetchSessions(user.id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
+  // Fetch user projects
+  useEffect(() => {
+    const fetchProjects = async () => {
+      if (!user) return
+      
+      setLoadingProjects(true)
+      try {
+        const response = await fetch('/api/projects')
+        const data = await response.json()
+        if (data.projects) {
+          setProjects(data.projects)
+        }
+      } catch (error) {
+        console.error('Erro ao buscar projetos:', error)
+      } finally {
+        setLoadingProjects(false)
+      }
+    }
+
+    fetchProjects()
   }, [user])
 
   // Start timer if session is active and belongs to current user
@@ -94,11 +120,26 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    
+    // Verificar se o usuário é coordenador ou gerente
+    const isCoordinatorOrManager = user?.roles?.includes('COORDENADOR') || user?.roles?.includes('GERENTE')
+    
+    // Validar se projeto foi selecionado (exceto para coordenadores/gerentes)
+    if ((!selectedProjectId || selectedProjectId === "loading" || selectedProjectId === "no-projects") && !isCoordinatorOrManager) {
+      setError("Por favor, selecione um projeto antes de iniciar a sessão")
+      return
+    }
+    
     try {
       if (!user) throw new Error("Usuário não autenticado")
-      await startSession({ userId: user.id, activity, location })
+      
+      // Para coordenadores/gerentes, projectId pode ser undefined
+      const projectId = selectedProjectId && selectedProjectId !== "no-project" ? parseInt(selectedProjectId) : undefined
+      
+      await startSession({ userId: user.id, activity, location, projectId })
       setActivity("")
       setLocation("")
+      setSelectedProjectId("")
       await fetchSessions(user.id)
     } catch (err: any) {
       setError(err.message || "Erro ao iniciar sessão")
@@ -277,6 +318,37 @@ export function TimerCard({ onSessionEnd }: TimerCardProps) {
           ) : (
             <form className="flex flex-col space-y-3" onSubmit={handleStart}>
               <div className="space-y-2">
+                <Select value={selectedProjectId} onValueChange={setSelectedProjectId} disabled={loading}>
+                  <SelectTrigger className="border-blue-300 focus:border-blue-500">
+                    <SelectValue placeholder={
+                      user?.roles?.includes('COORDENADOR') || user?.roles?.includes('GERENTE') 
+                        ? "Selecione um projeto (opcional)" 
+                        : "Selecione um projeto *"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {loadingProjects ? (
+                      <SelectItem value="loading" disabled>Carregando projetos...</SelectItem>
+                    ) : (
+                      <>
+                        {/* Opção para coordenadores/gerentes */}
+                        {(user?.roles?.includes('COORDENADOR') || user?.roles?.includes('GERENTE')) && (
+                          <SelectItem value="no-project">Sem projeto específico</SelectItem>
+                        )}
+                        {/* Projetos disponíveis */}
+                        {projects.length === 0 ? (
+                          <SelectItem value="no-projects" disabled>Nenhum projeto disponível</SelectItem>
+                        ) : (
+                          projects.map((project) => (
+                            <SelectItem key={project.id} value={project.id.toString()}>
+                              {project.name}
+                            </SelectItem>
+                          ))
+                        )}
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
                 <Input
                   placeholder="Descreva a atividade (opcional)"
                   value={activity}

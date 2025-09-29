@@ -15,8 +15,10 @@ import { User, FolderKanban, Trophy, ShoppingBag, Clock, FileText } from "lucide
 import { useUser } from "@/contexts/user-context"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { MobileMenu } from "@/components/layout/mobile-menu"
+import { NotificationsPanel } from "@/components/ui/notifications-panel"
 import { usePathname } from "next/navigation"
 import { ACCESS_CONTROL, hasAccess } from "@/lib/utils/utils"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 export function AppHeader() {
   const { user, logout } = useAuth()
@@ -124,11 +126,18 @@ export function AppHeader() {
             )}
             
             <ThemeToggle />
+            
+            <NotificationsPanel />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <ModernButton variant="outline" size="sm" className="gap-2 hover:bg-accent hover:text-accent-foreground transition-colors duration-200">
-                  <User className="h-5 w-5" />
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={user?.avatar || undefined} alt={user?.name || ''} />
+                    <AvatarFallback className="text-xs">
+                      {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
                   {user?.name}
                 </ModernButton>
               </DropdownMenuTrigger>

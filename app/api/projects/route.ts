@@ -32,20 +32,19 @@ export async function GET() {
     let projects: any[] = []
 
     if (user.roles && hasAccess(user.roles, "MANAGE_TASKS")) {
-      // User can see all projects
       projects = await projectController.getAllProjects()
+
     } else {
-      // User can only see projects they're a member of or created
       const userProjects = await projectController.getProjectsByUser(user.id)
       const createdProjects = await projectController.getProjectsByCreator(user.id)
       
-      // Merge and deduplicate projects
       const allProjects = [...userProjects, ...createdProjects]
       const uniqueProjects = allProjects.filter((project, index, self) => 
         index === self.findIndex(p => p.id === project.id)
       )
       projects = uniqueProjects
     }
+    
     
     return NextResponse.json({ projects }, { status: 200 })
   } catch (error) {
@@ -67,7 +66,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Nome é obrigatório" }, { status: 400 })
     }
 
-    // Use new controller for project creation
     const project = await projectController.createProject({
       name: body.name,
       description: body.description || "",
@@ -79,7 +77,6 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Erro ao criar projeto:", error)
     
-    // Handle validation errors specifically
     if (error.message && error.message.includes('Dados inválidos')) {
       return NextResponse.json({ 
         error: error.message 

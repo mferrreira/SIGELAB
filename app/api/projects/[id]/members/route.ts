@@ -1,84 +1,207 @@
-import { NextResponse } from "next/server"
-import { ProjectController } from "@/backend/controllers/ProjectController"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { prisma } from '@/lib/database/prisma'
 
-const projectController = new ProjectController();
-
-export async function GET(request: Request, { params }: { params: Promise<{ id: number }> }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await params
-    const projectId = Number(id)
-    const members = await projectController.getProjectMembers(projectId)
-    return NextResponse.json({ members }, { status: 200 })
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+    }
+
+    const user = await prisma.users.findUnique({
+      where: { email: session.user.email },
+      include: {
+        projectMemberships: {
+          include: {
+            project: true
+          }
+        }
+      }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    }
+
+    const projectId = parseInt(params.id)
+
+    const hasAccess = user.projectMemberships.some(
+      membership => membership.project.id === projectId
+    ) || user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE')
+
+    if (!hasAccess) {
+      return NextResponse.json({ error: 'Acesso negado ao projeto' }, { status: 403 })
+    }
+
+    // Buscar membros do projeto
+    const members = await prisma.project_members.findMany({
+      where: { projectId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      },
+      orderBy: { joinedAt: 'desc' }
+    })
+
+    // Buscar horas trabalhadas por membro
+    const membersWithHours = await Promise.all(
+      members.map(async (member) => {
+        // Horas totais
+        const totalSessions = await prisma.work_sessions.findMany({
+          where: {
+            userId: member.userId,
+            projectId: projectId,
+            status: 'completed'
+          },
+          select: { duration: true }
+        })
+
+        const totalHours = totalSessions.reduce((sum, session) => sum + (session.duration || 0), 0)
+
+        // Horas da semana atual
+        const now = new Date()
+        const startOfWeek = new Date(now)
+        startOfWeek.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+        startOfWeek.setHours(0, 0, 0, 0)
+        
+        const endOfWeek = new Date(startOfWeek)
+        endOfWeek.setDate(startOfWeek.getDate() + 6)
+        endOfWeek.setHours(23, 59, 59, 999)
+
+        const weekSessions = await prisma.work_sessions.findMany({
+          where: {
+            userId: member.userId,
+            projectId: projectId,
+            status: 'completed',
+            startTime: {
+              gte: startOfWeek,
+              lte: endOfWeek
+            }
+          },
+          select: { duration: true }
+        })
+
+        const currentWeekHours = weekSessions.reduce((sum, session) => sum + (session.duration || 0), 0)
+
+        return {
+          id: member.id,
+          userId: member.userId,
+          userName: member.user.name,
+          userEmail: member.user.email,
+          roles: member.roles,
+          joinedAt: member.joinedAt.toISOString(),
+          totalHours: Math.round(totalHours * 100) / 100,
+          currentWeekHours: Math.round(currentWeekHours * 100) / 100
+        }
+      })
+    )
+
+    return NextResponse.json({ members: membersWithHours }, { status: 200 })
   } catch (error: any) {
-    console.error("Erro ao buscar membros do projeto:", error)
-    return NextResponse.json({ error: "Erro ao buscar membros do projeto" }, { status: 500 })
+    console.error('Erro na API de membros do projeto:', error)
+    return NextResponse.json(
+      { error: error.message || 'Erro interno do servidor' },
+      { status: 500 }
+    )
   }
 }
 
-// POST: Add a member to a project
-export async function POST(request: Request, { params }: { params: Promise<{ id: number }> }) {
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await params
-    const projectId = Number(id)
-    const body = await request.json()
-    const { userId, roles } = body
-    if (!userId || !roles || !Array.isArray(roles) || roles.length === 0) {
-      return NextResponse.json({ error: "userId e roles são obrigatórios" }, { status: 400 })
-    }
-    
-    // Get user ID from session
     const session = await getServerSession(authOptions)
-    const sessionUser = session?.user as any
-    if (!sessionUser?.id) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-    const addedBy = sessionUser.id
-    
-    const member = await projectController.addMemberToProject(projectId, userId, roles, addedBy)
-    return NextResponse.json({ member }, { status: 201 })
+
+    const user = await prisma.users.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    }
+
+    // Verificar se o usuário tem permissão para adicionar membros
+    const canManage = user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE')
+
+    if (!canManage) {
+      return NextResponse.json({ error: 'Apenas coordenadores e gerentes podem adicionar membros' }, { status: 403 })
+    }
+
+    const projectId = parseInt(params.id)
+    const { userId, roles } = await request.json()
+
+    if (!userId || !roles || !Array.isArray(roles)) {
+      return NextResponse.json({ error: 'userId e roles são obrigatórios' }, { status: 400 })
+    }
+
+    // Verificar se o usuário existe
+    const targetUser = await prisma.users.findUnique({
+      where: { id: parseInt(userId) }
+    })
+
+    if (!targetUser) {
+      return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
+    }
+
+    // Verificar se já é membro do projeto
+    const existingMembership = await prisma.project_members.findFirst({
+      where: {
+        projectId,
+        userId: parseInt(userId)
+      }
+    })
+
+    if (existingMembership) {
+      return NextResponse.json({ error: 'Usuário já é membro deste projeto' }, { status: 400 })
+    }
+
+    // Adicionar membro ao projeto
+    const membership = await prisma.project_members.create({
+      data: {
+        projectId,
+        userId: parseInt(userId),
+        roles: roles
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    })
+
+    return NextResponse.json({ 
+      membership: {
+        id: membership.id,
+        userId: membership.userId,
+        userName: membership.user.name,
+        userEmail: membership.user.email,
+        roles: membership.roles,
+        joinedAt: membership.joinedAt.toISOString()
+      }
+    }, { status: 201 })
   } catch (error: any) {
-    console.error("Erro ao adicionar membro ao projeto:", error)
-    if (error.message.includes('já é membro')) {
-      return NextResponse.json({ error: "Usuário já é membro do projeto" }, { status: 400 })
-    }
-    if (error.message.includes('permissão')) {
-      return NextResponse.json({ error: error.message }, { status: 403 })
-    }
-    return NextResponse.json({ error: "Erro ao adicionar membro ao projeto" }, { status: 500 })
+    console.error('Erro na API de adicionar membro:', error)
+    return NextResponse.json(
+      { error: error.message || 'Erro interno do servidor' },
+      { status: 500 }
+    )
   }
 }
-
-// DELETE: Remove a member from a project
-export async function DELETE(request: Request, { params }: { params: Promise<{ id: number }> }) {
-  try {
-    const { id } = await params
-    const projectId = Number(id)
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get("userId")
-    if (!userId) {
-      return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 })
-    }
-    
-    // Get user ID from session
-    const session = await getServerSession(authOptions)
-    const sessionUser = session?.user as any
-    if (!sessionUser?.id) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
-    }
-    const removedBy = sessionUser.id
-    
-    await projectController.removeMemberFromProject(projectId, Number(userId), removedBy)
-    return NextResponse.json({ success: true }, { status: 200 })
-  } catch (error: any) {
-    console.error("Erro ao remover membro do projeto:", error)
-    if (error.message.includes('permissão')) {
-      return NextResponse.json({ error: error.message }, { status: 403 })
-    }
-    if (error.message.includes('último gerente')) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
-    }
-    return NextResponse.json({ error: "Erro ao remover membro do projeto" }, { status: 500 })
-  }
-} 

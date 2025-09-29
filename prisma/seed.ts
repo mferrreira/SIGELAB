@@ -66,6 +66,70 @@ async function main() {
       ],
       skipDuplicates: true,
     });
+
+    // Projects (for coordenador)
+    const projects = await prisma.projects.createMany({
+      data: [
+        {
+          name: 'Sistema de Gestão de Laboratório',
+          description: 'Desenvolvimento de um sistema completo para gestão de laboratório de pesquisa',
+          createdAt: new Date().toISOString(),
+          createdBy: coordenador.id,
+          leaderId: coordenador.id,
+          status: 'active',
+          links: [
+            { label: 'GitHub', url: 'https://github.com/lab/sistema-gestao' },
+            { label: 'Documentação', url: 'https://docs.lab.com' }
+          ]
+        },
+        {
+          name: 'Pesquisa em IA',
+          description: 'Projeto de pesquisa em inteligência artificial aplicada',
+          createdAt: new Date().toISOString(),
+          createdBy: coordenador.id,
+          leaderId: createdUsers.find(u => u.email === 'pesquisador@lab.com')?.id,
+          status: 'active',
+          links: [
+            { label: 'Repositório', url: 'https://github.com/lab/ia-research' }
+          ]
+        },
+        {
+          name: 'Automação de Processos',
+          description: 'Automação de processos administrativos do laboratório',
+          createdAt: new Date().toISOString(),
+          createdBy: coordenador.id,
+          leaderId: createdUsers.find(u => u.email === 'gerente@lab.com')?.id,
+          status: 'on_hold',
+          links: []
+        }
+      ],
+      skipDuplicates: true,
+    });
+
+    // Add members to projects
+    const createdProjects = await prisma.projects.findMany({
+      where: { createdBy: coordenador.id }
+    });
+
+    for (const project of createdProjects) {
+      // Add all users as members to all projects
+      for (const user of createdUsers) {
+        await prisma.project_members.upsert({
+          where: {
+            projectId_userId: {
+              projectId: project.id,
+              userId: user.id
+            }
+          },
+          update: {},
+          create: {
+            projectId: project.id,
+            userId: user.id,
+            roles: user.roles
+          }
+        });
+      }
+    }
   }
 }
 

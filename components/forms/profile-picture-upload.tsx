@@ -16,6 +16,7 @@ import {
   CheckCircle
 } from "lucide-react"
 import { User } from "@/contexts/types"
+import { useSession } from "next-auth/react"
 
 interface ProfilePictureUploadProps {
   user: User
@@ -29,6 +30,7 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { update: updateSession } = useSession()
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -74,6 +76,7 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
       // Upload to server
       const response = await fetch('/api/users/avatar', {
         method: 'POST',
+        credentials: 'include', // Include cookies for authentication
         body: formData,
       })
 
@@ -89,6 +92,9 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
         ...user,
         avatar: result.avatarUrl
       }
+      
+      // Update the session to reflect the new avatar
+      await updateSession()
       
       onUpdate(updatedUser)
       setSuccess('Foto de perfil atualizada com sucesso!')
@@ -117,6 +123,7 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
     try {
       const response = await fetch(`/api/users/${user.id}/avatar`, {
         method: 'DELETE',
+        credentials: 'include', // Include cookies for authentication
       })
 
       if (!response.ok) {
@@ -129,6 +136,9 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
         ...user,
         avatar: null
       }
+      
+      // Update the session to reflect the removed avatar
+      await updateSession()
       
       onUpdate(updatedUser)
       setSuccess('Foto de perfil removida com sucesso!')
@@ -193,7 +203,9 @@ export function ProfilePictureUpload({ user, onUpdate, onError }: ProfilePicture
               className="mt-1"
             />
             <p className="text-xs text-gray-500 mt-1">
-              Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB
+              Formatos aceitos: JPG, PNG, GIF. Tamanho máximo: 5MB. 
+              <br />
+              As imagens serão convertidas para WebP e redimensionadas para 300x300px.
             </p>
           </div>
 

@@ -41,13 +41,15 @@ export class WorkSessionController {
     userName: string;
     activity?: string;
     location?: string;
+    projectId?: number;
   }) {
     try {
       const session = await this.workSessionService.createSession(
         data.userId,
         data.userName,
         data.activity,
-        data.location
+        data.location,
+        data.projectId
       );
       return session.toJSON();
     } catch (error: any) {

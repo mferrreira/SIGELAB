@@ -5,10 +5,27 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
 const taskController = new TaskController();
 
-// GET: Obter todas as tarefas
-export async function GET() {
+// GET: Obter tarefas baseado no usuário logado
+export async function GET(request: Request) {
   try {
-    const tasks = await taskController.getAllTasks();
+    const session = await getServerSession(authOptions);
+    if (!session?.user || !(session.user as any).id) {
+      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+    }
+
+    const userId = parseInt((session.user as any).id);
+    const userRoles = (session.user as any).roles || [];
+    const { searchParams } = new URL(request.url)
+    const projectId = searchParams.get('projectId')
+    
+    let tasks
+    if (projectId) {
+      tasks = await taskController.getTasksByProject(parseInt(projectId))
+    } else {
+      // Filtrar tarefas baseado no usuário e suas permissões
+      tasks = await taskController.getTasksForUser(userId, userRoles)
+    }
+    
     return NextResponse.json({ tasks: tasks.map(task => task.toJSON()) })
   } catch (error) {
     console.error("Erro ao buscar tarefas:", error)
@@ -20,7 +37,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user || !(session.user as any).id) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
@@ -36,7 +53,8 @@ export async function POST(request: Request) {
       dueDate,
       points,
       completed,
-      taskVisibility
+      taskVisibility,
+      isGlobal
     } = body
 
     const task = await taskController.createTask({
@@ -49,8 +67,9 @@ export async function POST(request: Request) {
       dueDate,
       points,
       completed,
-      taskVisibility
-    }, parseInt(session.user.id));
+      taskVisibility,
+      isGlobal
+    }, parseInt((session.user as any).id));
 
     return NextResponse.json({ task: task.toJSON() }, { status: 201 })
   } catch (error: any) {

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Plus, Clock, CheckCircle, AlertCircle, Edit, Eye, Zap, Star, Crown } from "lucide-react"
 import { KanbanCard } from "@/components/ui/kanban-card"
+import { KanbanCardCompact } from "@/components/ui/kanban-card-compact"
 import type { Task, KanbanColumnProps } from "@/contexts/types"
 
 const STATUS_CONFIG = {
@@ -51,7 +52,7 @@ const STATUS_CONFIG = {
   }
 }
 
-export function KanbanColumn({ status, tasks, onEdit, onAddTask, canAddTask }: KanbanColumnProps) {
+export function KanbanColumn({ status, tasks, onEdit, onAddTask, canAddTask, isCompactView = false }: KanbanColumnProps) {
   const config = STATUS_CONFIG[status as keyof typeof STATUS_CONFIG]
   const Icon = config.icon
 
@@ -104,15 +105,18 @@ export function KanbanColumn({ status, tasks, onEdit, onAddTask, canAddTask }: K
                   : ""
               }`}
             >
-              {tasks.map((task, index) => (
-                <KanbanCard
-                  key={task.id}
-                  task={task}
-                  onEdit={onEdit}
-                  isOverdue={isTaskOverdue(task)}
-                  index={index}
-                />
-              ))}
+              {tasks.map((task, index) => {
+                const CardComponent = isCompactView ? KanbanCardCompact : KanbanCard
+                return (
+                  <CardComponent
+                    key={task.id}
+                    task={task}
+                    onEdit={onEdit}
+                    isOverdue={isTaskOverdue(task)}
+                    index={index}
+                  />
+                )
+              })}
               {provided.placeholder}
               
               {/* Empty state with gamified styling */}

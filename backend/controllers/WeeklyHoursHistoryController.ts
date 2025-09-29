@@ -202,4 +202,85 @@ export class WeeklyHoursHistoryController {
       throw new Error("Erro ao buscar estatísticas semanais")
     }
   }
+
+  async createWeekHistory(weekStart: Date) {
+    try {
+      // Normalizar a data para o início da semana
+      const normalizedWeekStart = startOfWeek(weekStart, { weekStartsOn: 1 })
+      const normalizedWeekEnd = endOfWeek(weekStart, { weekStartsOn: 1 })
+
+      // Buscar todos os usuários ativos
+      const users = await prisma.users.findMany({
+        where: {
+          status: 'active'
+        },
+        select: {
+          id: true,
+          name: true
+        }
+      })
+
+      const results = []
+
+      for (const user of users) {
+        // Verificar se já existe histórico para este usuário nesta semana
+        const existingHistory = await prisma.weekly_hours_history.findFirst({
+          where: {
+            userId: user.id,
+            weekStart: normalizedWeekStart
+          }
+        })
+
+        if (existingHistory) {
+          console.log(`Histórico já existe para ${user.name} na semana ${normalizedWeekStart.toISOString().split('T')[0]}`)
+          continue
+        }
+
+        // Buscar sessões do usuário nesta semana
+        const sessions = await prisma.work_sessions.findMany({
+          where: {
+            userId: user.id,
+            status: 'completed',
+            startTime: {
+              gte: normalizedWeekStart,
+              lte: normalizedWeekEnd
+            }
+          },
+          select: {
+            duration: true
+          }
+        })
+
+        const totalHours = sessions.reduce((sum, session) => sum + (session.duration || 0), 0)
+
+        if (totalHours > 0) {
+          // Criar o histórico semanal
+          const weeklyHistory = await prisma.weekly_hours_history.create({
+            data: {
+              userId: user.id,
+              userName: user.name,
+              weekStart: normalizedWeekStart,
+              weekEnd: normalizedWeekEnd,
+              totalHours: totalHours
+            }
+          })
+
+          results.push({
+            userId: user.id,
+            userName: user.name,
+            totalHours: totalHours,
+            weekStart: format(normalizedWeekStart, 'dd/MM/yyyy'),
+            weekEnd: format(normalizedWeekEnd, 'dd/MM/yyyy')
+          })
+
+          console.log(`Histórico criado para ${user.name}: ${totalHours}h`)
+        }
+      }
+
+      return results
+    } catch (error) {
+      console.error("Erro ao criar histórico semanal:", error)
+      throw new Error("Erro ao criar histórico semanal")
+    }
+  }
 } 

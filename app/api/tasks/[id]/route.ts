@@ -5,7 +5,6 @@ import { authOptions } from "@/lib/auth/server-auth"
 
 const taskController = new TaskController();
 
-// GET: Obter uma tarefa específica
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = parseInt(params.id)
@@ -20,11 +19,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-// PUT: Atualizar uma tarefa
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user || !(session.user as any).id) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
@@ -32,16 +30,15 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const id = parseInt(params.id)
     const body = await request.json()
 
-    // Remove invalid fields for update
     const allowedFields = [
-      "title", "description", "status", "priority", "assignedTo", "projectId", "dueDate", "points", "completed", "taskVisibility"
+      "title", "description", "status", "priority", "assignedTo", "projectId", "dueDate", "points", "completed", "taskVisibility", "isGlobal"
     ];
     const data: any = {}
     for (const key of allowedFields) {
       if (body[key] !== undefined) data[key] = body[key]
     }
 
-    const task = await taskController.updateTask(id, data, parseInt(session.user.id))
+    const task = await taskController.updateTask(id, data, parseInt((session.user as any).id))
     return NextResponse.json({ task: task.toJSON() })
   } catch (error: any) {
     if (error.message?.includes('not found')) {
@@ -52,17 +49,16 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
   }
 }
 
-// DELETE: Excluir uma tarefa
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user || !(session.user as any).id) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
     const params = await context.params
     const id = parseInt(params.id)
-    await taskController.deleteTask(id, parseInt(session.user.id))
+    await taskController.deleteTask(id, parseInt((session.user as any).id))
     return NextResponse.json({ success: true })
   } catch (error: any) {
     if (error.message?.includes('not found')) {
@@ -73,11 +69,10 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   }
 }
 
-// PATCH: Marcar tarefa como concluída e adicionar pontos ao voluntário
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user || !(session.user as any).id) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
@@ -86,13 +81,11 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     const body = await request.json()
     const { action, userId } = body
 
-    // Only process completion requests
     if (action !== "complete") {
       return NextResponse.json({ error: "Ação inválida. Use 'complete' para marcar tarefa como concluída." }, { status: 400 })
     }
 
-    // Use the userId from request body or fallback to session user
-    const userToAward = userId ? parseInt(userId) : parseInt(session.user.id);
+    const userToAward = userId ? parseInt(userId) : parseInt((session.user as any).id);
     
     const task = await taskController.completeTask(id, userToAward)
     

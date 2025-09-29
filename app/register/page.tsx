@@ -10,14 +10,11 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function RegisterPage() {
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [role, setRole] = useState("VOLUNTARIO")
-  const [weekHours, setWeekHours] = useState(0)
   const [error, setError] = useState("")
   const { register } = useAuth()
   const router = useRouter()
@@ -27,9 +24,9 @@ export default function RegisterPage() {
     setError("")
 
     try {
-      await register(name, email, password, [role] as any, weekHours)
+      await register(name, email, password)
       // Show success message and redirect to login
-      alert("Conta criada com sucesso! Sua solicitação será analisada por um coordenador ou laboratorista. Você receberá um email quando sua conta for aprovada.")
+      alert("Conta criada com sucesso! Sua solicitação será analisada por um coordenador ou gerente. Você receberá um email quando sua conta for aprovada.")
       router.push("/login")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao registrar")
@@ -45,8 +42,8 @@ export default function RegisterPage() {
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Após o registro, sua conta será analisada por um coordenador ou laboratorista. 
-              Você receberá uma notificação quando sua conta for aprovada.
+              Após o registro, sua conta será analisada por um coordenador ou gerente. 
+              Você receberá uma notificação quando sua conta for aprovada e suas funções forem definidas.
             </AlertDescription>
           </Alert>
         </CardHeader>
@@ -86,33 +83,6 @@ export default function RegisterPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role">Função</Label>
-              <Select value={role} onValueChange={setRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a função" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
-                  <SelectItem value="COLABORADOR">Colaborador</SelectItem>
-                  <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
-                  <SelectItem value="LABORATORISTA">Laboratorista</SelectItem>
-                  <SelectItem value="COORDENADOR">Coordenador</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="weekHours">Horas Semanais no Laboratório</Label>
-              <Input
-                id="weekHours"
-                type="number"
-                min="0"
-                max="168"
-                value={weekHours}
-                onChange={(e) => setWeekHours(Number(e.target.value))}
                 required
               />
             </div>

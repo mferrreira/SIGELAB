@@ -30,8 +30,7 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
     }
 
     async create(data: Omit<LaboratorySchedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<LaboratorySchedule> {
-        // Check if user can manage schedules
-        const canManage = await this.canUserManageSchedule(data.userId || 0);
+        const canManage = await this.canUserManageSchedule(data.userId! || 0);
         if (!canManage) {
             throw new Error("Usuário não tem permissão para gerenciar horários do laboratório");
         }
@@ -39,12 +38,11 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
         const laboratorySchedule = LaboratorySchedule.create(data);
         const created = await this.laboratoryScheduleRepo.create(laboratorySchedule);
 
-        // Record history
-        if (this.historyService && data.userId) {
+        if (this.historyService && data.userId!) {
             await this.historyService.recordEntityCreation(
                 "LABORATORY_SCHEDULE",
                 created.id!,
-                data.userId,
+                data.userId!,
                 created.toJSON()
             );
         }
@@ -58,31 +56,28 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
             throw new Error("Horário do laboratório não encontrado");
         }
 
-        // Check if user can manage schedules
-        const canManage = await this.canUserManageSchedule(data.userId || 0);
+        const canManage = await this.canUserManageSchedule(data.userId! || 0);
         if (!canManage) {
             throw new Error("Usuário não tem permissão para gerenciar horários do laboratório");
         }
 
         const oldData = existingSchedule.toJSON();
 
-        // Update fields
         if (data.startTime !== undefined || data.endTime !== undefined || data.notes !== undefined) {
             existingSchedule.updateSchedule(
                 data.startTime || existingSchedule.startTime,
                 data.endTime || existingSchedule.endTime,
-                data.notes
+                data.notes!
             );
         }
 
         const updated = await this.laboratoryScheduleRepo.update(existingSchedule);
 
-        // Record history
-        if (this.historyService && data.userId) {
+        if (this.historyService && data.userId!) {
             await this.historyService.recordEntityUpdate(
                 "LABORATORY_SCHEDULE",
                 id,
-                data.userId,
+                data.userId!,
                 oldData,
                 updated.toJSON()
             );
@@ -100,12 +95,11 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
         const scheduleData = existingSchedule.toJSON();
         await this.laboratoryScheduleRepo.delete(id);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordEntityDeletion(
                 "LABORATORY_SCHEDULE",
                 id,
-                0, // System deletion
+                0,
                 scheduleData
             );
         }
@@ -120,12 +114,11 @@ export class LaboratoryScheduleService implements ILaboratoryScheduleService {
     }
 
     async canUserManageSchedule(userId: number): Promise<boolean> {
-        if (userId === 0) return false; // System operations
+        if (userId === 0) return false;
 
         const user = await this.userRepo.findById(userId);
         if (!user) return false;
 
-        // Only coordinators and managers can manage laboratory schedules
         const hasPermission = user.roles.some(role => 
             ['COORDENADOR', 'GERENTE', 'LABORATORISTA'].includes(role)
         );

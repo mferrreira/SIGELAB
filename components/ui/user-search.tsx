@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Search, User, X } from "lucide-react"
 import { User as UserType } from "@/contexts/types"
 import { UserProfilesAPI } from "@/contexts/api-client"
+import { UserBadges } from "@/components/ui/user-badges"
 
 interface UserSearchProps {
   onUserSelect: (user: UserType) => void
@@ -115,6 +116,7 @@ export function UserSearch({ onUserSelect, placeholder = "Buscar usuários..." }
       {showResults && (
         <Card className="absolute top-full left-0 right-0 mt-1 z-50 max-h-80 overflow-y-auto">
           <CardContent className="p-2">
+            
             {isSearching ? (
               <div className="flex items-center justify-center py-4">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -128,6 +130,7 @@ export function UserSearch({ onUserSelect, placeholder = "Buscar usuários..." }
                     onClick={() => handleUserSelect(user)}
                     className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-50 cursor-pointer transition-colors"
                   >
+                    <div>
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.avatar || undefined} alt={user.name} />
                       <AvatarFallback className="text-xs">
@@ -159,8 +162,15 @@ export function UserSearch({ onUserSelect, placeholder = "Buscar usuários..." }
                       )}
                     </div>
                   </div>
-                ))}
+                  
+
+                  <div className="mt-2">
+                    <UserBadges userId={user.id} limit={3} />
+                  </div>
+                </div>
+              ))}
               </div>
+
             ) : (
               <div className="text-center py-4 text-sm text-gray-500">
                 Nenhum usuário encontrado

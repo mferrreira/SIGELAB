@@ -145,7 +145,6 @@ export function IssueProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  // Helper functions
   const getUserIssues = useCallback((userId: number): Issue[] => {
     return issues.filter(issue => issue.reporterId === userId)
   }, [issues])

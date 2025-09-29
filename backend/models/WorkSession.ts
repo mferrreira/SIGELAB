@@ -9,6 +9,7 @@ export class WorkSession {
     private _duration?: number | null;
     private _activity?: string | null;
     private _location?: string | null;
+    private _projectId?: number | null;
     private _status: string;
     private _createdAt?: Date;
     private _updatedAt?: Date;
@@ -21,6 +22,7 @@ export class WorkSession {
         duration?: number | null,
         activity?: string | null,
         location?: string | null,
+        projectId?: number | null,
         status: string = "active",
         id?: number,
         createdAt?: Date,
@@ -33,13 +35,13 @@ export class WorkSession {
         this._duration = duration;
         this._activity = activity;
         this._location = location;
+        this._projectId = projectId;
         this._status = status;
         this._id = id;
         this._createdAt = createdAt;
         this._updatedAt = updatedAt;
     }
 
-    // Getters
     get id(): number | undefined { return this._id; }
     get userId(): number { return this._userId; }
     get userName(): string { return this._userName; }
@@ -48,11 +50,11 @@ export class WorkSession {
     get duration(): number | null | undefined { return this._duration; }
     get activity(): string | null | undefined { return this._activity; }
     get location(): string | null | undefined { return this._location; }
+    get projectId(): number | null | undefined { return this._projectId; }
     get status(): string { return this._status; }
     get createdAt(): Date | undefined { return this._createdAt; }
     get updatedAt(): Date | undefined { return this._updatedAt; }
 
-    // Setters
     setActivity(activity: string | null): WorkSession {
         this._activity = activity;
         return this;
@@ -63,12 +65,16 @@ export class WorkSession {
         return this;
     }
 
+    setProjectId(projectId: number | null): WorkSession {
+        this._projectId = projectId;
+        return this;
+    }
+
     setStatus(status: string): WorkSession {
         this._status = status;
         return this;
     }
 
-    // Business logic methods
     endSession(endTime?: Date): WorkSession {
         if (this._status !== "active") {
             throw new Error("Sessão não está ativa");
@@ -104,7 +110,7 @@ export class WorkSession {
         }
 
         const diffMs = this._endTime.getTime() - this._startTime.getTime();
-        return diffMs / (1000 * 60 * 60); // Convert to hours
+        return diffMs / (1000 * 60 * 60);
     }
 
     isActive(): boolean {
@@ -126,7 +132,6 @@ export class WorkSession {
         return `${h}h ${m}m`;
     }
 
-    // Validation
     isValid(): boolean {
         if (!this._userId || !this._userName?.trim()) {
             return false;
@@ -139,12 +144,12 @@ export class WorkSession {
         return true;
     }
 
-    // Factory methods
     static create(
         userId: number,
         userName: string,
         activity?: string,
-        location?: string
+        location?: string,
+        projectId?: number
     ): WorkSession {
         const session = new WorkSession(
             userId,
@@ -153,7 +158,8 @@ export class WorkSession {
             null,
             null,
             activity,
-            location
+            location,
+            projectId
         );
 
         if (!session.isValid()) {
@@ -172,6 +178,7 @@ export class WorkSession {
             data.duration,
             data.activity,
             data.location,
+            data.projectId,
             data.status,
             data.id,
             data.createdAt,
@@ -179,21 +186,20 @@ export class WorkSession {
         );
     }
 
-    // Convert to Prisma format
     toPrisma(): Omit<work_sessions, 'id' | 'createdAt' | 'updatedAt'> {
         return {
             userId: this._userId,
             userName: this._userName,
             startTime: this._startTime,
-            endTime: this._endTime,
-            duration: this._duration,
-            activity: this._activity,
-            location: this._location,
+            endTime: this._endTime || null,
+            duration: this._duration || null,
+            activity: this._activity || null,
+            location: this._location || null,
+            projectId: this._projectId || null,
             status: this._status
         };
     }
 
-    // Convert to JSON
     toJSON(): any {
         return {
             id: this._id,
@@ -204,6 +210,7 @@ export class WorkSession {
             duration: this._duration,
             activity: this._activity,
             location: this._location,
+            projectId: this._projectId,
             status: this._status,
             createdAt: this._createdAt,
             updatedAt: this._updatedAt,

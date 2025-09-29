@@ -63,4 +63,27 @@ export class ProjectController {
         const members = await this.projectService.getProjectMembers(projectId);
         return members.map(member => member.toJSON());
     }
+
+    async getVolunteersStats(projectId: number): Promise<{
+        success: boolean;
+        volunteers: any[];
+        stats: {
+            totalVolunteers: number;
+            totalHours: number;
+            completedTasks: number;
+            totalPoints: number;
+        };
+    }> {
+        try {
+            const result = await this.projectService.getVolunteersStats(projectId);
+            return {
+                success: true,
+                volunteers: result.volunteers,
+                stats: result.stats
+            };
+        } catch (error) {
+            console.error('Erro ao buscar estatísticas dos voluntários:', error);
+            throw new Error('Erro ao buscar estatísticas dos voluntários');
+        }
+    }
 }

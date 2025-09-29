@@ -34,12 +34,8 @@ export class UserScheduleController {
         dayOfWeek: number;
         startTime: string;
         endTime: string;
-        isActive?: boolean;
     }): Promise<UserSchedule> {
-        return await this.userScheduleService.create({
-            ...data,
-            isActive: data.isActive ?? true
-        });
+        return await this.userScheduleService.create(data);
     }
 
     async updateSchedule(id: number, data: {
@@ -47,7 +43,6 @@ export class UserScheduleController {
         dayOfWeek?: number;
         startTime?: string;
         endTime?: string;
-        isActive?: boolean;
     }): Promise<UserSchedule> {
         return await this.userScheduleService.update(id, data);
     }
@@ -56,7 +51,6 @@ export class UserScheduleController {
         await this.userScheduleService.delete(id);
     }
 
-    // Query operations (used by API)
     async getSchedulesByUser(userId: number): Promise<UserSchedule[]> {
         return await this.userScheduleService.getSchedulesByUser(userId);
     }

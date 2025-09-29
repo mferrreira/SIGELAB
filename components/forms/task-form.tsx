@@ -51,6 +51,8 @@ interface NumberFieldProps {
   value: number
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
   min?: number
+  disabled?: boolean
+  helperText?: string
 }
 
 function FormField({ 
@@ -94,7 +96,9 @@ function NumberField({
   name, 
   value, 
   onChange, 
-  min 
+  min,
+  disabled = false,
+  helperText
 }: NumberFieldProps) {
   return (
     <div className="grid gap-2">
@@ -106,7 +110,12 @@ function NumberField({
         min={min}
         value={value}
         onChange={onChange}
+        disabled={disabled}
+        className={disabled ? "bg-gray-100 cursor-not-allowed" : ""}
       />
+      {helperText && (
+        <p className="text-xs text-gray-600 dark:text-gray-400">{helperText}</p>
+      )}
     </div>
   )
 }
@@ -121,14 +130,15 @@ interface SelectFieldProps {
   placeholder?: string
   options: Array<{ value: string; label: string }>
   error?: string
+  disabled?: boolean
 }
 
-function SelectField({ label, value, onValueChange, placeholder, options, error }: SelectFieldProps) {
+function SelectField({ label, value, onValueChange, placeholder, options, error, disabled = false }: SelectFieldProps) {
   return (
     <div className="grid gap-2">
       <Label>{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
-        <SelectTrigger>
+      <Select value={value} onValueChange={onValueChange} disabled={disabled}>
+        <SelectTrigger className={disabled ? "bg-gray-100 cursor-not-allowed" : ""}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -191,8 +201,9 @@ export function TaskForm({
     assignedTo: "",
     project: "",
     dueDate: "",
-    points: 10,
+    points: 50, // Default para medium priority
     completed: false,
+    isGlobal: false,
   })
   const [isPastDate, setIsPastDate] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({})
@@ -207,6 +218,28 @@ export function TaskForm({
     const selectedDate = new Date(dateString)
     setIsPastDate(selectedDate < today)
   }, [])
+
+  // Sistema de pontuação baseado em prioridade
+  const PRIORITY_POINTS = {
+    'low': 25,
+    'medium': 50,
+    'high': 100,
+    'urgent': 150
+  } as const;
+
+  // Verificar se usuário pode definir pontos customizados
+  const canSetCustomPoints = currentUser && (
+    currentUser.roles.includes('COORDENADOR') || 
+    currentUser.roles.includes('GERENTE')
+  );
+
+  // Atualizar pontos quando prioridade mudar (apenas para usuários não-coordenadores/gerentes)
+  useEffect(() => {
+    if (!canSetCustomPoints) {
+      const priorityPoints = PRIORITY_POINTS[formData.priority];
+      setFormData(prev => ({ ...prev, points: priorityPoints }));
+    }
+  }, [formData.priority, canSetCustomPoints]);
 
   // Reset form when task changes
   useEffect(() => {
@@ -235,6 +268,7 @@ export function TaskForm({
         dueDate: "",
         points: 10,
         completed: false,
+        isGlobal: false,
       })
       setIsPastDate(false)
     }
@@ -258,13 +292,23 @@ export function TaskForm({
     setFormData((prev) => ({ ...prev, [name]: parseInt(value) || 0 }))
   }, [])
 
+  const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target
+    setFormData((prev) => ({ ...prev, [name]: checked }))
+  }, [])
+
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault()
     // Validation
     const errors: { [key: string]: string } = {}
     if (!formData.title.trim()) errors.title = "Título é obrigatório."
-    if (!formData.assignedTo) errors.assignedTo = "Selecione um responsável."
-    if (!formData.project) errors.project = "Selecione um projeto."
+    
+    // For global quests, assignedTo and project are not required
+    if (!formData.isGlobal) {
+      if (!formData.assignedTo) errors.assignedTo = "Selecione um responsável."
+      if (!formData.project) errors.project = "Selecione um projeto."
+    }
+    
     setFieldErrors(errors)
     if (Object.keys(errors).length > 0) return
     onSubmit(formData)
@@ -348,19 +392,26 @@ export function TaskForm({
           label="Projeto"
           value={formData.project}
           onValueChange={(value) => handleSelectChange("project", value)}
-          placeholder="Selecione um projeto"
+          placeholder={formData.isGlobal ? "Não aplicável para quest global" : "Selecione um projeto"}
           options={projectOptions}
           error={fieldErrors.project}
+          disabled={formData.isGlobal}
         />
         <SelectField
           label="Responsável"
           value={formData.assignedTo}
           onValueChange={(value) => handleSelectChange("assignedTo", value)}
-          placeholder="Selecione um responsável"
+          placeholder={formData.isGlobal ? "Não aplicável para quest global" : "Selecione um responsável"}
           options={userOptions}
           error={fieldErrors.assignedTo}
+          disabled={formData.isGlobal}
         />
       </div>
+      {formData.isGlobal && (
+        <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+          ℹ️ Quest globais não precisam de projeto ou responsável específico - são visíveis para todos os usuários.
+        </p>
+      )}
       <div className="grid grid-cols-2 gap-4">
         <FormField
           label="Data de Vencimento"
@@ -372,14 +423,38 @@ export function TaskForm({
           error={isPastDate ? "A data selecionada já passou" : undefined}
         />
         <NumberField
-          label="Pontos"
+          label={canSetCustomPoints ? "Pontos (Personalizado)" : "Pontos (Baseado na Prioridade)"}
           id="points"
           name="points"
           value={formData.points}
           onChange={handleNumberChange}
           min={0}
+          disabled={!canSetCustomPoints}
+          helperText={!canSetCustomPoints ? `Pontos automáticos: ${PRIORITY_POINTS[formData.priority]} (${formData.priority})` : "Defina a pontuação personalizada"}
         />
       </div>
+
+      {/* Quest Global Checkbox - Only show for managers and coordinators */}
+      {currentUser && (currentUser.roles.includes('GERENTE') || currentUser.roles.includes('COORDENADOR')) && (
+        <div className="space-y-4 p-4 border rounded-lg bg-blue-50">
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="isGlobal"
+              name="isGlobal"
+              checked={formData.isGlobal || false}
+              onChange={handleCheckboxChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <label htmlFor="isGlobal" className="text-sm font-medium text-blue-900">
+              Quest Global
+            </label>
+          </div>
+          <p className="text-xs text-blue-700">
+            Quest globais são visíveis para todos os usuários e não precisam de responsável específico.
+          </p>
+        </div>
+      )}
       <FormActions
         isSubmitting={isSubmitting}
         onCancel={onCancel}

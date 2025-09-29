@@ -38,13 +38,12 @@ export class WeeklyReportService implements IWeeklyReportService {
   }
 
   async create(data: Omit<WeeklyReport, 'id' | 'createdAt'>, creatorId: number): Promise<WeeklyReport> {
-    // Validate user exists
+
     const user = await this.userRepository.findById(data.userId);
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Check if report already exists for this week
     const existingReport = await this.weeklyReportRepository.findByUserAndWeek(
       data.userId,
       data.weekStart,
@@ -64,13 +63,11 @@ export class WeeklyReportService implements IWeeklyReportService {
       throw new Error('Weekly report not found');
     }
 
-    // Check permissions
     const canManage = await this.canUserManageReport(id, userId);
     if (!canManage) {
       throw new Error('User does not have permission to update this report');
     }
 
-    // Create updated report
     const updatedReport = new WeeklyReport({
       id: existingReport.id,
       userId: data.userId ?? existingReport.userId,
@@ -125,23 +122,19 @@ export class WeeklyReportService implements IWeeklyReportService {
   }
 
   async generateWeeklyReport(userId: number, weekStart: Date, weekEnd: Date): Promise<WeeklyReport> {
-    // Validate user exists
     const user = await this.userRepository.findById(userId);
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Check if report already exists
     const existingReport = await this.weeklyReportRepository.findByUserAndWeek(userId, weekStart, weekEnd);
     if (existingReport) {
       return existingReport;
     }
 
-    // Get daily logs for the week
     const dailyLogs = await this.dailyLogRepository.findByDateRange(userId, weekStart, weekEnd);
     const totalLogs = dailyLogs.length;
 
-    // Create the report
     const reportData = {
       userId,
       userName: user.name,
@@ -200,12 +193,10 @@ export class WeeklyReportService implements IWeeklyReportService {
     const user = await this.userRepository.findById(userId);
     if (!user) return false;
 
-    // Check if user has global management roles
     if (user.hasAnyRole(['COORDENADOR', 'GERENTE'])) {
       return true;
     }
 
-    // Check if user is the owner of the report
     if (report.userId === userId) {
       return true;
     }
@@ -220,17 +211,14 @@ export class WeeklyReportService implements IWeeklyReportService {
     const user = await this.userRepository.findById(userId);
     if (!user) return false;
 
-    // Check if user has global management roles
     if (user.hasAnyRole(['COORDENADOR', 'GERENTE'])) {
       return true;
     }
 
-    // Check if user is the owner of the report
     if (report.userId === userId) {
       return true;
     }
 
-    // Check if user has viewing permissions (e.g., LABORATORISTA)
     if (user.hasAnyRole(['LABORATORISTA'])) {
       return true;
     }

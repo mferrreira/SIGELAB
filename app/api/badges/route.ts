@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     }
 
     // If session exists but userId is missing, get user from database
-    let userId = session.user.id;
+    let userId = (session.user as any).id;
     if (!userId && session.user.email) {
       const { prisma } = await import("@/lib/database/prisma");
       const user = await prisma.users.findUnique({

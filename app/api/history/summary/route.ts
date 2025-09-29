@@ -9,11 +9,11 @@ const historyController = new HistoryController();
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
+    if (!session?.user || !(session.user as any).id) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    const canView = await historyController.canUserViewHistory(parseInt(session.user.id));
+    const canView = await historyController.canUserViewHistory(parseInt((session.user as any).id));
     if (!canView) {
       return NextResponse.json({ error: "Sem permissão para visualizar histórico" }, { status: 403 });
     }

@@ -11,7 +11,7 @@ interface AuthContextType {
   loading: boolean
   error: string | null
   login: (email: string, password: string) => Promise<void>
-  register: (name: string, email: string, password: string, roles: UserRole[], weekHours: number) => Promise<void>
+  register: (name: string, email: string, password: string) => Promise<void>
   logout: () => void
 }
 
@@ -21,34 +21,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
   const user = session?.user as User | null
   const loading = status === "loading"
-  const error = null // NextAuth handles errors in the signIn result
+  const error = null
 
-  // O login agora é feito diretamente via signIn do NextAuth
   const login = async (email: string, password: string) => {
     const result = await signIn("credentials", { redirect: false, email, password })
     if (result?.error) throw new Error(result.error)
   }
 
-  // O logout agora é feito via signOut do NextAuth
   const logout = () => {
     signOut({ callbackUrl: "/login" })
   }
 
-  // O registro permanece igual
-  const register = async (name: string, email: string, password: string, roles: UserRole[], weekHours: number) => {
-    const normalizedEmail = email.toLowerCase()
-    
-    // Criar novo usuário diretamente
-    // A verificação de usuário existente será feita no backend
-    const { user } = await UsersAPI.create({
-      name,
-      email: normalizedEmail,
-      roles,
-      password,
-      weekHours,
+  const register = async (name: string, email: string, password: string) => {
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name,
+        email,
+        password
+      })
     })
-    // Não fazer login automaticamente após o registro
-    // O usuário precisa fazer login explicitamente
+
+    const data = await response.json()
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Erro ao criar conta')
+    }
+
+    return data
   }
 
   return (

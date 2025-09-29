@@ -99,7 +99,6 @@ export class RewardService {
         return await this.repo.findAffordable(userPoints);
     }
 
-    // Business logic methods
     async toggleAvailability(id: number): Promise<Reward> {
         const reward = await this.repo.findById(id);
         if (!reward) {
@@ -219,7 +218,7 @@ export class RewardService {
         }
 
         if (query.userPoints !== undefined) {
-            rewards = rewards.filter(reward => reward.canBePurchased(query.userPoints));
+            rewards = rewards.filter(reward => reward.canBePurchased(query.userPoints!));
         }
 
         return rewards;

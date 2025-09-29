@@ -11,7 +11,6 @@ export default function DashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Redirecionar para login se não estiver autenticado
     if (!loading && !user) {
       router.push("/login")
     }

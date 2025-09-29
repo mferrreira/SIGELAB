@@ -8,7 +8,6 @@ import { HistoryRepository } from '../repositories/HistoryRepository';
 import { UserRole } from '@prisma/client';
 
 export interface IProjectService {
-    // Project CRUD operations
     findById(id: number): Promise<Project | null>;
     findAll(): Promise<Project[]>;
     findByUserId(userId: number): Promise<Project[]>;
@@ -17,7 +16,6 @@ export interface IProjectService {
     update(id: number, data: Partial<IProject>, userId: number): Promise<Project>;
     delete(id: number, userId: number): Promise<void>;
     
-    // Project membership operations
     addMemberToProject(projectId: number, userId: number, roles: UserRole[], addedBy: number): Promise<ProjectMembership>;
     removeMemberFromProject(projectId: number, userId: number, removedBy: number): Promise<void>;
     getProjectMembers(projectId: number): Promise<ProjectMembership[]>;
@@ -36,7 +34,6 @@ export class ProjectService implements IProjectService {
         this.historyService = new HistoryService(historyRepository, this.userRepository);
     }
 
-    // Project CRUD operations
     async findById(id: number): Promise<Project | null> {
         return await this.projectRepository.findById(id);
     }
@@ -54,8 +51,6 @@ export class ProjectService implements IProjectService {
     }
 
     async create(data: Omit<IProject, 'id' | 'createdAt'>, creatorId: number): Promise<Project> {
-        console.log('ProjectService.create - input data:', data);
-        console.log('ProjectService.create - data.links:', data.links);
         
         const project = Project.create({
             ...data,
@@ -72,14 +67,12 @@ export class ProjectService implements IProjectService {
 
         await this.membershipRepository.create(membership);
         await this.historyService.recordEntityCreation('PROJECT', createdProject.id!, creatorId, createdProject.toJSON());
-        await this.historyService.recordProjectMemberAddition(createdProject.id!, creatorId, creatorId, ['GERENTE_PROJETO']);
+        await this.historyService.recordAction('PROJECT', createdProject.id!, 'CREATE', creatorId, 'Projeto criado');
         
         return createdProject;
     }
 
     async update(id: number, data: Partial<IProject>, userId: number): Promise<Project> {
-        console.log('ProjectService.update - input data:', data);
-        console.log('ProjectService.update - data.links:', data.links);
         
         const project = await this.projectRepository.findById(id);
         if (!project) {
@@ -101,16 +94,23 @@ export class ProjectService implements IProjectService {
             project.updateStatus(data.status);
         }
         if (data.links !== undefined) {
-            console.log('ProjectService.update - updating links from:', project.links, 'to:', data.links);
-            project.updateLinks(data.links);
+            project.updateLinks(data?.links!);
         }
-
-        console.log('ProjectService.update - project links after update:', project.links);
+        if (data.leaderId !== undefined) {
+            // Validar se o novo líder não é líder de outro projeto
+            if (data.leaderId !== null) {
+                const existingLeaderProjects = await this.projectRepository.findByLeaderId(data.leaderId);
+                const otherProjects = existingLeaderProjects.filter(p => p.id !== id);
+                if (otherProjects.length > 0) {
+                    throw new Error('Este usuário já é líder de outro projeto. Um usuário só pode ser líder de um projeto por vez.');
+                }
+            }
+            project.updateLeader(data.leaderId);
+        }
         
         const oldProjectData = project.toJSON();
         const updatedProject = await this.projectRepository.update(project);
         
-        // Record project update in history
         await this.historyService.recordEntityUpdate('PROJECT', id, userId, oldProjectData, updatedProject.toJSON());
         
         return updatedProject;
@@ -122,13 +122,11 @@ export class ProjectService implements IProjectService {
             throw new Error('Projeto não encontrado');
         }
 
-        // Check if user can manage this project
         const canManage = await this.canUserManageProject(id, userId);
         if (!canManage) {
             throw new Error('Usuário não tem permissão para excluir este projeto');
         }
 
-        // Check if project can be deleted
         if (!project.canBeDeleted()) {
             throw new Error('Projeto não pode ser excluído no status atual');
         }
@@ -136,7 +134,6 @@ export class ProjectService implements IProjectService {
         const projectData = project.toJSON();
         await this.projectRepository.delete(id);
         
-        // Record project deletion in history
         await this.historyService.recordEntityDeletion('PROJECT', id, userId, projectData);
     }
 
@@ -146,8 +143,6 @@ export class ProjectService implements IProjectService {
             return membership.canManageProject();
         }
         
-        // If user is not a member, check if they have global management roles
-        // This allows COORDENADOR and GERENTE to manage any project
         const user = await this.userRepository.findById(userId);
         if (user) {
             return user.hasAnyRole(['COORDENADOR', 'GERENTE']);
@@ -156,27 +151,23 @@ export class ProjectService implements IProjectService {
         return false;
     }
 
-    // Project membership operations
+
     async addMemberToProject(projectId: number, userId: number, roles: UserRole[], addedBy: number): Promise<ProjectMembership> {
-        // Check if project exists
         const project = await this.projectRepository.findById(projectId);
         if (!project) {
             throw new Error('Projeto não encontrado');
         }
 
-        // Check if user adding member can manage the project
         const canManage = await this.canUserManageProject(projectId, addedBy);
         if (!canManage) {
             throw new Error('Usuário não tem permissão para adicionar membros a este projeto');
         }
 
-        // Check if user is already a member
         const existingMembership = await this.membershipRepository.findByProjectAndUser(projectId, userId);
         if (existingMembership) {
             throw new Error('Usuário já é membro deste projeto');
         }
 
-        // Validate roles
         if (!roles || roles.length === 0) {
             throw new Error('Pelo menos um papel deve ser atribuído');
         }
@@ -189,32 +180,27 @@ export class ProjectService implements IProjectService {
 
         const createdMembership = await this.membershipRepository.create(membership);
         
-        // Record member addition in history
-        await this.historyService.recordProjectMemberAddition(projectId, userId, addedBy, roles);
+        await this.historyService.recordAction('PROJECT', projectId, 'CREATE', addedBy, 'Membro adicionado ao projeto');
         
         return createdMembership;
     }
 
     async removeMemberFromProject(projectId: number, userId: number, removedBy: number): Promise<void> {
-        // Check if project exists
         const project = await this.projectRepository.findById(projectId);
         if (!project) {
             throw new Error('Projeto não encontrado');
         }
 
-        // Check if user removing member can manage the project
         const canManage = await this.canUserManageProject(projectId, removedBy);
         if (!canManage) {
             throw new Error('Usuário não tem permissão para remover membros deste projeto');
         }
 
-        // Check if user is a member
         const membership = await this.membershipRepository.findByProjectAndUser(projectId, userId);
         if (!membership) {
             throw new Error('Usuário não é membro deste projeto');
         }
 
-        // Prevent removing the last project manager
         if (membership.isProjectManager()) {
             const managers = await this.membershipRepository.getProjectManagers(projectId);
             if (managers.length <= 1) {
@@ -224,11 +210,53 @@ export class ProjectService implements IProjectService {
 
         await this.membershipRepository.deleteByProjectAndUser(projectId, userId);
         
-        // Record member removal in history
-        await this.historyService.recordProjectMemberRemoval(projectId, userId, removedBy);
+        await this.historyService.recordAction('PROJECT', projectId, 'REMOVE_MEMBER', removedBy, 'Membro removido do projeto');
     }
 
     async getProjectMembers(projectId: number): Promise<ProjectMembership[]> {
         return await this.membershipRepository.getProjectMembersWithDetails(projectId);
+    }
+
+    async getVolunteersStats(projectId: number): Promise<{
+        volunteers: any[];
+        stats: {
+            totalVolunteers: number;
+            totalHours: number;
+            completedTasks: number;
+            totalPoints: number;
+        };
+    }> {
+        const members = await this.membershipRepository.getProjectMembersWithDetails(projectId);
+        
+        // Converter membros em voluntários com dados reais
+        const volunteers = members.map(member => ({
+            id: member.userId,
+            name: member.user?.name || 'Usuário',
+            email: member.user?.email || '',
+            avatar: member.user?.avatar,
+            role: member.roles?.[0] || 'COLABORADOR',
+            joinedAt: member.joinedAt,
+            hoursWorked: member.user?.totalHours || 0,
+            tasksCompleted: member.user?.completedTasks || 0,
+            pointsEarned: member.user?.points || 0,
+            status: 'active' as const,
+            lastActivity: new Date().toISOString().split('T')[0]
+        }));
+
+        // Calcular estatísticas reais
+        const totalVolunteers = volunteers.length;
+        const totalHours = volunteers.reduce((sum, v) => sum + v.hoursWorked, 0);
+        const completedTasks = volunteers.reduce((sum, v) => sum + v.tasksCompleted, 0);
+        const totalPoints = volunteers.reduce((sum, v) => sum + v.pointsEarned, 0);
+
+        return {
+            volunteers,
+            stats: {
+                totalVolunteers,
+                totalHours,
+                completedTasks,
+                totalPoints
+            }
+        };
     }
 }

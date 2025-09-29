@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { User, UserFormData } from "@/contexts/types"
 import { UserProfilesAPI } from "@/contexts/api-client"
 import { AlertCircle, CheckCircle, User as UserIcon } from "lucide-react"
+import { useSession } from "next-auth/react"
 
 interface UserProfileFormProps {
   user: User
@@ -20,19 +21,20 @@ interface UserProfileFormProps {
 
 export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormProps) {
   const [formData, setFormData] = useState<UserFormData>({
-    name: user.name,
-    email: user.email,
-    roles: user.roles,
+    name: user.name || "",
+    email: user.email || "",
+    roles: user.roles || [],
     password: "",
-    weekHours: user.weekHours,
+    weekHours: user.weekHours || 0,
     bio: user.bio || "",
     avatar: user.avatar || "",
-    profileVisibility: user.profileVisibility
+    profileVisibility: user.profileVisibility || "public"
   })
   
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const { update: updateSession } = useSession()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -46,7 +48,6 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
       
       if (formData.name !== user.name) updateData.name = formData.name
       if (formData.bio !== user.bio) updateData.bio = formData.bio
-      if (formData.avatar !== user.avatar) updateData.avatar = formData.avatar
       if (formData.profileVisibility !== user.profileVisibility) updateData.profileVisibility = formData.profileVisibility
       if (formData.weekHours !== user.weekHours) updateData.weekHours = formData.weekHours
       
@@ -55,13 +56,16 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
         updateData.password = formData.password
       }
 
-      await UserProfilesAPI.updateProfile(user.id, updateData)
+      const result = await UserProfilesAPI.updateProfile(user.id, updateData)
       
       // Update the user object with new data
       const updatedUser = {
         ...user,
         ...updateData
       }
+      
+      // Update the session to reflect the changes
+      await updateSession()
       
       onUpdate(updatedUser)
       setSuccess("Perfil atualizado com sucesso!")
@@ -96,7 +100,7 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
               <Label htmlFor="name">Nome</Label>
               <Input
                 id="name"
-                value={formData.name}
+                value={formData.name || ""}
                 onChange={(e) => handleInputChange("name", e.target.value)}
                 required
               />
@@ -107,7 +111,7 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
               <Input
                 id="email"
                 type="email"
-                value={formData.email}
+                value={formData.email || ""}
                 disabled
                 className="bg-gray-50"
               />
@@ -120,27 +124,18 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
               <Label htmlFor="bio">Biografia</Label>
               <Textarea
                 id="bio"
-                value={formData.bio}
+                value={formData.bio || ""}
                 onChange={(e) => handleInputChange("bio", e.target.value)}
                 placeholder="Conte um pouco sobre você..."
                 rows={3}
               />
             </div>
 
-            <div>
-              <Label htmlFor="avatar">URL do Avatar</Label>
-              <Input
-                id="avatar"
-                value={formData.avatar}
-                onChange={(e) => handleInputChange("avatar", e.target.value)}
-                placeholder="https://exemplo.com/avatar.jpg"
-              />
-            </div>
 
             <div>
               <Label htmlFor="profileVisibility">Visibilidade do Perfil</Label>
               <Select 
-                value={formData.profileVisibility} 
+                value={formData.profileVisibility || "public"} 
                 onValueChange={(value: "public" | "private" | "members_only") => 
                   handleInputChange("profileVisibility", value)
                 }
@@ -163,7 +158,7 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
                 type="number"
                 step="0.5"
                 min="0"
-                value={formData.weekHours}
+                value={formData.weekHours || 0}
                 onChange={(e) => handleInputChange("weekHours", parseFloat(e.target.value) || 0)}
               />
             </div>

@@ -50,8 +50,7 @@ export class LabEventRepository implements ILabEventRepository {
                 userName: data.userName,
                 date: data.date,
                 note: data.note,
-                createdAt: new Date(),
-                updatedAt: new Date()
+                createdAt: new Date()
             },
             include: this.getIncludeOptions()
         });
@@ -76,8 +75,7 @@ export class LabEventRepository implements ILabEventRepository {
                 userId: data.userId,
                 userName: data.userName,
                 date: data.date,
-                note: data.note,
-                updatedAt: new Date()
+                note: data.note
             },
             include: this.getIncludeOptions()
         });

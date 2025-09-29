@@ -128,6 +128,7 @@ export interface Task {
   points: number
   completed: boolean
   taskVisibility?: string
+  isGlobal?: boolean
 }
 
 export interface TaskFormData {
@@ -140,7 +141,9 @@ export interface TaskFormData {
   dueDate: string
   points: number
   completed: boolean
+  isGlobal?: boolean
 }
+
 
 // Reward types
 export interface Reward {
@@ -407,6 +410,7 @@ export interface KanbanColumnProps {
   onEdit: (task: Task) => void
   onAddTask: (status: string) => void
   canAddTask: boolean
+  isCompactView?: boolean
 }
 
 export interface KanbanCardProps {
@@ -513,6 +517,7 @@ export interface WorkSession {
   duration?: number | null
   activity?: string | null
   location?: string | null
+  projectId?: number | null
   status: "active" | "completed" | "paused"
   createdAt: Date
   updatedAt: Date
@@ -527,6 +532,7 @@ export interface WorkSessionFormData {
   userId: number
   activity?: string
   location?: string
+  projectId?: number
 }
 
 export interface WorkSessionContextType {

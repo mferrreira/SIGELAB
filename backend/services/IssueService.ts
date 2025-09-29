@@ -16,9 +16,8 @@ export class IssueService {
         this.historyService = historyService;
     }
 
-    // Issue CRUD operations
-    async create(data: any): Promise<Issue> {
-        // Validate required fields
+
+    async create(data: any): Promise<Issue> {  
         if (!data.title || !data.title.trim()) {
             throw new Error("Título do issue é obrigatório");
         }
@@ -29,13 +28,11 @@ export class IssueService {
             throw new Error("Reporter do issue é obrigatório");
         }
 
-        // Validate priority
         const validPriorities: IssuePriority[] = ['low', 'medium', 'high', 'urgent'];
         if (data.priority && !validPriorities.includes(data.priority)) {
             throw new Error("Prioridade inválida");
         }
 
-        // Create issue
         const issue = Issue.create({
             title: data.title.trim(),
             description: data.description.trim(),
@@ -43,6 +40,7 @@ export class IssueService {
             category: data.category || null,
             reporterId: data.reporterId,
             assigneeId: data.assigneeId || null,
+            status: 'in_progress'
         });
 
         return await this.issueRepo.create(issue);
@@ -62,7 +60,6 @@ export class IssueService {
             throw new Error("Issue não encontrado");
         }
 
-        // Apply updates to current issue
         if (data.title !== undefined) {
             currentIssue.updateTitle(data.title);
         }
@@ -88,14 +85,12 @@ export class IssueService {
         await this.issueRepo.delete(id);
     }
 
-    // Issue workflow operations
     async assignIssue(issueId: number, assigneeId: number): Promise<Issue> {
         const issue = await this.issueRepo.findById(issueId);
         if (!issue) {
             throw new Error("Issue não encontrado");
         }
 
-        // Validate assignee exists
         if (this.userRepo) {
             const assignee = await this.userRepo.findById(assigneeId);
             if (!assignee) {
@@ -107,7 +102,6 @@ export class IssueService {
         issue.assignTo(assigneeId);
         const updatedIssue = await this.issueRepo.update(issue);
 
-        // Record assignment in history
         if (this.historyService) {
             await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
         }
@@ -125,7 +119,6 @@ export class IssueService {
         issue.unassign();
         const updatedIssue = await this.issueRepo.update(issue);
 
-        // Record unassignment in history
         if (this.historyService) {
             await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
         }
@@ -143,7 +136,6 @@ export class IssueService {
         issue.startProgress();
         const updatedIssue = await this.issueRepo.update(issue);
 
-        // Record progress start in history
         if (this.historyService) {
             await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
         }
@@ -160,14 +152,12 @@ export class IssueService {
         const oldData = issue.toJSON();
         issue.resolve();
         
-        // Set resolution if provided
         if (resolution) {
             issue.setResolution(resolution);
         }
 
         const updatedIssue = await this.issueRepo.update(issue);
 
-        // Record resolution in history
         if (this.historyService) {
             await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
         }
@@ -185,7 +175,6 @@ export class IssueService {
         issue.close();
         const updatedIssue = await this.issueRepo.update(issue);
 
-        // Record closure in history
         if (this.historyService) {
             await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
         }
@@ -203,7 +192,6 @@ export class IssueService {
         issue.reopen();
         const updatedIssue = await this.issueRepo.update(issue);
 
-        // Record reopening in history
         if (this.historyService) {
             await this.historyService.recordEntityUpdate('ISSUE', issueId, issueId, oldData, updatedIssue.toJSON());
         }
@@ -211,7 +199,6 @@ export class IssueService {
         return updatedIssue;
     }
 
-    // Search method
     async searchIssues(query: {
         status?: any;
         priority?: any;
@@ -220,6 +207,6 @@ export class IssueService {
         assigneeId?: number;
         search?: string;
     }): Promise<Issue[]> {
-        return await this.issueRepo.searchIssues(query);
+        return await this.issueRepo.findByStatus(query.status);
     }
 }

@@ -30,18 +30,37 @@ export class WorkSessionService {
         userId: number,
         userName: string,
         activity?: string,
-        location?: string
+        location?: string,
+        projectId?: number
     ): Promise<WorkSession> {
-        // Check if user already has an active session
+        // Encerrar automaticamente qualquer sessão ativa existente para este usuário
         const activeSession = await this.workSessionRepo.findActiveByUserId(userId);
         if (activeSession) {
-            throw new Error("Usuário já possui uma sessão ativa");
+            console.log(`Encerrando sessão ativa ID ${activeSession.id} para usuário ${userId} antes de criar nova sessão`);
+            const endTime = new Date();
+            const duration = (endTime.getTime() - activeSession.startTime.getTime()) / (1000 * 60 * 60); // em horas
+            
+            await this.workSessionRepo.update(activeSession.id!, {
+                endTime: endTime,
+                duration: duration,
+                status: 'completed'
+            });
+
+            if (this.historyService) {
+                await this.historyService.recordAction(
+                    "WORK_SESSION",
+                    activeSession.id!,
+                    "AUTO-END",
+                    userId,
+                    `Sessão automaticamente encerrada ao iniciar nova sessão`,
+                    { oldData: activeSession.toJSON(), newData: { status: 'completed', endTime, duration } }
+                );
+            }
         }
 
-        const session = WorkSession.create(userId, userName, activity, location);
+        const session = WorkSession.create(userId, userName, activity, location, projectId);
         const created = await this.workSessionRepo.create(session);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordAction(
                 "WORK_SESSION",
@@ -73,15 +92,12 @@ export class WorkSessionService {
 
         const oldData = session.toJSON();
         
-        // Se estamos encerrando a sessão, fazer isso primeiro
         if (data.endTime !== undefined) {
             session.endSession(new Date(data.endTime));
         } else if (data.status !== undefined) {
-            // Só atualizar status se não estamos encerrando
             session.setStatus(data.status);
         }
         
-        // Atualizar outros campos
         if (data.activity !== undefined) {
             session.setActivity(data.activity);
         }
@@ -91,7 +107,6 @@ export class WorkSessionService {
 
         const updated = await this.workSessionRepo.update(id, session);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordAction(
                 "WORK_SESSION",
@@ -119,7 +134,6 @@ export class WorkSessionService {
         const sessionData = session.toJSON();
         await this.workSessionRepo.delete(id);
 
-        // Record history
         if (this.historyService) {
             await this.historyService.recordAction(
                 "WORK_SESSION",

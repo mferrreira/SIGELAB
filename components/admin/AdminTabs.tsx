@@ -437,7 +437,7 @@ async function handleDelete(scheduleId: number) {
           </CardContent>
         </Card>
       </TabsContent>
-      {/* Schedule Tab */}
+
       <TabsContent value="schedule" className="space-y-4">
         <Card>
           <CardHeader>
@@ -493,7 +493,7 @@ async function handleDelete(scheduleId: number) {
                                 <div className="flex flex-row items-center gap-1 flex-wrap min-w-0">
                                   <Input
                                     type="time"
-                                    value={userSchedule.find(s => s.dayOfWeek === idx)?.startTime || ""}
+                                    value={userSchedule.find(s => s.dayOfWeek === idx)?.startTime ?? ""}
                                     onChange={e => handleTimeChange(idx, "startTime", e.target.value)}
                                     className="w-24 min-w-0"
                                     style={{ maxWidth: 100 }}
@@ -501,7 +501,7 @@ async function handleDelete(scheduleId: number) {
                                   <span>-</span>
                                   <Input
                                     type="time"
-                                    value={userSchedule.find(s => s.dayOfWeek === idx)?.endTime || ""}
+                                    value={userSchedule.find(s => s.dayOfWeek === idx)?.endTime ?? ""}
                                     onChange={e => handleTimeChange(idx, "endTime", e.target.value)}
                                     className="w-24 min-w-0"
                                     style={{ maxWidth: 100 }}
@@ -554,20 +554,18 @@ async function handleDelete(scheduleId: number) {
                   <tbody>
                     {TIME_SLOTS.map((slot) => (
                       <tr key={slot.start + slot.end}>
-                        <td className="px-2 py-1 border-r font-mono text-right align-top whitespace-nowrap">
+                        <td className="px-2 py-1 border-r text-right align-middle whitespace-nowrap border-b-2">
                           {slot.start}<br />{slot.end}
                         </td>
                         {WEEK_DAYS.map((_, dayIdx) => {
-                          // For this cell, show all schedules for this day that overlap with the slot
                           const slotSchedules = (localSchedules || []).filter((s: any) => {
                             if (s.dayOfWeek !== dayIdx) return false;
-                            // Overlap: schedule.startTime < slot.end && schedule.endTime > slot.start
                             return s.startTime < slot.end && s.endTime > slot.start;
                           });
                           return (
                             <td key={dayIdx} className="px-1 py-1 border align-top min-w-[120px]">
                               {slotSchedules.length === 0 ? (
-                                <span className="text-muted-foreground">-----</span>
+                                <span className="text-muted-foreground"></span>
                               ) : (
                                 <div className="flex flex-col gap-1">
                                   {slotSchedules.map((s: any) => {

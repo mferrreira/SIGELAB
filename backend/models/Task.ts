@@ -1,4 +1,6 @@
-import { TaskStatus, TaskPriority, TaskVisibility } from '@prisma/client';
+export type TaskStatus = 'to-do' | 'in-progress' | 'in-review' | 'adjust' | 'done';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type TaskVisibility = 'public' | 'delegated' | 'private';
 
 export interface ITask {
   id?: number;
@@ -12,6 +14,7 @@ export interface ITask {
   points: number;
   completed: boolean;
   taskVisibility: TaskVisibility;
+  isGlobal?: boolean;
 }
 
 export class Task {
@@ -26,6 +29,7 @@ export class Task {
   private _points: number;
   private _completed: boolean;
   private _taskVisibility: TaskVisibility;
+  private _isGlobal: boolean;
 
   constructor(data: ITask) {
     this._id = data.id;
@@ -39,9 +43,9 @@ export class Task {
     this._points = data.points;
     this._completed = data.completed;
     this._taskVisibility = data.taskVisibility;
+    this._isGlobal = data.isGlobal || false;
   }
 
-  // Getters
   get id(): number | undefined { return this._id; }
   get title(): string { return this._title; }
   get description(): string | null | undefined { return this._description; }
@@ -53,8 +57,8 @@ export class Task {
   get points(): number { return this._points; }
   get completed(): boolean { return this._completed; }
   get taskVisibility(): TaskVisibility { return this._taskVisibility; }
+  get isGlobal(): boolean { return this._isGlobal; }
 
-  // Business Logic Methods
   assignTo(userId: number): void {
     this._assignedTo = userId;
   }
@@ -78,7 +82,7 @@ export class Task {
 
   updatePoints(points: number): void {
     if (points < 0) {
-      throw new Error('Points cannot be negative');
+      throw new Error('Pontos não podem ser negativos');
     }
     this._points = points;
   }
@@ -99,12 +103,58 @@ export class Task {
   }
 
   canBeCompleted(): boolean {
-    return this._status !== 'done' && this._assignedTo !== null;
+    if (this._status === 'done') {
+      return false;
+    }
+    
+    if (this._taskVisibility === 'public') {
+      return true;
+    }
+    
+    return this._assignedTo !== null;
+  }
+
+  setTitle(title: string): void {
+    this._title = title;
+  }
+
+  setDescription(description: string): void {
+    this._description = description;
+  }
+
+  setPriority(priority: TaskPriority): void {
+    this._priority = priority;
+  }
+
+  setStatus(status: TaskStatus): void {
+    this._status = status;
+    // Sincronizar o campo completed com o status
+    if (status === 'done') {
+      this._completed = true;
+    } else {
+      this._completed = false;
+    }
+  }
+
+  setAssignedTo(assignedTo: number): void {
+    this._assignedTo = assignedTo;
+  }
+
+  setProjectId(projectId: number): void {
+    this._projectId = projectId;
+  }
+
+  setVisibility(visibility: TaskVisibility): void {
+    this._taskVisibility = visibility;
+  }
+
+  setGlobal(isGlobal: boolean): void {
+    this._isGlobal = isGlobal;
   }
 
   complete(): void {
     if (!this.canBeCompleted()) {
-      throw new Error('Task cannot be completed');
+      throw new Error('Tarefa não pode ser completada');
     }
     this._status = 'done';
     this._completed = true;
@@ -115,29 +165,34 @@ export class Task {
     this._completed = false;
   }
 
-  // Validation
   validate(): void {
     if (!this._title || this._title.trim().length === 0) {
-      throw new Error('Task title is required');
+      throw new Error('Título da tarefa é obrigatório');
     }
     if (this._title.length > 200) {
-      throw new Error('Task title cannot exceed 200 characters');
+      throw new Error('Título da tarefa não pode ter mais de 200 caracteres');
     }
     if (this._description && this._description.length > 1000) {
-      throw new Error('Task description cannot exceed 1000 characters');
+      throw new Error('Descrição da tarefa não pode ter mais de 1000 caracteres');
     }
     if (this._points < 0) {
-      throw new Error('Task points cannot be negative');
+      throw new Error('Pontos da tarefa não podem ser negativos');
     }
   }
 
-  // Factory Methods
   static create(data: Omit<ITask, 'id'>): Task {
     const task = new Task({
-      ...data,
+      title: data.title || '',
+      description: data.description || null,
+      status: data.status,
+      priority: data.priority,
+      assignedTo: data.assignedTo || null,
+      projectId: data.projectId || null,
+      dueDate: data.dueDate || null,
       points: data.points || 0,
       completed: data.completed || false,
-      taskVisibility: data.taskVisibility || 'delegated'
+      taskVisibility: data.taskVisibility || 'delegated',
+      isGlobal: data.isGlobal || false
     });
     task.validate();
     return task;
@@ -155,14 +210,13 @@ export class Task {
       dueDate: data.dueDate,
       points: data.points,
       completed: data.completed,
-      taskVisibility: data.taskVisibility
+      taskVisibility: data.taskVisibility,
+      isGlobal: data.isGlobal || false
     });
   }
 
-  // Conversion Methods
   toPrisma(): any {
     return {
-      id: this._id,
       title: this._title,
       description: this._description,
       status: this._status,
@@ -172,7 +226,8 @@ export class Task {
       dueDate: this._dueDate,
       points: this._points,
       completed: this._completed,
-      taskVisibility: this._taskVisibility
+      taskVisibility: this._taskVisibility,
+      isGlobal: this._isGlobal
     };
   }
 
@@ -188,7 +243,8 @@ export class Task {
       dueDate: this._dueDate,
       points: this._points,
       completed: this._completed,
-      taskVisibility: this._taskVisibility
+      taskVisibility: this._taskVisibility,
+      isGlobal: this._isGlobal
     };
   }
 }

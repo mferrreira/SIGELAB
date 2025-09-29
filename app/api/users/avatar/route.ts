@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth/server-auth"
-import { writeFile, mkdir } from "fs/promises"
-import { join } from "path"
-import { existsSync } from "fs"
+import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { UserController } from "@/backend/controllers/UserController"
+import { ImageProcessor } from "@/lib/utils/image-processor"
 
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user?.id) {
+    if (!session?.user || !(session.user as any).id) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
@@ -20,42 +19,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 })
     }
 
-    if (!userId || parseInt(userId) !== session.user.id) {
+    if (!userId || parseInt(userId) !== (session.user as any).id) {
       return NextResponse.json({ error: "Usuário não autorizado" }, { status: 403 })
     }
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      return NextResponse.json({ error: "Apenas arquivos de imagem são permitidos" }, { status: 400 })
+    const validation = ImageProcessor.validateImage(file)
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "Arquivo muito grande. Máximo 5MB" }, { status: 400 })
+    const userController = new UserController()
+    const currentUser = await userController.getUser(parseInt(userId))
+    
+    if (currentUser?.avatar) {
+      await ImageProcessor.deleteImage(currentUser.avatar)
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), "public", "uploads", "avatars")
-    if (!existsSync(uploadsDir)) {
-      await mkdir(uploadsDir, { recursive: true })
-    }
+    const avatarUrl = await ImageProcessor.processAndSave(file, parseInt(userId), {
+      width: 300,
+      height: 300,
+      quality: 85,
+      format: 'webp'
+    })
 
-    // Generate unique filename
-    const fileExtension = file.name.split('.').pop()
-    const fileName = `avatar_${userId}_${Date.now()}.${fileExtension}`
-    const filePath = join(uploadsDir, fileName)
-
-    // Convert file to buffer and save
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
-
-    // Return the public URL
-    const avatarUrl = `/uploads/avatars/${fileName}`
-
-    // TODO: Update user avatar in database
-    // This would typically involve updating the user record in the database
-    // For now, we'll just return the URL
+    await userController.updateProfile(parseInt(userId), { avatar: avatarUrl })
 
     return NextResponse.json({ 
       success: true, 

@@ -24,13 +24,11 @@ export class BadgeService {
             throw new Error("Criador do badge é obrigatório");
         }
 
-        // Validate category
         const validCategories: BadgeCategory[] = ['achievement', 'milestone', 'special', 'social'];
         if (!validCategories.includes(data.category)) {
             throw new Error("Categoria de badge inválida");
         }
 
-        // Create badge
         const badge = Badge.create({
             name: data.name.trim(),
             description: data.description.trim(),
@@ -67,7 +65,6 @@ export class BadgeService {
             throw new Error("Badge não encontrado");
         }
 
-        // Apply updates to current badge
         if (data.name !== undefined) {
             currentBadge.updateName(data.name);
         }
@@ -106,26 +103,23 @@ export class BadgeService {
         await this.badgeRepo.delete(id);
     }
 
-    // User Badge operations
     async awardBadgeToUser(badgeId: number, userId: number, awardedBy?: number): Promise<UserBadge> {
-        // Validate badge exists
         const badge = await this.badgeRepo.findById(badgeId);
         if (!badge) {
             throw new Error("Badge não encontrado");
         }
 
-        // Check if user already has this badge
+
         const existingUserBadge = await this.userBadgeRepo.findByUserAndBadge(userId, badgeId);
         if (existingUserBadge) {
             throw new Error("Usuário já possui este badge");
         }
 
-        // Create user badge
+
         const userBadge = UserBadge.create({
             userId: userId,
             badgeId: badgeId,
-            awardedBy: awardedBy || null,
-            awardedAt: new Date(),
+            earnedBy: awardedBy || null,
         });
 
         return await this.userBadgeRepo.create(userBadge);

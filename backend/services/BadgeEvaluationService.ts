@@ -24,9 +24,6 @@ export class BadgeEvaluationService {
     this.userBadgeRepo = new UserBadgeRepository();
   }
 
-  /**
-   * Evaluate all users for potential badge awards
-   */
   async evaluateAllUsers(): Promise<void> {
     try {
       const users = await this.userRepo.findAll();
@@ -41,9 +38,6 @@ export class BadgeEvaluationService {
     }
   }
 
-  /**
-   * Evaluate a specific user for potential badge awards
-   */
   async evaluateUserForBadges(user: User, badges?: Badge[]): Promise<Badge[]> {
     try {
       if (!badges) {
@@ -56,18 +50,16 @@ export class BadgeEvaluationService {
       const newlyEarnedBadges: Badge[] = [];
 
       for (const badge of badges) {
-        // Skip if user already has this badge
         if (earnedBadgeIds.includes(badge.id!)) {
           continue;
         }
 
-        // Check if user meets criteria
         if (await this.userMeetsCriteria(user, badge.criteria)) {
           try {
             await this.userBadgeRepo.create({
               userId: user.id!,
               badgeId: badge.id!,
-              earnedBy: null // Auto-awarded by system
+              earnedBy: null
             });
             
             newlyEarnedBadges.push(badge);
@@ -85,17 +77,12 @@ export class BadgeEvaluationService {
     }
   }
 
-  /**
-   * Check if a user meets the criteria for a badge
-   */
   private async userMeetsCriteria(user: User, criteria?: BadgeCriteria): Promise<boolean> {
     if (!criteria) return false;
 
     try {
-      // Get user statistics
       const userStats = await this.getUserStatistics(user.id!);
 
-      // Check each criterion
       if (criteria.points && userStats.points < criteria.points) {
         return false;
       }
@@ -120,7 +107,6 @@ export class BadgeEvaluationService {
         return false;
       }
 
-      // Special conditions (custom logic)
       if (criteria.specialCondition) {
         if (!await this.evaluateSpecialCondition(user, criteria.specialCondition, userStats)) {
           return false;
@@ -134,9 +120,6 @@ export class BadgeEvaluationService {
     }
   }
 
-  /**
-   * Get comprehensive user statistics
-   */
   private async getUserStatistics(userId: number): Promise<{
     points: number;
     completedTasks: number;
@@ -151,7 +134,6 @@ export class BadgeEvaluationService {
         throw new Error(`User ${userId} not found`);
       }
 
-      // Get additional statistics from related entities
       const projectsCount = await this.userRepo.getUserProjectsCount(userId);
       const workSessionsCount = await this.userRepo.getUserWorkSessionsCount(userId);
       const averageWeeklyHours = await this.userRepo.getUserAverageWeeklyHours(userId);
@@ -178,9 +160,6 @@ export class BadgeEvaluationService {
     }
   }
 
-  /**
-   * Evaluate special conditions (custom logic for specific badges)
-   */
   private async evaluateSpecialCondition(
     user: User, 
     condition: string, 
@@ -189,34 +168,28 @@ export class BadgeEvaluationService {
     try {
       const conditionLower = condition.toLowerCase();
 
-      // First user to reach milestones
       if (conditionLower.includes("primeiro") && conditionLower.includes("100")) {
         if (conditionLower.includes("tarefas") && stats.completedTasks >= 100) {
-          // Check if this user is the first to reach 100 tasks
           const allUsers = await this.userRepo.findAll();
           const usersWith100Tasks = allUsers.filter(u => u.completedTasks >= 100);
           return usersWith100Tasks.length === 1 && usersWith100Tasks[0].id === user.id;
         }
         
         if (conditionLower.includes("pontos") && stats.points >= 100) {
-          // Check if this user is the first to reach 100 points
           const allUsers = await this.userRepo.findAll();
           const usersWith100Points = allUsers.filter(u => u.points >= 100);
           return usersWith100Points.length === 1 && usersWith100Points[0].id === user.id;
         }
       }
 
-      // Perfect week (completed all weekly hours)
       if (conditionLower.includes("semana perfeita")) {
         return stats.averageWeeklyHours >= user.weekHours;
       }
 
-      // Streak achievements
       if (conditionLower.includes("sequência") && conditionLower.includes("dias")) {
         return stats.maxConsecutiveDays >= 7; // 7-day streak
       }
 
-      // Role-specific achievements
       if (conditionLower.includes("coordenador") && user.hasRole("COORDENADOR")) {
         return true;
       }
@@ -225,8 +198,6 @@ export class BadgeEvaluationService {
         return true;
       }
 
-      // Default: return true for unrecognized conditions
-      // This allows for manual badge awarding
       return true;
     } catch (error) {
       console.error(`Error evaluating special condition "${condition}" for user ${user.id}:`, error);
@@ -234,18 +205,13 @@ export class BadgeEvaluationService {
     }
   }
 
-  /**
-   * Manually award a badge to a user (for special cases)
-   */
   async manuallyAwardBadge(userId: number, badgeId: number, awardedBy: number): Promise<void> {
     try {
-      // Check if user already has this badge
       const existingUserBadge = await this.userBadgeRepo.findByUserAndBadge(userId, badgeId);
       if (existingUserBadge) {
         throw new Error("User already has this badge");
       }
 
-      // Create the user badge
       await this.userBadgeRepo.create({
         userId,
         badgeId,
@@ -259,9 +225,6 @@ export class BadgeEvaluationService {
     }
   }
 
-  /**
-   * Remove a badge from a user
-   */
   async removeBadgeFromUser(userId: number, badgeId: number): Promise<void> {
     try {
       await this.userBadgeRepo.deleteByUserAndBadge(userId, badgeId);

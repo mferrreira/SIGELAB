@@ -1,9 +1,11 @@
 // Cliente de API para fazer chamadas aos endpoints
 
 // Função genérica para fazer requisições
-async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T> {
+export async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T> {
+  console.log(`🔍 API Call: ${options.method || 'GET'} ${url}`)
+  
   const response = await fetch(url, {
-    credentials: "include", // Ensure cookies/session are sent
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
@@ -14,10 +16,16 @@ async function fetchAPI<T>(url: string, options: RequestInit = {}): Promise<T> {
   const data = await response.json()
 
   if (!response.ok) {
+    console.error(`❌ API Error: ${options.method || 'GET'} ${url}`, {
+      status: response.status,
+      statusText: response.statusText,
+      error: data.error,
+      data
+    })
     throw new Error(data.error || "Ocorreu um erro na requisição")
   }
 
-  // Return the data property if it exists, otherwise return the whole response
+  console.log(`✅ API Success: ${options.method || 'GET'} ${url}`)
   return data.data || data
 }
 
@@ -101,6 +109,27 @@ export const UsersAPI = {
     fetchAPI<{ user: any; message: string }>("/api/users/approve", {
       method: "POST",
       body: JSON.stringify({ userId, action: "reject" }),
+    }),
+
+  // Atualizar roles do usuário
+  updateUserRoles: (userId: number, roles: string[]) =>
+    fetchAPI<{ user: any }>(`/api/users/${userId}/roles`, {
+      method: "PATCH",
+      body: JSON.stringify({ action: "set", roles }),
+    }),
+
+  // Atualizar carga horária do usuário
+  updateUserWeekHours: (userId: number, weekHours: number) =>
+    fetchAPI<{ user: any }>(`/api/users/${userId}`, {
+      method: "PUT",
+      body: JSON.stringify({ weekHours }),
+    }),
+
+  // Adicionar usuário a projeto
+  addUserToProject: (userId: number, projectId: number) =>
+    fetchAPI<{ membership: any }>(`/api/projects/${projectId}/members`, {
+      method: "POST",
+      body: JSON.stringify({ userId, roles: ["COLABORADOR"] }),
     }),
 
   // Laboratory Schedule API
@@ -523,6 +552,14 @@ export const BadgesAPI = {
       method: "POST",
       body: JSON.stringify({ userId, badgeId }),
     }),
+
+  // Obter badges de um usuário
+  getUserBadges: (userId: number, limit?: number) => {
+    const url = limit 
+      ? `/api/user-badges?userId=${userId}&limit=${limit}`
+      : `/api/user-badges?userId=${userId}`
+    return fetchAPI<{ badges: any[]; recentBadges: any[]; count: number }>(url)
+  },
 }
 
 // API de Perfis de Usuário
@@ -532,13 +569,19 @@ export const UserProfilesAPI = {
 
   // Atualizar perfil de um usuário
   updateProfile: (userId: number, profileData: any) =>
-    fetchAPI<{ profile: any }>(`/api/users/${userId}/profile`, {
-      method: "PUT",
+    fetchAPI<{ user: any }>(`/api/users/${userId}/profile`, {
+      method: "PATCH",
       body: JSON.stringify(profileData),
     }),
 
   // Buscar usuários por nome
   searchUsers: (query: string) => fetchAPI<{ users: any[] }>(`/api/users/search?q=${encodeURIComponent(query)}`),
+
+  // Obter perfis públicos dos usuários
+  getPublic: () => fetchAPI<{ users: any[] }>("/api/users/profiles?type=public"),
+
+  // Obter perfis de membros
+  getMembers: () => fetchAPI<{ users: any[] }>("/api/users/profiles?type=members"),
 
   // Obter avatar de um usuário
   getAvatar: (userId: number) => fetchAPI<{ avatar: string }>(`/api/users/${userId}/avatar`),
@@ -550,3 +593,4 @@ export const UserProfilesAPI = {
       body: avatarData,
     }),
 }
+

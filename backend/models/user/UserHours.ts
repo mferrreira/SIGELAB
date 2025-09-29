@@ -50,5 +50,19 @@ export class UserHours {
     getRemainingHours(): number {
         return Math.max(0, this.weekHours - this.currentWeekHours);
     }
+
+    deductHours(hours: number): void {
+        if (hours < 0) {
+            throw new Error("Horas não podem ser negativas");
+        }
+        if (this.weekHours < hours) {
+            throw new Error("Usuário não possui horas suficientes");
+        }
+        this.weekHours -= hours;
+        // Ajustar currentWeekHours se necessário
+        if (this.currentWeekHours > this.weekHours) {
+            this.currentWeekHours = this.weekHours;
+        }
+    }
 }
 

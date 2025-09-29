@@ -139,8 +139,49 @@ export class UserController {
         bio?: string | null;
         avatar?: string | null;
         profileVisibility?: any;
+        password?: string;
     }): Promise<any> {
         const user = await this.userService.updateProfile(id, data);
         return user.toJSON();
+    }
+
+    async getUsers(options: { search?: string; excludeProjectId?: number } = {}): Promise<{
+        success: boolean;
+        users: any[];
+    }> {
+        try {
+            const users = await this.userService.getUsers(options);
+            return {
+                success: true,
+                users: users.map(user => user.toJSON())
+            };
+        } catch (error) {
+            console.error('Erro ao buscar usuários:', error);
+            throw new Error('Erro ao buscar usuários');
+        }
+    }
+
+    async deductHours(userId: number, data: {
+        hours: number;
+        reason: string;
+        projectId?: number;
+        deductedBy: number;
+        deductedByRoles: string[];
+    }): Promise<{
+        success: boolean;
+        message: string;
+        user: any;
+    }> {
+        try {
+            const result = await this.userService.deductHours(userId, data);
+            return {
+                success: true,
+                message: result.message,
+                user: result.user.toJSON()
+            };
+        } catch (error) {
+            console.error('Erro ao retirar horas:', error);
+            throw new Error('Erro ao retirar horas');
+        }
     }
 }

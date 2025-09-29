@@ -32,7 +32,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     }
 
     // Get user ID from session or database
-    let userId = session.user.id;
+    let userId = (session.user as any).id;
     if (!userId && session.user.email) {
       const { prisma } = await import("@/lib/database/prisma");
       const user = await prisma.users.findUnique({
@@ -70,7 +70,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     }
 
     // Get user ID from session or database
-    let userId = session.user.id;
+    let userId = (session.user as any).id;
     if (!userId && session.user.email) {
       const { prisma } = await import("@/lib/database/prisma");
       const user = await prisma.users.findUnique({
