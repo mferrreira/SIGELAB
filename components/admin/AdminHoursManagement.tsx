@@ -55,6 +55,11 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
     generateHoursReports()
   }, [users, sessions, filterPeriod])
 
+  // Adicionar log para debug
+  useEffect(() => {
+    console.log('AdminHoursManagement: Sessões atualizadas', sessions.length)
+  }, [sessions])
+
   const generateHoursReports = () => {
     setLoading(true)
     

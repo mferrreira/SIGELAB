@@ -110,7 +110,7 @@ export class WorkSession {
         }
 
         const diffMs = this._endTime.getTime() - this._startTime.getTime();
-        return diffMs / (1000 * 60 * 60);
+        return diffMs / 1000; // Retorna duração em segundos
     }
 
     isActive(): boolean {
@@ -126,7 +126,8 @@ export class WorkSession {
     }
 
     getDurationFormatted(): string {
-        const hours = this._duration || this.calculateDuration();
+        const seconds = this._duration || this.calculateDuration();
+        const hours = seconds / 3600;
         const h = Math.floor(hours);
         const m = Math.floor((hours - h) * 60);
         return `${h}h ${m}m`;
