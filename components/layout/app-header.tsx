@@ -118,9 +118,10 @@ export function AppHeader() {
           <div className="hidden md:flex items-center gap-4">
             
             {currentUserData && (
-              <div className="text-sm mr-2">
-                <span className="font-medium bg-gradient-to-r from-amber-400 to-orange-400 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
-                  {currentUserData.points} pontos
+              <div className="flex items-center gap-2 mr-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-50 to-orange-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-amber-200 dark:border-emerald-700">
+                <Trophy className="h-4 w-4 text-amber-500 dark:text-emerald-400" />
+                <span className="font-semibold text-sm bg-gradient-to-r from-amber-600 to-orange-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
+                  {currentUserData.points}
                 </span>
               </div>
             )}

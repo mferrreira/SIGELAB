@@ -139,11 +139,11 @@ export function MobileMenu() {
               </div>
               
               {currentUserData && (
-                <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-amber-200 dark:border-emerald-700">
-                  <span className="text-sm font-medium">Pontos</span>
-                  <Badge variant="secondary" className="bg-gradient-to-r from-amber-400 to-orange-400 dark:from-emerald-400 dark:to-teal-400 text-white">
+                <div className="flex items-center justify-center gap-2 p-3 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 dark:from-emerald-900/20 dark:to-teal-900/20 border border-amber-200 dark:border-emerald-700">
+                  <Trophy className="h-5 w-5 text-amber-500 dark:text-emerald-400" />
+                  <span className="font-semibold text-lg bg-gradient-to-r from-amber-600 to-orange-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">
                     {currentUserData.points}
-                  </Badge>
+                  </span>
                 </div>
               )}
             </div>
