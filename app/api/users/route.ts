@@ -19,13 +19,14 @@ export async function GET() {
     }
 
     // Verificar se o usuário tem permissão para ver outros usuários
-    const canViewUsers = user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE')
+    const canViewFullUsers = user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE')
+    const canViewBasicUsers = user.roles.includes('COORDENADOR') || user.roles.includes('GERENTE') || user.roles.includes('VOLUNTARIO') || user.roles.includes('COLABORADOR') || user.roles.includes('LABORATORISTA')
 
-    if (!canViewUsers) {
-      return NextResponse.json({ error: 'Apenas coordenadores e gerentes podem visualizar usuários' }, { status: 403 })
+    if (!canViewBasicUsers) {
+      return NextResponse.json({ error: 'Usuário não tem permissão para visualizar outros usuários' }, { status: 403 })
     }
 
-    // Buscar todos os usuários ativos
+    // Buscar usuários ativos com campos diferentes baseado na permissão
     const users = await prisma.users.findMany({
       where: {
         status: 'active'
@@ -33,9 +34,12 @@ export async function GET() {
       select: {
         id: true,
         name: true,
-        email: true,
-        roles: true,
-        status: true
+        email: canViewFullUsers,
+        roles: canViewFullUsers,
+        status: canViewFullUsers,
+        points: true,
+        avatar: true,
+        bio: canViewFullUsers
       },
       orderBy: {
         name: 'asc'

@@ -26,7 +26,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { user } = useAuth()
-  const { fetchUsers } = useUser();
 
   const fetchTasks = useCallback(async (projectId?: number | null) => {
     try {
