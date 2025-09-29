@@ -14,6 +14,8 @@ interface TaskContextType {
   createTask: (task: any) => Promise<Task>
   updateTask: (id: number, task: Partial<Task>) => Promise<Task>
   completeTask: (id: number, userId?: number) => Promise<Task>
+  approveTask: (id: number) => Promise<Task>
+  rejectTask: (id: number, reason?: string) => Promise<Task>
   deleteTask: (id: number) => Promise<void>
 }
 
@@ -134,6 +136,76 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const approveTask = async (id: number) => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await fetch(`/api/tasks/${id}/approve`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao aprovar tarefa')
+      }
+      
+      const data = await response.json()
+      const task = data.task
+      
+      if (task) {
+        setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
+        await fetchUsers(); // Refresh users after approving a task
+        return task
+      }
+      throw new Error("Erro ao aprovar tarefa: resposta inválida")
+    } catch (err) {
+      setError("Erro ao aprovar tarefa")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const rejectTask = async (id: number, reason?: string) => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const response = await fetch(`/api/tasks/${id}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason })
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Erro ao rejeitar tarefa')
+      }
+      
+      const data = await response.json()
+      const task = data.task
+      
+      if (task) {
+        setTasks((prevTasks) => prevTasks.map((t) => (t.id === id ? task : t)))
+        return task
+      }
+      throw new Error("Erro ao rejeitar tarefa: resposta inválida")
+    } catch (err) {
+      setError("Erro ao rejeitar tarefa")
+      console.error(err)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const deleteTask = async (id: number) => {
     try {
       setLoading(true)
@@ -161,6 +233,8 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         createTask,
         updateTask,
         completeTask,
+        approveTask,
+        rejectTask,
         deleteTask,
       }}
     >

@@ -156,7 +156,15 @@ export class Task {
     if (!this.canBeCompleted()) {
       throw new Error('Tarefa não pode ser completada');
     }
-    this._status = 'done';
+    
+    // Tasks globais vão direto para 'done' (sem necessidade de aprovação)
+    // Tasks delegadas vão para 'in-review' (precisam de aprovação do líder)
+    if (this._isGlobal || this._taskVisibility === 'public') {
+      this._status = 'done';
+    } else {
+      this._status = 'in-review';
+    }
+    
     this._completed = true;
   }
 
