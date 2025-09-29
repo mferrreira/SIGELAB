@@ -13,6 +13,8 @@ export const ACCESS_CONTROL = {
   MANAGE_PROJECTS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO'],
   MANAGE_TASKS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO', 'COLABORADOR', "PESQUISADOR"],
   MANAGE_PROJECT_MEMBERS: ['COORDENADOR', 'GERENTE', 'GERENTE_PROJETO'],
+  MANAGE_SCHEDULE: ['COORDENADOR', 'GERENTE', 'LABORATORISTA'],
+  MANAGE_BADGES: ['COORDENADOR', 'GERENTE', 'LABORATORISTA'],
   
   // Visualização
   VIEW_ALL_DATA: ['COORDENADOR', 'GERENTE', 'LABORATORISTA'],
@@ -48,6 +50,10 @@ export const ACCESS_CONTROL = {
 export function hasAccess(userRoles: string[], feature: keyof typeof ACCESS_CONTROL): boolean {
   if (!userRoles || !Array.isArray(userRoles)) return false;
   const allowedRoles = ACCESS_CONTROL[feature];
+  if (!allowedRoles || !Array.isArray(allowedRoles)) {
+    console.warn(`Feature '${feature}' not found in ACCESS_CONTROL`);
+    return false;
+  }
   return userRoles.some((role) => allowedRoles.includes(role));
 }
 
