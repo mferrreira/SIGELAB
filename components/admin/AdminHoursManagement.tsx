@@ -63,6 +63,10 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
   const generateHoursReports = () => {
     setLoading(true)
     
+    console.log('AdminHoursManagement: Gerando relatórios...')
+    console.log('Sessões recebidas:', sessions.length)
+    console.log('Filtro de período:', filterPeriod)
+    
     const reports: HoursReport[] = users.map(user => {
       const userSessions = sessions.filter(session => 
         session.userId === user.id && session.status === 'completed'
@@ -95,6 +99,14 @@ export function AdminHoursManagement({ users, projects, sessions }: AdminHoursMa
       )
 
       const totalHours = filteredSessions.reduce((sum, session) => sum + (session.duration || 0), 0) / 3600
+      
+      if (user.name === 'Coordenador') {
+        console.log(`Coordenador - Sessões filtradas: ${filteredSessions.length}, Total horas: ${totalHours.toFixed(2)}h`)
+        filteredSessions.forEach(session => {
+          const hours = (session.duration || 0) / 3600
+          console.log(`  - ${session.startTime}: ${hours.toFixed(2)}h`)
+        })
+      }
 
       // Horas da semana atual
       const weekStart = new Date(now)

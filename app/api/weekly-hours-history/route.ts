@@ -13,9 +13,26 @@ export async function GET(request: Request) {
     }
 
     const user = session.user as any
+    console.log('🔍 Weekly Hours History API - User session:', {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roles: user.roles,
+      rolesType: typeof user.roles,
+      isArray: Array.isArray(user.roles)
+    })
+    
+    if (!user.roles || !Array.isArray(user.roles)) {
+      console.log('❌ User roles is not an array:', user.roles)
+      return NextResponse.json({ error: 'Roles não encontradas na sessão.' }, { status: 403 });
+    }
+    
     if (!user.roles.includes('COORDENADOR') && !user.roles.includes('GERENTE')) {
+      console.log('❌ User does not have required roles:', user.roles)
       return NextResponse.json({ error: 'Apenas coordenadores e gerentes podem acessar.' }, { status: 403 });
     }
+    
+    console.log('✅ User has permission, proceeding...')
 
     const { searchParams } = new URL(request.url)
     const weekStart = searchParams.get("weekStart")
@@ -56,9 +73,26 @@ export async function POST(request: Request) {
     }
 
     const user = session.user as any
-    if (user.role !== "administrador_laboratorio") {
-      return NextResponse.json({ error: "Sem permissão" }, { status: 403 })
+    console.log('🔍 Weekly Hours History POST - User session:', {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      roles: user.roles,
+      rolesType: typeof user.roles,
+      isArray: Array.isArray(user.roles)
+    })
+    
+    if (!user.roles || !Array.isArray(user.roles)) {
+      console.log('❌ User roles is not an array:', user.roles)
+      return NextResponse.json({ error: 'Roles não encontradas na sessão.' }, { status: 403 });
     }
+    
+    if (!user.roles.includes('COORDENADOR') && !user.roles.includes('GERENTE')) {
+      console.log('❌ User does not have required roles:', user.roles)
+      return NextResponse.json({ error: 'Apenas coordenadores e gerentes podem acessar.' }, { status: 403 });
+    }
+    
+    console.log('✅ User has permission for POST, proceeding...')
 
     const body = await request.json()
     const { action } = body

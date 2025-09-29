@@ -160,6 +160,15 @@ export function UserWeeklyHoursTable({ users }: UserWeeklyHoursTableProps) {
     setCurrentWeekStart(monday);
   };
 
+  const goToWeek72h = () => {
+    // Ir para a semana de 15/09/2025 (quando foi criada a sessão de 72h)
+    const week72h = new Date(2025, 8, 15); // Setembro = 8 (0-indexed)
+    const monday = new Date(week72h);
+    monday.setDate(week72h.getDate() - ((week72h.getDay() + 6) % 7));
+    monday.setHours(0, 0, 0, 0);
+    setCurrentWeekStart(monday);
+  };
+
   const handleResetWeeklyHours = async () => {
     setLoading(true);
     try {
@@ -215,6 +224,16 @@ export function UserWeeklyHoursTable({ users }: UserWeeklyHoursTableProps) {
               className={isCurrentWeek ? "bg-blue-100" : ""}
             >
               Hoje
+            </Button>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToWeek72h}
+              disabled={loading}
+              className="bg-green-50 border-green-200 text-green-700 hover:bg-green-100"
+            >
+              Semana 72h
             </Button>
             
             <Button
