@@ -311,9 +311,9 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
         new Date(session.startTime) <= weekEndDate
       );
       
-      // Somar as durações das sessões (já estão em horas)
+      // Somar as durações das sessões (converter de segundos para horas)
       const totalHours = completedSessions.reduce((sum, session) => {
-        return sum + (session.duration || 0);
+        return sum + ((session.duration || 0) / 3600);
       }, 0);
       
       return totalHours;

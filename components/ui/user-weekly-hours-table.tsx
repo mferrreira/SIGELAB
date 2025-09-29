@@ -132,7 +132,7 @@ export function UserWeeklyHoursTable({ users }: UserWeeklyHoursTableProps) {
       );
       
       const totalHours = completedSessions.reduce((sum, session) => {
-        return sum + (session.duration || 0);
+        return sum + ((session.duration || 0) / 3600); // Converter segundos para horas
       }, 0);
       
       return totalHours;
