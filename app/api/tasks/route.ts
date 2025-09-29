@@ -20,7 +20,18 @@ export async function GET(request: Request) {
     
     let tasks
     if (projectId) {
-      tasks = await taskController.getTasksByProject(parseInt(projectId))
+      // Buscar tasks do projeto específico
+      const projectTasks = await taskController.getTasksByProject(parseInt(projectId))
+      // Buscar tasks globais/públicas
+      const allTasks = await taskController.getTasksForUser(userId, userRoles)
+      const globalTasks = allTasks.filter(task => task.isGlobal || task.taskVisibility === 'public')
+      // Combinar tasks do projeto + tasks globais
+      tasks = [...projectTasks, ...globalTasks]
+      // Remover duplicatas baseado no ID
+      const uniqueTasks = tasks.filter((task, index, self) => 
+        index === self.findIndex(t => t.id === task.id)
+      )
+      tasks = uniqueTasks
     } else {
       // Filtrar tarefas baseado no usuário e suas permissões
       tasks = await taskController.getTasksForUser(userId, userRoles)
