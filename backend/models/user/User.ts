@@ -228,6 +228,11 @@ export abstract class User {
         return this;
     }
 
+    applyPenalty(points: number): User {
+        this.pointsManager.applyPenalty(points);
+        return this;
+    }
+
     setPoints(points: number): User {
         this.pointsManager.setPoints(points);
         return this;

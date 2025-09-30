@@ -1,36 +1,32 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15
-    container_name: jogos-postgres
+    container_name: display-quest-db
     environment:
-      POSTGRES_DB: jogos
-      POSTGRES_USER: jogos
-      POSTGRES_PASSWORD: jogos123
+      POSTGRES_DB: display-quest
+      POSTGRES_USER: display-quest
+      POSTGRES_PASSWORD: display-quest123
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
-      - jogos-network
+      - display-quest-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U jogos -d jogos"]
+      test: ["CMD-SHELL", "pg_isready -U display-quest -d display-quest"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Next.js Application
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: jogos-app
+    build: .
+    container_name: display-quest
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://jogos:jogos123@postgres:5432/jogos
+      - DATABASE_URL=postgresql://display-quest:display-quest123@postgres:5432/display-quest
       - NEXTAUTH_URL=http://localhost:3000
       - NEXTAUTH_SECRET=your-secret-key-here
       - NODE_ENV=production
@@ -38,12 +34,23 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - jogos-network
+      - display-quest-network
     restart: unless-stopped
+    command: >
+      sh -c "
+        echo '🚀 Aguardando banco estar pronto...' &&
+        sleep 5 &&
+        echo '🗄️ Executando migrations...' &&
+        npx prisma db push &&
+        echo '🌱 Executando seed...' &&
+        (npx prisma db seed || echo 'ℹ️ Seed falhou ou já foi executado') &&
+        echo '✅ Iniciando aplicação...' &&
+        node server.js
+      "
 
 volumes:
   postgres_data:
 
 networks:
-  jogos-network:
-    driver: bridge 
+  display-quest-network:
+    driver: bridge

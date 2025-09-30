@@ -30,7 +30,6 @@ const nextConfig = {
   output: 'standalone',
   webpack: (config, { isServer }) => {
     if (!isServer) {
-      // Fix for openid-client in browser environment
       config.resolve.fallback = {
         ...config.resolve.fallback,
         crypto: false,
@@ -55,7 +54,6 @@ const nextConfig = {
 }
 
 if (userConfig) {
-  // ESM imports will have a "default" property
   const config = userConfig.default || userConfig
 
   for (const key in config) {

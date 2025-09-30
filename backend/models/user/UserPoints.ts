@@ -5,10 +5,21 @@ export class UserPoints {
     ) {}
 
     addPoints(points: number): void {
-        if (points < 0) {
-            throw new Error("Pontos não podem ser negativos");
-        }
+        // Permitir valores negativos para penalizações
         this.points += points;
+        
+        // Garantir que o total não fique negativo (mínimo 0)
+        if (this.points < 0) {
+            this.points = 0;
+        }
+    }
+
+    /**
+     * Aplica penalização permitindo que os pontos finais sejam negativos
+     * Usado para penalizações por atraso em tasks
+     */
+    applyPenalty(points: number): void {
+        this.points += points; // Permite valores negativos finais
     }
 
     removePoints(points: number): void {

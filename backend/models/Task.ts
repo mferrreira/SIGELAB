@@ -173,6 +173,11 @@ export class Task {
     this._completed = false;
   }
 
+  // Método para marcar como completada sem validações (usado na aprovação)
+  markAsCompleted(): void {
+    this._completed = true;
+  }
+
   validate(): void {
     if (!this._title || this._title.trim().length === 0) {
       throw new Error('Título da tarefa é obrigatório');

@@ -1,231 +1,280 @@
-# 🧪 Plataforma de Gerenciamento de Laboratórios Educacionais
+# Sistema de Gerenciamento de Laboratórios Educacionais
 
-Uma plataforma gamificada completa para gerenciamento de projetos, tarefas e recursos em laboratórios educacionais do IFNMG.
+Plataforma web para gestão integrada de projetos, recursos e atividades em laboratórios de pesquisa educacional.
 
-## 🚀 Funcionalidades Principais
+## Visão Geral
 
-### 👥 Gestão de Usuários
-- **Sistema de Autenticação**: Login seguro com NextAuth.js
-- **Papéis Hierárquicos**: Admin, Laboratorista, Gerente de Projeto, Voluntário
-- **Aprovação de Usuários**: Controle de acesso com aprovação manual
-- **Perfis Personalizados**: Pontos, tarefas completadas, horários
+Este sistema foi desenvolvido para otimizar a gestão de laboratórios educacionais, proporcionando controle centralizado de projetos, acompanhamento de atividades estudantis e monitoramento de recursos. A plataforma integra elementos de gamificação para aumentar o engajamento dos usuários e facilitar o acompanhamento acadêmico.
 
-### 📋 Gestão de Projetos
-- **Criação de Projetos**: Interface intuitiva para novos projetos
-- **Membros de Projeto**: Sistema de convites e participação
-- **Kanban Board**: Visualização e gestão de tarefas por status
-- **Progresso em Tempo Real**: Acompanhamento de conclusão
-
-### 🎯 Sistema de Tarefas
-- **Atribuição Inteligente**: Tarefas por usuário ou projeto
-- **Sistema de Pontos**: Gamificação com pontuação por tarefa
-- **Prioridades**: Baixa, Média, Alta
-- **Prazos**: Controle de datas de entrega
-- **Status Dinâmicos**: To-do, In Progress, In Review, Adjust, Done
-
-### 🏆 Gamificação
-- **Sistema de Pontos**: Acumulação por tarefas completadas
-- **Loja de Recompensas**: Resgate de pontos por benefícios
-- **Aprovação de Compras**: Controle laboratorista/admin
-- **Leaderboard**: Ranking de usuários por pontos
-
-### 📅 Calendário e Agendamento
-- **Responsabilidades do Lab**: Controle de horários de responsabilidade
-- **Agenda Compartilhada**: Visualização de eventos e disponibilidade
-- **Logs Diários**: Registro de atividades por projeto
-- **Relatórios Semanais**: Resumos automáticos de progresso
-
-### ⏱️ Controle de Tempo
-- **Sessões de Trabalho**: Timer para atividades
-- **Logs de Atividade**: Registro detalhado de tempo
-- **Relatórios de Produtividade**: Análise de horas trabalhadas
-
-## 🛠️ Tecnologias Utilizadas
+## Arquitetura do Sistema
 
 ### Frontend
 - **Next.js 15** - Framework React com App Router
-- **TypeScript** - Tipagem estática
-- **Tailwind CSS** - Estilização utilitária
-- **Radix UI** - Componentes acessíveis
-- **Lucide React** - Ícones modernos
+- **TypeScript** - Tipagem estática para maior robustez
+- **Tailwind CSS** - Framework CSS utilitário
+- **Radix UI** - Biblioteca de componentes acessíveis
+- **React Hook Form** - Gerenciamento de formulários
 
 ### Backend
-- **Next.js API Routes** - API RESTful
-- **Prisma ORM** - Acesso type-safe ao banco
-- **PostgreSQL** - Banco de dados relacional
-- **NextAuth.js** - Autenticação segura
-- **bcryptjs** - Hash de senhas
+- **Next.js API Routes** - Endpoints RESTful
+- **Prisma ORM** - Camada de acesso aos dados com type safety
+- **PostgreSQL** - Sistema gerenciador de banco de dados relacional
+- **NextAuth.js** - Sistema de autenticação e autorização
+- **bcryptjs** - Criptografia de senhas
 
-### DevOps
-- **Docker** - Containerização
-- **Docker Compose** - Orquestração local
-- **PostgreSQL** - Banco de dados
+### Infraestrutura
+- **Docker** - Containerização da aplicação
+- **Docker Compose** - Orquestração de serviços
+- **PostgreSQL** - Banco de dados principal
 
-## 📦 Instalação e Configuração
+## Funcionalidades Principais
+
+### Gestão de Usuários
+- Sistema de autenticação baseado em sessões
+- Controle de acesso baseado em papéis (RBAC)
+- Processo de aprovação de novos usuários
+- Perfis personalizáveis com métricas individuais
+
+### Gestão de Projetos
+- Criação e administração de projetos de pesquisa
+- Sistema de convites para participação
+- Interface Kanban para visualização de tarefas
+- Acompanhamento de progresso em tempo real
+
+### Sistema de Tarefas
+- Atribuição de tarefas por usuário ou projeto
+- Sistema de pontuação para gamificação
+- Controle de prioridades e prazos
+- Estados de progresso configuráveis
+
+### Gamificação
+- Sistema de pontos por conclusão de atividades
+- Loja virtual para resgate de recompensas
+- Processo de aprovação para compras
+- Ranking de produtividade dos usuários
+
+### Controle de Tempo
+- Registro de sessões de trabalho
+- Logs detalhados de atividades
+- Relatórios de produtividade
+- Análise de horas trabalhadas
+
+### Agendamento
+- Gestão de responsabilidades do laboratório
+- Calendário compartilhado de eventos
+- Controle de disponibilidade de recursos
+- Relatórios semanais automatizados
+
+## Instalação e Configuração
 
 ### Pré-requisitos
-- Node.js 18+ 
-- PostgreSQL 12+
-- Docker (opcional)
+- Node.js versão 18 ou superior
+- PostgreSQL versão 12 ou superior
+- Docker (opcional, para ambiente containerizado)
 
-### 1. Clone o Repositório
+### Configuração do Ambiente de Desenvolvimento
+
+1. **Clonagem do Repositório**
 ```bash
 git clone <repository-url>
 cd jogos-main
 ```
 
-### 2. Instale as Dependências
+2. **Instalação de Dependências**
 ```bash
 npm install
-# ou
-yarn install
 ```
 
-### 3. Configure as Variáveis de Ambiente
+3. **Configuração de Variáveis de Ambiente**
 ```bash
 cp .env.example .env.local
 ```
 
-Edite o arquivo `.env.local`:
+Configure as seguintes variáveis no arquivo `.env.local`:
 ```env
 DATABASE_URL="postgresql://user:password@localhost:5432/lab_management"
 NEXTAUTH_SECRET="your-secret-key"
 NEXTAUTH_URL="http://localhost:3000"
 ```
 
-### 4. Configure o Banco de Dados
+4. **Configuração do Banco de Dados**
 ```bash
-# Execute as migrações
 npx prisma migrate dev
-
-# Gere o cliente Prisma
 npx prisma generate
 ```
 
-### 5. Execute o Projeto
+5. **Execução em Modo de Desenvolvimento**
 ```bash
-# Desenvolvimento
 npm run dev
-
-# Produção
-npm run build
-npm start
 ```
 
-## 🐳 Docker (Opcional)
+### Configuração com Docker
 
-### Desenvolvimento
+Para ambiente de produção ou desenvolvimento isolado:
+
 ```bash
-docker-compose -f docker-compose.dev.yml up
+# Subir todos os serviços
+docker-compose up --build -d
+
+# Verificar status
+docker-compose ps
+
+# Ver logs
+docker-compose logs -f app
 ```
 
-### Produção
-```bash
-docker-compose up -d
-```
-
-## 🏗️ Estrutura do Projeto
+## Estrutura do Projeto
 
 ```
 jogos-main/
 ├── app/                    # Next.js App Router
-│   ├── api/               # API Routes
-│   ├── dashboard/         # Páginas do dashboard
-│   └── layout.tsx         # Layout principal
-├── components/            # Componentes React
-│   ├── ui/               # Componentes base
-│   └── *.tsx             # Componentes específicos
-├── lib/                   # Utilitários e configurações
-│   ├── prisma.ts         # Cliente Prisma
-│   ├── auth-context.tsx  # Contexto de autenticação
-│   └── types.ts          # Tipos TypeScript
-├── prisma/               # Schema e migrações
-│   └── schema.prisma     # Schema do banco
-└── public/               # Arquivos estáticos
+│   ├── api/               # Endpoints da API REST
+│   ├── dashboard/         # Interface administrativa
+│   └── layout.tsx         # Layout principal da aplicação
+├── components/            # Componentes React reutilizáveis
+│   ├── ui/               # Componentes de interface base
+│   ├── admin/            # Componentes administrativos
+│   └── features/         # Componentes de funcionalidades específicas
+├── contexts/             # Contextos React para gerenciamento de estado
+├── lib/                  # Bibliotecas e utilitários
+│   ├── prisma.ts         # Cliente Prisma configurado
+│   ├── auth/             # Configurações de autenticação
+│   └── utils/            # Funções utilitárias
+├── prisma/               # Schema e migrações do banco de dados
+│   └── schema.prisma     # Definição do schema
+├── cli/                  # Ferramentas de linha de comando
+└── public/               # Recursos estáticos
 ```
 
-## 👤 Papéis e Permissões
+## Modelo de Papéis e Permissões
 
-### 🔧 Admin
-- Acesso total ao sistema
-- Gestão de usuários e aprovações
-- Configurações do laboratório
-- Relatórios completos
+### Coordenador
+- Acesso administrativo completo ao sistema
+- Gestão de usuários e processos de aprovação
+- Configurações gerais do laboratório
+- Acesso a todos os relatórios e métricas
 
-### 🧪 Laboratorista
-- Gestão de responsabilidades
-- Aprovação de compras na loja
-- Gestão de projetos e tarefas
-- Controle de horários
+### Gerente
+- Gestão estratégica e operacional
+- Aprovação de projetos e recursos
+- Controle de acesso a funcionalidades
+- Acompanhamento de indicadores de desempenho
 
-### 📊 Gerente de Projeto
-- Gestão de projetos próprios
-- Atribuição de tarefas
-- Acompanhamento de membros
-- Relatórios de projeto
+### Laboratorista
+- Gestão operacional do laboratório
+- Controle de responsabilidades e horários
+- Aprovação de compras e recursos
+- Supervisão de projetos e atividades
 
-### 👨‍🎓 Voluntário
-- Visualização de tarefas atribuídas
-- Registro de logs diários
-- Participação em projetos
-- Resgate de recompensas
+### Gerente de Projeto
+- Gestão de projetos específicos
+- Atribuição e acompanhamento de tarefas
+- Relatórios de progresso do projeto
+- Coordenação de membros da equipe
 
-## 🔒 Segurança
+### Pesquisador
+- Participação em projetos de pesquisa
+- Execução de tarefas atribuídas
+- Registro de atividades e progresso
+- Acesso a recursos do laboratório
 
-- **Autenticação**: NextAuth.js com JWT
-- **Hash de Senhas**: bcryptjs
-- **Controle de Acesso**: Baseado em papéis
-- **Validação**: TypeScript + Zod
-- **HTTPS**: Recomendado para produção
+### Colaborador
+- Participação em atividades do laboratório
+- Execução de tarefas delegadas
+- Registro de horas e atividades
+- Acesso limitado a funcionalidades
 
-## 📊 Monitoramento
+### Voluntário
+- Participação em atividades básicas
+- Execução de tarefas públicas
+- Registro de atividades
+- Acesso restrito ao sistema
 
-### Métricas Disponíveis
-- Usuários ativos por período
-- Tarefas completadas
-- Pontos distribuídos
-- Tempo de sessão
-- Produtividade por projeto
+## Segurança e Autenticação
 
-### Logs
-- Logs de autenticação
-- Logs de ações administrativas
-- Logs de erros
-- Logs de performance
+O sistema implementa múltiplas camadas de segurança:
 
-## 🚀 Deploy
+- **Autenticação**: Baseada em NextAuth.js com tokens JWT
+- **Autorização**: Controle de acesso baseado em papéis (RBAC)
+- **Criptografia**: Senhas hasheadas com bcryptjs
+- **Validação**: Schema validation com TypeScript e Zod
+- **HTTPS**: Recomendado para ambientes de produção
 
-### Requisitos Mínimos
+## Monitoramento e Métricas
+
+### Indicadores Disponíveis
+- Número de usuários ativos por período
+- Taxa de conclusão de tarefas
+- Distribuição de pontos e recompensas
+- Tempo médio de sessão
+- Produtividade por projeto e usuário
+
+### Sistema de Logs
+- Logs de autenticação e autorização
+- Registro de ações administrativas
+- Monitoramento de erros e exceções
+- Métricas de performance da aplicação
+
+## Deploy em Produção
+
+### Requisitos Mínimos do Servidor
 - **CPU**: 2-4 vCPUs
-- **RAM**: 4-8 GB
-- **Storage**: 50-100 GB SSD
-- **Network**: 1 Gbps
+- **Memória RAM**: 4-8 GB
+- **Armazenamento**: 50-100 GB SSD
+- **Rede**: 1 Gbps
+
+### Processo de Deploy
+
+1. **Clone do Repositório**
+```bash
+git clone <repository-url>
+cd jogos-main
+```
+
+2. **Deploy com Docker**
+```bash
+docker-compose up --build -d
+```
+
+3. **Criação de Usuário Administrador**
+```bash
+./cli/cli.sh create-admin
+```
+
+4. **Verificação do Sistema**
+```bash
+curl http://localhost:3000/api/health
+```
 
 ### Plataformas Recomendadas
-- **Vercel** + **Railway** (Managed)
+- **Vercel** + **Railway** (solução gerenciada)
 - **DigitalOcean** Droplet
 - **AWS EC2** + **RDS**
 - **Google Cloud Platform**
 
-## 🤝 Contribuição
+## Contribuição
 
-1. Fork o projeto
-2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. Push para a branch (`git push origin feature/AmazingFeature`)
-5. Abra um Pull Request
+Para contribuir com o projeto:
 
-## 📝 Licença
+1. Faça um fork do repositório
+2. Crie uma branch para sua funcionalidade (`git checkout -b feature/nova-funcionalidade`)
+3. Implemente suas alterações
+4. Execute os testes locais
+5. Faça commit das mudanças (`git commit -m 'Adiciona nova funcionalidade'`)
+6. Push para sua branch (`git push origin feature/nova-funcionalidade`)
+7. Abra um Pull Request
 
-Este projeto está sob a licença MIT. Veja o arquivo `LICENSE` para mais detalhes.
+## Licença
 
-## 📞 Suporte
+Este projeto está licenciado sob a Licença MIT.
 
-Para dúvidas ou suporte:
-- Abra uma issue no GitHub
+## Suporte e Contato
+
+Para dúvidas técnicas ou suporte:
+- Abra uma issue no repositório GitHub
 - Entre em contato com a equipe de desenvolvimento
-- Consulte a documentação técnica
+- Consulte a documentação técnica disponível
 
 ---
 
-**Desenvolvido para o IFNMG - Instituto Federal do Norte de Minas Gerais** 🎓 
+**Desenvolvido por Márcio Martins Ferreira Júnior, Rian Gabriel Andrade e Matheus Silva Seixas para o IFNMG - Instituto Federal do Norte de Minas Gerais**

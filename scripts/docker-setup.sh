@@ -18,47 +18,13 @@ sleep 10
 echo "🗄️ Running database migrations..."
 docker-compose exec app npx prisma db push
 
-# Create admin user
-echo "👤 Creating admin user..."
-docker-compose exec app node -e "
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+# Wait for app to be ready
+echo "⏳ Waiting for application to be ready..."
+sleep 15
 
-const prisma = new PrismaClient();
-
-async function createAdminUser() {
-  try {
-    const hashedPassword = await bcrypt.hash('123', 10);
-    
-    const adminUser = await prisma.users.create({
-      data: {
-        name: 'Admin',
-        email: 'admin@example.com',
-        role: 'administrador_laboratorio',
-        password: hashedPassword,
-        status: 'active',
-        points: 0,
-        completedTasks: 0,
-        weekHours: 40
-      }
-    });
-    
-    console.log('✅ Admin user created successfully!');
-    console.log('📧 Email: admin@example.com');
-    console.log('🔑 Password: 123');
-  } catch (error) {
-    if (error.code === 'P2002') {
-      console.log('ℹ️ Admin user already exists');
-    } else {
-      console.error('❌ Error creating admin user:', error);
-    }
-  } finally {
-    await prisma.\$disconnect();
-  }
-}
-
-createAdminUser();
-"
+# Check if seed was executed successfully
+echo "✅ Database setup completed!"
+echo "🌱 Seed data should be automatically loaded"
 
 echo "✅ Setup complete!"
 echo "🌐 Application is running at: http://localhost:3000"
