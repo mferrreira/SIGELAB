@@ -120,18 +120,23 @@ export default function LeaderboardPage() {
                       <div>
                         <p className="font-medium">{rankedUser.name}</p>
                         <p className="text-xs text-muted-foreground capitalize">
-                          {rankedUser.roles.map((role, i) => (
-                            <span key={role}>
-                              {i > 0 && ", "}
-                              {role === "GERENTE_PROJETO" ? "Gerente de Projeto" :
-                               role === "LABORATORISTA" ? "Laboratorista" :
-                               role === "COORDENADOR" ? "Coordenador" :
-                               role === "GERENTE" ? "Gerente" :
-                               role === "PESQUISADOR" ? "Pesquisador" :
-                               role === "COLABORADOR" ? "Colaborador" :
-                               role}
-                            </span>
-                          ))}
+                          {rankedUser.roles && rankedUser.roles.length > 0 ? (
+                            rankedUser.roles.map((role, i) => (
+                              <span key={role}>
+                                {i > 0 && ", "}
+                                {role === "GERENTE_PROJETO" ? "Gerente de Projeto" :
+                                 role === "LABORATORISTA" ? "Laboratorista" :
+                                 role === "COORDENADOR" ? "Coordenador" :
+                                 role === "GERENTE" ? "Gerente" :
+                                 role === "PESQUISADOR" ? "Pesquisador" :
+                                 role === "COLABORADOR" ? "Colaborador" :
+                                 role === "VOLUNTARIO" ? "Voluntário" :
+                                 role}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-400">Sem função definida</span>
+                          )}
                         </p>
                       </div>
                     </div>

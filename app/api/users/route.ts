@@ -35,9 +35,10 @@ export async function GET() {
         id: true,
         name: true,
         email: canViewFullUsers,
-        roles: canViewFullUsers,
+        roles: true, // Sempre retornar roles para o ranking funcionar
         status: canViewFullUsers,
         points: true,
+        completedTasks: true, // Adicionar para o ranking
         avatar: true,
         bio: canViewFullUsers
       },
