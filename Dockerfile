@@ -30,7 +30,6 @@ RUN npm install --legacy-peer-deps && npm cache clean --force
 
 # Copia arquivos do Prisma e Client já gerado
 COPY --from=builder /app/prisma ./prisma/
-COPY --from=builder /app/lib/generated ./lib/generated/
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma/
 
 # Cria usuário não-root

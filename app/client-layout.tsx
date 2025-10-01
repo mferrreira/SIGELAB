@@ -17,6 +17,22 @@ import { LabEventsProvider } from "@/contexts/lab-events-context"
 import { IssueProvider } from "@/contexts/issue-context"
 import { NotificationProvider } from "@/contexts/notification-context"
 import { AppHeader } from "@/components/layout/app-header"
+import { usePathname } from "next/navigation"
+
+function LayoutContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  
+  // Páginas que NÃO devem mostrar o header
+  const authPages = ['/login', '/register']
+  const shouldShowHeader = !authPages.includes(pathname)
+  
+  return (
+    <>
+      {shouldShowHeader && <AppHeader />}
+      {children}
+    </>
+  )
+}
 
 export default function ClientLayout({
   children,
@@ -40,8 +56,7 @@ export default function ClientLayout({
                               <LaboratoryScheduleProvider>
                                 <WorkSessionProvider>
                                   <WeeklyReportProvider>
-                                    <AppHeader />
-                                    {children}
+                                    <LayoutContent>{children}</LayoutContent>
                                   </WeeklyReportProvider>
                                 </WorkSessionProvider>
                               </LaboratoryScheduleProvider>
