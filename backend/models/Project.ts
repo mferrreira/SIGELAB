@@ -289,16 +289,11 @@ export class Project {
             links: this._links,
         };
         
-        console.log('Project.toJSON - serializing links:', this._links);
-        console.log('Project.toJSON - final result:', result);
-        
         return result;
     }
 
     static fromPrisma(data: projects): Project {
-        console.log('Project.fromPrisma - raw data.links:', data.links);
-        console.log('Project.fromPrisma - data.links type:', typeof data.links);
-        
+
         const project = new Project({
             id: data.id,
             name: data.name,
@@ -310,13 +305,10 @@ export class Project {
             links: data.links ? (data.links as unknown as ProjectLink[]) : null,
         });
         
-        console.log('Project.fromPrisma - converted project links:', project.links);
         return project;
     }
 
     static create(data: Omit<IProject, 'id' | 'createdAt'>): Project {
-        console.log('Project.create - input data:', data);
-        console.log('Project.create - data.links:', data.links);
         
         const now = new Date().toISOString();
         const project = new Project({
@@ -324,7 +316,6 @@ export class Project {
             createdAt: now,
         });
         
-        console.log('Project.create - created project links:', project.links);
         return project;
     }
 }

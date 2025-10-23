@@ -34,23 +34,36 @@ export abstract class User {
     private hoursManager: UserHours;
     private timestamps: UserTimestamps;
 
-    constructor(data: IUser) {
-        this.id = data.id;
-        
-        // Initialize components
-        this.auth = new UserAuth(data.password || null);
-        this.profile = new UserProfile(
-            data.name,
-            data.email,
-            data.bio || null,
-            data.avatar || null,
-            data.profileVisibility || 'public'
-        );
-        this.pointsManager = new UserPoints(data.points || 0, data.completedTasks || 0);
-        this.rolesManager = new UserRoles(data.roles || []);
-        this.statusManager = new UserStatus(data.status || 'pending');
-        this.hoursManager = new UserHours(data.weekHours || 0, data.currentWeekHours || 0);
-        this.timestamps = new UserTimestamps(data.createdAt);
+    constructor(data: IUser | User) {
+        // Se data é um User, extrair os dados internos
+        if (data instanceof User) {
+            this.id = data.id;
+            this.auth = (data as any).auth;
+            this.profile = (data as any).profile;
+            this.pointsManager = (data as any).pointsManager;
+            this.rolesManager = (data as any).rolesManager;
+            this.statusManager = (data as any).statusManager;
+            this.hoursManager = (data as any).hoursManager;
+            this.timestamps = (data as any).timestamps;
+        } else {
+            // data é IUser, inicializar normalmente
+            this.id = data.id;
+            
+            // Initialize components
+            this.auth = new UserAuth(data.password || null);
+            this.profile = new UserProfile(
+                data.name,
+                data.email,
+                data.bio || null,
+                data.avatar || null,
+                data.profileVisibility || 'public'
+            );
+            this.pointsManager = new UserPoints(data.points || 0, data.completedTasks || 0);
+            this.rolesManager = new UserRoles(data.roles || []);
+            this.statusManager = new UserStatus(data.status || 'pending');
+            this.hoursManager = new UserHours(data.weekHours || 0, data.currentWeekHours || 0);
+            this.timestamps = new UserTimestamps(data.createdAt);
+        }
     }
 
     // Factory method to create appropriate role instance
@@ -122,8 +135,6 @@ export abstract class User {
         };
     }
 
-    // Delegation methods to components
-    // Authentication
     async setPassword(password: string): Promise<void> {
         return this.auth.setPassword(password);
     }

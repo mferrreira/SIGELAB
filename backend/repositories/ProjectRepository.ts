@@ -91,11 +91,6 @@ export class ProjectRepository implements IProjectRepository {
             orderBy: { createdAt: 'desc' }
         });
 
-        // Debug: Log the first project from database
-        if (projects.length > 0) {
-            console.log('First project from database:', JSON.stringify(projects[0], null, 2));
-        }
-
         return projects.map(project => Project.fromPrisma(project));
     }
 
@@ -151,7 +146,6 @@ export class ProjectRepository implements IProjectRepository {
         }
 
         const projectData = project.toJSON();
-        console.log('ProjectRepository.create - projectData.links:', projectData.links);
         
         const createdProject = await prisma.projects.create({
             data: {
@@ -165,8 +159,6 @@ export class ProjectRepository implements IProjectRepository {
             },
             include: this.getIncludeOptions()
         });
-
-        console.log('ProjectRepository.create - created project links:', createdProject.links);
         return Project.fromPrisma(createdProject);
     }
 
@@ -181,7 +173,6 @@ export class ProjectRepository implements IProjectRepository {
         }
 
         const projectData = project.toJSON();
-        console.log('ProjectRepository.update - projectData.links:', projectData.links);
         
         const updatedProject = await prisma.projects.update({
             where: { id: project.id },
@@ -194,8 +185,7 @@ export class ProjectRepository implements IProjectRepository {
             },
             include: this.getIncludeOptions()
         });
-
-        console.log('ProjectRepository.update - updated project links:', updatedProject.links);
+        
         return Project.fromPrisma(updatedProject);
     }
 

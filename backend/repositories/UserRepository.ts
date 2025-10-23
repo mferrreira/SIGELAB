@@ -140,6 +140,8 @@ export class UserRepository implements IUserRepository {
         }
 
         const data = user.toPrisma();
+        
+
         const updated = await prisma.users.update({
             where: { id: user.id },
             data,

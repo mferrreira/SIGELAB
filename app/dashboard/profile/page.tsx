@@ -38,7 +38,6 @@ export default function ProfilePage() {
   const today = new Date()
   const isoToday = today.toISOString().split("T")[0]
 
-  // Calculate week start (Monday) and end (Sunday)
   const dayOfWeek = today.getDay()
   const monday = new Date(today)
   monday.setDate(today.getDate() - ((dayOfWeek + 6) % 7))
@@ -47,7 +46,6 @@ export default function ProfilePage() {
   sunday.setDate(monday.getDate() + 6)
   sunday.setHours(23, 59, 59, 999)
 
-  // Check if user has a completed session for today
   const hasCompletedSessionToday =
     Array.isArray(sessions) &&
     sessions.filter(Boolean).some(
@@ -233,7 +231,6 @@ export default function ProfilePage() {
             </Card>
           </div>
 
-          {/* Tabs for different sections */}
           <Tabs defaultValue="activity" className="space-y-6">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="activity" className="flex items-center space-x-2">
@@ -255,7 +252,6 @@ export default function ProfilePage() {
             </TabsList>
 
             <TabsContent value="activity" className="space-y-6">
-              {/* Weekly Hours Summary Card */}
               <Card className="border-primary/20 bg-primary/5">
                 <CardContent className="p-4 flex items-center gap-4">
                   <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
@@ -391,7 +387,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* TODO: Add profile edit functionality */}
+      {/* TODO: Adicionar edição de perfil */}
     </div>
 
   )

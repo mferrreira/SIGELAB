@@ -402,6 +402,7 @@ export class UserService {
         password?: string;
     }): Promise<User> {
         const user = await this.userRepo.findById(id);
+
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
@@ -420,9 +421,13 @@ export class UserService {
         if (data.profileVisibility !== undefined) {
             user.updateProfileVisibility(data.profileVisibility);
         }
-        if (data.password !== undefined && data.password.trim()) {
-            await user.setPassword(data.password);
+        if (data.password !== undefined) {
+            if (data.password.trim()) {
+                await user.setPassword(data.password);
+            }
+            // Se password é string vazia, não fazemos nada (mantém a senha atual)
         }
+        // Se password é undefined, não fazemos nada (mantém a senha atual)
 
         const updatedUser = await this.userRepo.update(user);
         

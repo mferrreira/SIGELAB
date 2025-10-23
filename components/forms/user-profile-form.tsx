@@ -43,7 +43,6 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
     setSuccess(null)
 
     try {
-      // Only send fields that have changed
       const updateData: Partial<UserFormData> = {}
       
       if (formData.name !== user.name) updateData.name = formData.name
@@ -51,14 +50,11 @@ export function UserProfileForm({ user, onUpdate, onCancel }: UserProfileFormPro
       if (formData.profileVisibility !== user.profileVisibility) updateData.profileVisibility = formData.profileVisibility
       if (formData.weekHours !== user.weekHours) updateData.weekHours = formData.weekHours
       
-      // Only include password if it's provided
-      if (formData.password && formData.password.trim()) {
+      if (formData.password)       
         updateData.password = formData.password
-      }
 
       const result = await UserProfilesAPI.updateProfile(user.id, updateData)
       
-      // Update the user object with new data
       const updatedUser = {
         ...user,
         ...updateData
