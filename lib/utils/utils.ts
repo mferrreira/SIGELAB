@@ -5,9 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// ===== BACKEND UTILITIES =====
-
-// Time utilities
 export function parseTimeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number)
   return h * 60 + m
@@ -23,7 +20,6 @@ export function calculateTimeDifference(startTime: string, endTime: string): num
   return parseTimeToMinutes(endTime) - parseTimeToMinutes(startTime)
 }
 
-// Validation utilities
 export function validateRequiredFields(data: any, fields: string[]): { valid: boolean; error?: string } {
   for (const field of fields) {
     if (data[field] === undefined || data[field] === null || data[field] === '') {
@@ -68,7 +64,6 @@ export function validateRoles(roles: string[]): { valid: boolean; error?: string
   return { valid: true };
 }
 
-// Error handling utilities
 export function handlePrismaError(error: any): { status: number; message: string } {
   if (error.code === 'P2025') {
     return { status: 404, message: "Registro não encontrado" }
@@ -91,7 +86,6 @@ export function createApiError(message: string, status: number = 500) {
   return Response.json({ error: message }, { status })
 }
 
-// Data transformation utilities
 export function sanitizeUser(user: any) {
   const { password, ...safeUser } = user
   return safeUser
@@ -115,7 +109,6 @@ export function paginateResults<T>(items: T[], page: number = 1, limit: number =
   }
 }
 
-// Re-export access control utilities for frontend use
 export { 
   ACCESS_CONTROL, 
   hasAccess, 

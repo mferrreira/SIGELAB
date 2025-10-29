@@ -19,15 +19,7 @@ export class DailyLog {
     public workSessionId?: number | null;
     public createdAt?: Date;
 
-    constructor(
-        userId: number,
-        date: Date,
-        projectId?: number | null,
-        note?: string | null,
-        workSessionId?: number | null,
-        id?: number,
-        createdAt?: Date
-    ) {
+    constructor(userId: number, date: Date, projectId?: number | null, note?: string | null, workSessionId?: number | null, id?: number, createdAt?: Date) {
         this.id = id;
         this.userId = userId;
         this.projectId = projectId;

@@ -4,7 +4,6 @@ import { UserRole } from '@prisma/client';
 export class Laboratorista extends User {
     constructor(baseUser: BaseUser) {
         super(baseUser);
-        // Ensure Laboratorista role is present
         if (!this.hasRole('LABORATORISTA')) {
             this.addRole('LABORATORISTA');
         }
@@ -14,7 +13,6 @@ export class Laboratorista extends User {
         return 'Laboratorista';
     }
 
-    // Laboratorista has laboratory management and issue resolution capabilities
     canManageUsers(): boolean {
         return false;
     }
@@ -56,7 +54,7 @@ export class Laboratorista extends User {
     }
 
     canAwardBadges(): boolean {
-        return false; // Only Coordenador and Gerente can award badges
+        return false;
     }
 
     getRoleSpecificPermissions(): string[] {
@@ -75,7 +73,6 @@ export class Laboratorista extends User {
         ];
     }
 
-    // Laboratorista-specific methods
     canManageLabSchedule(): boolean {
         return true;
     }
@@ -109,11 +106,11 @@ export class Laboratorista extends User {
     }
 
     getRolePriority(): number {
-        return 3; // Third priority
+        return 3;
     }
 
     getRoleColor(): string {
-        return '#059669'; // Green
+        return '#059669';
     }
 
     getRoleIcon(): string {

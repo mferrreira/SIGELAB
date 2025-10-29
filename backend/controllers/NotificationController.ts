@@ -51,7 +51,6 @@ export class NotificationController {
 
     async markAsRead(notificationId: number, userId: number) {
         try {
-            // Verificar se a notificação pertence ao usuário
             const notification = await this.notificationService.findById(notificationId);
             if (!notification) {
                 throw new Error('Notificação não encontrada');
@@ -87,7 +86,6 @@ export class NotificationController {
 
     async deleteNotification(notificationId: number, userId: number) {
         try {
-            // Verificar se a notificação pertence ao usuário
             const notification = await this.notificationService.findById(notificationId);
             if (!notification) {
                 throw new Error('Notificação não encontrada');
@@ -108,7 +106,6 @@ export class NotificationController {
         }
     }
 
-    // Métodos para criar notificações específicas
     async createTaskReviewRequest(taskId: number, taskTitle: string, userId: number, projectLeaderId: number) {
         try {
             const notification = await this.notificationService.createTaskReviewRequest(

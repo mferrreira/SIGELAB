@@ -4,7 +4,6 @@ import { UserRole } from '@prisma/client';
 export class Colaborador extends User {
     constructor(baseUser: BaseUser) {
         super(baseUser);
-        // Ensure Colaborador role is present
         if (!this.hasRole('COLABORADOR')) {
             this.addRole('COLABORADOR');
         }
@@ -14,7 +13,6 @@ export class Colaborador extends User {
         return 'Colaborador';
     }
 
-    // Colaborador has task management and collaboration capabilities
     canManageUsers(): boolean {
         return false;
     }

@@ -77,7 +77,6 @@ export class UserProfile {
         return this.avatar;
     }
 
-    // Profile visibility methods
     isProfilePublic(): boolean {
         return this.profileVisibility === 'public';
     }
@@ -92,14 +91,13 @@ export class UserProfile {
 
     canViewProfile(viewerRoles: string[]): boolean {
         if (this.isProfilePublic()) return true;
-        if (this.isProfilePrivate()) return false; // Only owner can view
+        if (this.isProfilePrivate()) return false;
         if (this.isProfileMembersOnly()) {
             return viewerRoles.length > 0;
         }
         return false;
     }
 
-    // Validation
     isValid(): boolean {
         return !!(
             this.name &&

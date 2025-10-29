@@ -4,7 +4,6 @@ import { UserRole } from '@prisma/client';
 export class GerenteProjeto extends User {
     constructor(baseUser: BaseUser) {
         super(baseUser);
-        // Ensure GerenteProjeto role is present
         if (!this.hasRole('GERENTE_PROJETO')) {
             this.addRole('GERENTE_PROJETO');
         }
@@ -14,7 +13,6 @@ export class GerenteProjeto extends User {
         return 'Gerente de Projeto';
     }
 
-    // GerenteProjeto has project management capabilities
     canManageUsers(): boolean {
         return false;
     }
@@ -73,7 +71,6 @@ export class GerenteProjeto extends User {
         ];
     }
 
-    // GerenteProjeto-specific methods
     canAssignTasks(): boolean {
         return true;
     }
@@ -111,11 +108,11 @@ export class GerenteProjeto extends User {
     }
 
     getRolePriority(): number {
-        return 4; // Fourth priority
+        return 4;
     }
 
     getRoleColor(): string {
-        return '#2563EB'; // Blue
+        return '#2563EB'; 
     }
 
     getRoleIcon(): string {

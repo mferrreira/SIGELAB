@@ -2,7 +2,7 @@
 
 Sistema de linha de comando para gerenciar usuários em produção.
 
-## 📋 Comandos Disponíveis
+## Comandos Disponíveis
 
 ### **Modo Interativo**
 ```bash
@@ -47,20 +47,20 @@ docker-compose up --build -d
 ./cli/cli.sh reset-password
 ```
 
-## 👤 Roles Disponíveis
+## Roles Disponíveis
 
 - **COORDENADOR**: Acesso total ao sistema
 - **GERENTE**: Gestão estratégica e usuários
 - **LABORATORISTA**: Gestão operacional do lab
 
-## 🔒 Segurança
+## Segurança
 
 - Senhas são hasheadas com bcrypt
 - Emails são normalizados (lowercase)
 - Validação de roles
 - Verificação de duplicatas
 
-## 📝 Exemplo de Uso
+## Exemplo de Uso
 
 ```bash
 $ ./cli/cli.sh create-admin
@@ -79,7 +79,7 @@ Role (COORDENADOR/GERENTE/LABORATORISTA): COORDENADOR
 🔑 Status: active
 ```
 
-## 🆘 Solução de Problemas
+## Solução de Problemas
 
 ### **Erro: Sistema não está rodando**
 ```bash

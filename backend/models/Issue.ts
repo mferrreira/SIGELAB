@@ -70,7 +70,6 @@ export class Issue {
         });
     }
 
-    // Business logic methods
     updateTitle(title: string): Issue {
         if (!title || title.trim().length === 0) {
             throw new Error("Título do issue é obrigatório");
@@ -164,7 +163,6 @@ export class Issue {
         return this;
     }
 
-    // Validation methods
     isValid(): boolean {
         return !!(
             this.title &&
@@ -205,7 +203,6 @@ export class Issue {
         return this.status === 'closed';
     }
 
-    // Utility methods
     getStatusDisplayName(): string {
         const statusNames: Record<IssueStatus, string> = {
             open: 'Aberto',
@@ -228,20 +225,20 @@ export class Issue {
 
     getPriorityColor(): string {
         const priorityColors: Record<IssuePriority, string> = {
-            low: '#10B981',    // Green
-            medium: '#F59E0B', // Yellow
-            high: '#EF4444',   // Red
-            urgent: '#DC2626'  // Dark Red
+            low: '#10B981',    
+            medium: '#F59E0B', 
+            high: '#EF4444',  
+            urgent: '#DC2626'  
         };
         return priorityColors[this.priority];
     }
 
     getStatusColor(): string {
         const statusColors: Record<IssueStatus, string> = {
-            open: '#3B82F6',      // Blue
-            in_progress: '#F59E0B', // Yellow
-            resolved: '#10B981',   // Green
-            closed: '#6B7280'     // Gray
+            open: '#3B82F6',      
+            in_progress: '#F59E0B', 
+            resolved: '#10B981',   
+            closed: '#6B7280'     
         };
         return statusColors[this.status];
     }

@@ -117,7 +117,6 @@ export class Notification {
         return errors;
     }
 
-    // Serialization
     toJSON(): INotification {
         return {
             id: this._id,

@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       weekStart: new Date(weekStart),
       weekEnd: new Date(weekEnd),
       summary: summary || null,
-    });
+    }, Number(userId));
     return createApiResponse({ weeklyReport }, 201)
   } catch (error: any) {
     console.error("Erro ao criar relatório semanal:", error)

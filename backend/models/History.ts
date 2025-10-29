@@ -89,7 +89,7 @@ export class History {
   get description(): string | undefined { return this._description; }
   get metadata(): any { return this._metadata; }
 
-  // Business Logic Methods
+  // Regra de negócio
   setDescription(description: string): void {
     this._description = description;
   }
@@ -105,7 +105,7 @@ export class History {
 
     const changes: { field: string; oldValue: any; newValue: any }[] = [];
     
-    // Compare old and new values
+    // Comparar valores velhos e novos
     const allKeys = new Set([
       ...Object.keys(this._oldValues || {}),
       ...Object.keys(this._newValues || {})
@@ -179,7 +179,7 @@ export class History {
     }
   }
 
-  // Validation
+  // Validação
   validate(): void {
     if (!this._entityType) {
       throw new Error('Entity type is required');
@@ -198,7 +198,7 @@ export class History {
     }
   }
 
-  // Factory Methods
+  // Métodos Factory 
   static create(data: Omit<IHistory, 'id' | 'performedAt'>): History {
     const history = new History({
       ...data,
@@ -223,7 +223,7 @@ export class History {
     });
   }
 
-  // Conversion Methods
+  // Conversão
   toPrisma(): any {
     return {
       id: this._id,

@@ -48,11 +48,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Dados obrigatórios não fornecidos" }, { status: 400 })
     }
 
-    // Verificar se o usuário tem permissão para criar notificações
     const userRoles = session.user.roles || []
-    const canCreateNotifications = userRoles.includes('COORDENADOR') || 
-                                  userRoles.includes('GERENTE') || 
-                                  userRoles.includes('GERENTE_PROJETO')
+    const canCreateNotifications = userRoles.includes('COORDENADOR') || userRoles.includes('GERENTE') || userRoles.includes('GERENTE_PROJETO')
 
     if (!canCreateNotifications) {
       return NextResponse.json({ error: "Sem permissão para criar notificações" }, { status: 403 })

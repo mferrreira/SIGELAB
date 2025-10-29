@@ -4,7 +4,6 @@ import { UserRole } from '@prisma/client';
 export class Voluntario extends User {
     constructor(baseUser: BaseUser) {
         super(baseUser);
-        // Ensure Voluntario role is present
         if (!this.hasRole('VOLUNTARIO')) {
             this.addRole('VOLUNTARIO');
         }
@@ -14,7 +13,6 @@ export class Voluntario extends User {
         return 'Voluntário';
     }
 
-    // Voluntario has basic participation capabilities
     canManageUsers(): boolean {
         return false;
     }
@@ -72,7 +70,6 @@ export class Voluntario extends User {
         ];
     }
 
-    // Voluntario-specific methods
     canViewPublicProjects(): boolean {
         return true;
     }
@@ -110,11 +107,11 @@ export class Voluntario extends User {
     }
 
     getRolePriority(): number {
-        return 7; // Lowest priority
+        return 7;
     }
 
     getRoleColor(): string {
-        return '#16A34A'; // Green
+        return '#16A34A';
     }
 
     getRoleIcon(): string {

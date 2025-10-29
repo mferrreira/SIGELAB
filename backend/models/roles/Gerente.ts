@@ -4,7 +4,6 @@ import { UserRole } from '@prisma/client';
 export class Gerente extends User {
     constructor(baseUser: BaseUser) {
         super(baseUser);
-        // Ensure Gerente role is present
         if (!this.hasRole('GERENTE')) {
             this.addRole('GERENTE');
         }
@@ -14,7 +13,6 @@ export class Gerente extends User {
         return 'Gerente';
     }
 
-    // Gerente has management access but not full system control
     canManageUsers(): boolean {
         return true;
     }
@@ -32,7 +30,7 @@ export class Gerente extends User {
     }
 
     canManageLaboratory(): boolean {
-        return false; // Only Coordenador and Laboratorista can manage laboratory
+        return false;
     }
 
     canApproveUsers(): boolean {
@@ -52,7 +50,7 @@ export class Gerente extends User {
     }
 
     canResolveIssues(): boolean {
-        return false; // Only Coordenador and Laboratorista can resolve issues
+        return false;
     }
 
     canAwardBadges(): boolean {
@@ -76,7 +74,6 @@ export class Gerente extends User {
         ];
     }
 
-    // Gerente-specific methods
     canViewManagementDashboard(): boolean {
         return true;
     }
@@ -102,11 +99,11 @@ export class Gerente extends User {
     }
 
     getRolePriority(): number {
-        return 2; // Second highest priority
+        return 2;
     }
 
     getRoleColor(): string {
-        return '#7C3AED'; // Purple
+        return '#7C3AED';
     }
 
     getRoleIcon(): string {

@@ -46,10 +46,8 @@ export abstract class User {
             this.hoursManager = (data as any).hoursManager;
             this.timestamps = (data as any).timestamps;
         } else {
-            // data é IUser, inicializar normalmente
             this.id = data.id;
             
-            // Initialize components
             this.auth = new UserAuth(data.password || null);
             this.profile = new UserProfile(
                 data.name,
@@ -108,9 +106,7 @@ export abstract class User {
             roles: data.roles,
         });
 
-        // Return role-specific instance if roles exist
         if (data.roles && data.roles.length > 0) {
-            // Import UserFactory dynamically to avoid circular dependency
             const { UserFactory } = require('../UserFactory');
             return UserFactory.createFromRole(data.roles[0], baseUser);
         }
@@ -143,7 +139,6 @@ export abstract class User {
         return this.auth.validatePassword(password);
     }
 
-    // Profile
     updateName(name: string): User {
         this.profile.updateName(name);
         return this;
@@ -179,7 +174,6 @@ export abstract class User {
         return this;
     }
 
-    // Roles
     addRole(role: UserRole): User {
         this.rolesManager.addRole(role);
         return this;
@@ -202,7 +196,6 @@ export abstract class User {
         return this.rolesManager.hasAllRoles(roles);
     }
 
-    // Status
     approve(): User {
         this.statusManager.approve();
         return this;
@@ -228,7 +221,6 @@ export abstract class User {
         return this;
     }
 
-    // Points
     addPoints(points: number): User {
         this.pointsManager.addPoints(points);
         return this;
@@ -259,7 +251,6 @@ export abstract class User {
         return this;
     }
 
-    // Hours
     addWeekHours(hours: number): User {
         this.hoursManager.addWeekHours(hours);
         return this;
@@ -299,7 +290,6 @@ export abstract class User {
     get roles(): UserRole[] { return this.rolesManager.getRoles(); }
     get createdAt(): Date | undefined { return this.timestamps.getCreatedAt(); }
 
-    // Utility methods
     isValid(): boolean {
         return this.profile.isValid();
     }
@@ -376,7 +366,6 @@ export abstract class User {
         return this.profile.canViewProfile(viewer.roles);
     }
 
-    // Security methods
     toSafeObject(): any {
         const { auth, ...safeUser } = this;
         return safeUser;
@@ -414,12 +403,11 @@ export abstract class User {
         };
     }
 
-    // JSON serialization method
     toJSON(): any {
         return this.toPublicObject();
     }
 
-    // Abstract methods that must be implemented by role-specific classes
+    // Metodos abrastos de outras classes
     abstract canManageUsers(): boolean;
     abstract canManageProjects(): boolean;
     abstract canManageTasks(): boolean;
@@ -434,7 +422,7 @@ export abstract class User {
     abstract getRoleSpecificPermissions(): string[];
 }
 
-// Base implementation for users without specific roles
+// Classe base para usuários básicos sem permissões
 export class BaseUser extends User {
     canManageUsers(): boolean { return false; }
     canManageProjects(): boolean { return false; }
@@ -449,5 +437,3 @@ export class BaseUser extends User {
     canAwardBadges(): boolean { return false; }
     getRoleSpecificPermissions(): string[] { return ['create_issues']; }
 }
-
-// UserFactory is imported dynamically to avoid circular dependency

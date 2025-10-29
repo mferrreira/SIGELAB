@@ -30,29 +30,24 @@ export async function GET(request: Request) {
     let history;
 
     if (entityType && entityId) {
-      // Get history for specific entity
       history = await historyController.getEntityHistory(
         entityType as any,
         parseInt(entityId),
         limit ? parseInt(limit) : undefined
       );
     } else if (userId) {
-      // Get user activity
       history = await historyController.getUserActivity(
         parseInt(userId),
         limit ? parseInt(limit) : undefined
       );
     } else if (action) {
-      // Get history by action
       history = await historyController.getActivityByAction(action as any);
     } else if (startDate && endDate) {
-      // Get history by date range
       history = await historyController.getActivityByDateRange(
         new Date(startDate),
         new Date(endDate)
       );
     } else {
-      // Get recent activity
       history = await historyController.getRecentActivity(
         limit ? parseInt(limit) : 50
       );

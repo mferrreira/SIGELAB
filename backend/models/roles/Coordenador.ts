@@ -4,7 +4,6 @@ import { UserRole } from '@prisma/client';
 export class Coordenador extends User {
     constructor(baseUser: BaseUser) {
         super(baseUser);
-        // Ensure Coordenador role is present
         if (!this.hasRole('COORDENADOR')) {
             this.addRole('COORDENADOR');
         }
@@ -14,7 +13,6 @@ export class Coordenador extends User {
         return 'Coordenador';
     }
 
-    // Coordenador has full system access
     canManageUsers(): boolean {
         return true;
     }
@@ -78,7 +76,6 @@ export class Coordenador extends User {
         ];
     }
 
-    // Coordenador-specific methods
     canAccessAdminPanel(): boolean {
         return true;
     }
@@ -104,11 +101,11 @@ export class Coordenador extends User {
     }
 
     getRolePriority(): number {
-        return 1; // Highest priority
+        return 1;
     }
 
     getRoleColor(): string {
-        return '#DC2626'; // Red
+        return '#DC2626';
     }
 
     getRoleIcon(): string {

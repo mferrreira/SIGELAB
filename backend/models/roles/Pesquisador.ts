@@ -4,7 +4,6 @@ import { UserRole } from '@prisma/client';
 export class Pesquisador extends User {
     constructor(baseUser: BaseUser) {
         super(baseUser);
-        // Ensure Pesquisador role is present
         if (!this.hasRole('PESQUISADOR')) {
             this.addRole('PESQUISADOR');
         }
@@ -14,7 +13,6 @@ export class Pesquisador extends User {
         return 'Pesquisador';
     }
 
-    // Pesquisador has research-focused capabilities
     canManageUsers(): boolean {
         return false;
     }
@@ -72,7 +70,6 @@ export class Pesquisador extends User {
         ];
     }
 
-    // Pesquisador-specific methods
     canAccessResearchData(): boolean {
         return true;
     }
@@ -110,11 +107,11 @@ export class Pesquisador extends User {
     }
 
     getRolePriority(): number {
-        return 5; // Fifth priority
+        return 5; 
     }
 
     getRoleColor(): string {
-        return '#0891B2'; // Cyan
+        return '#0891B2';
     }
 
     getRoleIcon(): string {

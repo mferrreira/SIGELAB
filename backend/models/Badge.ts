@@ -4,10 +4,10 @@ export interface IBadge {
     id?: number;
     name: string;
     description: string;
-    icon?: string | null;
-    color?: string | null;
+    icon?: string | null | undefined;
+    color?: string | null | undefined;
     category: BadgeCategory;
-    criteria?: BadgeCriteria | null;
+    criteria?: IBadgeCriteria | null;
     isActive: boolean;
     createdAt?: Date;
     createdBy: number;
@@ -37,8 +37,8 @@ export class Badge {
     public id?: number;
     public name: string;
     public description: string;
-    public icon?: string | null;
-    public color?: string | null;
+    public icon?: string | null | undefined;
+    public color?: string | null | undefined;
     public category: BadgeCategory;
     public criteria?: IBadgeCriteria | null;
     public isActive: boolean;
@@ -95,7 +95,6 @@ export class Badge {
         };
     }
 
-    // Business logic methods
     updateName(name: string): Badge {
         if (!name || name.trim().length === 0) {
             throw new Error("Nome do badge é obrigatório");
@@ -146,7 +145,6 @@ export class Badge {
         return this;
     }
 
-    // Validation methods
     isValid(): boolean {
         return !!(
             this.name &&
@@ -160,7 +158,6 @@ export class Badge {
         return this.isActive && this.isValid();
     }
 
-    // Badge criteria validation
     checkCriteria(userStats: {
         points?: number;
         completedTasks?: number;
@@ -200,7 +197,6 @@ export class Badge {
         return true;
     }
 
-    // Utility methods
     getDisplayName(): string {
         return this.name;
     }
@@ -209,12 +205,12 @@ export class Badge {
         return this.description;
     }
 
-    getIconUrl(): string | null {
+    getIconUrl(): string | null | undefined {
         return this.icon;
     }
 
     getColorCode(): string {
-        return this.color || '#3B82F6'; // Default blue
+        return this.color || '#3B82F6';
     }
 
     getCategoryDisplayName(): string {
@@ -241,7 +237,7 @@ export class UserBadge {
     public userId: number;
     public badgeId: number;
     public earnedAt: Date;
-    public earnedBy?: number | null;
+    public earnedBy?: number | null | undefined;
 
     constructor(data: IUserBadge) {
         this.id = data.id;
@@ -277,7 +273,6 @@ export class UserBadge {
         };
     }
 
-    // Business logic methods
     isValid(): boolean {
         return !!(this.userId && this.badgeId);
     }
