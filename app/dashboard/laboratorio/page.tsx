@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Clock, Play, Square, AlertCircle, FileText, Bug, Plus } from "lucide-react"
+import { Loader2, Clock, Play, Square, AlertCircle, FileText, Bug, Plus, Calendar as CalendarIcon } from "lucide-react"
 import { IssueManagement } from "@/components/features/issue-management"
 import { IssueForm } from "@/components/forms/issue-form"
 import { format, parseISO, startOfMonth, endOfMonth, isWithinInterval, isSameDay } from "date-fns"
@@ -26,9 +26,12 @@ import DayViewCalendar from "@/components/ui/day-view-calendar"
 import { Input } from "@/components/ui/input"
 import { LaboratorySchedule } from "@/components/features/laboratory-schedule"
 import { hasAccess } from "@/lib/utils/utils"
+import { useUser } from "@/contexts/user-context"
+import { ScheduleGrid } from "@/components/admin/ScheduleGrid"
 
 export default function LabResponsibilityPage() {
   const { user, loading: authLoading } = useAuth()
+  const { users: labUsers, loading: labUsersLoading } = useUser()
   const router = useRouter()
   const {
     responsibilities,
@@ -318,6 +321,29 @@ export default function LabResponsibilityPage() {
                 <LaboratorySchedule />
               </Card>
             </div>
+
+            {labUsersLoading ? (
+              <Card>
+                <CardContent className="flex items-center justify-center py-6 text-muted-foreground">
+                  Carregando grade semanal...
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarIcon className="h-5 w-5" />
+                    Grade Semanal do Laboratório
+                  </CardTitle>
+                  <CardDescription>
+                    Visualize e edite seus horários de presença. Coordenadores e gerentes podem editar os horários de todos os usuários.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ScheduleGrid users={labUsers} currentUser={user || undefined} />
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {hasAccess(user?.roles || [], 'MANAGE_LABORATORY') && (

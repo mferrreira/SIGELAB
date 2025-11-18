@@ -3,6 +3,16 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
 import { prisma } from '@/lib/database/prisma'
 
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -10,9 +20,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
-    const user = await prisma.users.findUnique({
-      where: { email: session.user.email }
-    })
+    const user = await userService.findByEmail(session.user.email);
 
     if (!user) {
       return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
@@ -26,6 +34,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Usuário não tem permissão para visualizar outros usuários' }, { status: 403 })
     }
 
+    // TODO: Passar query para UserRepository e chamar com UserService
     // Buscar usuários ativos com campos diferentes baseado na permissão
     const users = await prisma.users.findMany({
       where: {
@@ -37,6 +46,7 @@ export async function GET() {
         email: canViewFullUsers,
         roles: true, // Sempre retornar roles para o ranking funcionar
         status: canViewFullUsers,
+        weekHours: true,
         points: true,
         completedTasks: true, // Adicionar para o ranking
         avatar: true,

@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { UserController } from "@/backend/controllers/UserController";
 
-const userController = new UserController();
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 // PATCH: Atualizar status do usuário
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -14,16 +21,16 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     let user;
     switch (action) {
       case "approve":
-        user = await userController.approveUser(id);
+        user = await userService.approveUser(id);
         break;
       case "reject":
-        user = await userController.rejectUser(id);
+        user = await userService.rejectUser(id);
         break;
       case "suspend":
-        user = await userController.suspendUser(id);
+        user = await userService.suspendUser(id);
         break;
       case "activate":
-        user = await userController.activateUser(id);
+        user = await userService.activateUser(id);
         break;
       default:
         return NextResponse.json({ error: "Ação inválida" }, { status: 400 });

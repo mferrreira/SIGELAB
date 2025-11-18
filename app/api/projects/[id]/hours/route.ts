@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { ProjectHoursController } from '@/backend/controllers/ProjectHoursController'
 import { prisma } from '@/lib/database/prisma'
+import { getProjectHours } from '@/backend/services/ProjectHoursService'
 
-const projectHoursController = new ProjectHoursController()
-
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
+export async function GET(request: Request, { params }: { params: { id: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -16,6 +12,7 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    //TODO: mover lógica para um repository
     const user = await prisma.users.findUnique({
       where: { email: session.user.email },
       include: {
@@ -33,8 +30,8 @@ export async function GET(
 
     const projectId = parseInt(params.id)
     const { searchParams } = new URL(request.url)
-    const weekStart = searchParams.get('weekStart')
-    const weekEnd = searchParams.get('weekEnd')
+    const weekStartParam = searchParams.get('weekStart')
+    const weekEndParam = searchParams.get('weekEnd')
 
     // Verificar se o usuário tem acesso ao projeto
     const hasAccess = user.projectMemberships.some(
@@ -45,11 +42,11 @@ export async function GET(
       return NextResponse.json({ error: 'Acesso negado ao projeto' }, { status: 403 })
     }
 
-    const hours = await projectHoursController.getProjectHours(
+    const hours = await getProjectHours({
       projectId,
-      weekStart || undefined,
-      weekEnd || undefined
-    )
+      weekStart: weekStartParam ? new Date(weekStartParam) : undefined,
+      weekEnd: weekEndParam ? new Date(weekEndParam) : undefined
+    })
 
     return NextResponse.json({ hours }, { status: 200 })
   } catch (error: any) {

@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
-import { UserController } from "@/backend/controllers/UserController";
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
 
-const userController = new UserController();
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 // GET: Obter perfis públicos dos usuários
 export async function GET(request: Request) {
@@ -12,13 +18,13 @@ export async function GET(request: Request) {
     let users;
     switch (type) {
       case "public":
-        users = await userController.getPublicProfiles();
+        users = await userService.getPublicProfiles();
         break;
       case "members":
-        users = await userController.getMemberProfiles();
+        users = await userService.getMemberProfiles();
         break;
       default:
-        users = await userController.getPublicProfiles();
+        users = await userService.getPublicProfiles();
     }
 
     return NextResponse.json({ users, type });

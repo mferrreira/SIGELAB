@@ -55,21 +55,40 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
   const loadAvailableUsers = async (search: string = "") => {
     setSearchLoading(true)
     try {
-      const response = await fetchAPI(`/api/users?search=${encodeURIComponent(search)}&excludeProjectId=${projectId}`)
-      if (response.success) {
-        const users = response.users.map((user: any) => ({
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          avatar: user.avatar,
-          roles: user.roles || [],
-          isMember: false, // Já filtrados pela API
-          isLeader: currentProject.leaderId === user.id
-        }))
-        setAvailableUsers(users)
-      }
+      const response = await fetchAPI<{ users: any[] }>("/api/users")
+      const normalizedSearch = search.trim().toLowerCase()
+      const existingMemberIds = new Set(currentProject.members?.map(member => member.userId))
+
+      const users = (response.users || response || []).filter((user: any) => {
+        if (!user || existingMemberIds.has(user.id)) {
+          return false
+        }
+
+        const matchesSearch =
+          !normalizedSearch ||
+          user.name?.toLowerCase().includes(normalizedSearch) ||
+          user.email?.toLowerCase().includes(normalizedSearch)
+
+        if (!matchesSearch) {
+          return false
+        }
+
+        const hasVolunteerRole = user.roles?.includes("VOLUNTARIO") || user.roles?.includes("COLABORADOR")
+        return hasVolunteerRole
+      }).map((user: any) => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        roles: user.roles || [],
+        isMember: false,
+        isLeader: currentProject.leaderId === user.id
+      }))
+
+      setAvailableUsers(users)
     } catch (error) {
       console.error("Erro ao buscar usuários:", error)
+      setAvailableUsers([])
     } finally {
       setSearchLoading(false)
     }
@@ -240,6 +259,7 @@ export function VolunteerActions({ projectId, onVolunteerAdded, onVolunteerRemov
                       <SelectItem value="COLABORADOR">Colaborador</SelectItem>
                       <SelectItem value="PESQUISADOR">Pesquisador</SelectItem>
                       <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
+                      <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

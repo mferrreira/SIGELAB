@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { UserController } from "@/backend/controllers/UserController";
 
-const userController = new UserController();
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 // GET: Obter leaderboard dos usuários
 export async function GET(request: Request) {
@@ -13,13 +20,13 @@ export async function GET(request: Request) {
     let users;
     switch (type) {
       case "points":
-        users = await userController.getTopUsersByPoints(limit ? parseInt(limit) : undefined);
+        users = await userService.getTopUsersByPoints(limit ? parseInt(limit) : undefined);
         break;
       case "tasks":
-        users = await userController.getTopUsersByTasks(limit ? parseInt(limit) : undefined);
+        users = await userService.getTopUsersByTasks(limit ? parseInt(limit) : undefined);
         break;
       default:
-        users = await userController.getTopUsersByPoints(limit ? parseInt(limit) : undefined);
+        users = await userService.getTopUsersByPoints(limit ? parseInt(limit) : undefined);
     }
 
     return NextResponse.json({ users, type });

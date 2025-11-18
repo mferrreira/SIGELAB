@@ -37,15 +37,18 @@ export interface Project {
   description?: string | null
   createdAt: string
   createdBy: number
+  leaderId?: number | null
   status: "active" | "completed" | "archived"
-  links?: { label: string; url: string }[] // Add links field
+  links?: { label: string; url: string }[]
 }
 
 export interface ProjectFormData {
   name: string
   description: string
   status: "active" | "completed" | "archived"
-  links?: { label: string; url: string }[] // Add links field
+  leaderId?: number | null
+  volunteerIds?: number[]
+  links?: { label: string; url: string }[]
 }
 
 // Badge types

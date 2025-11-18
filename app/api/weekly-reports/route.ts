@@ -2,9 +2,17 @@ import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { createApiResponse, createApiError } from "@/lib/utils/utils"
-import { WeeklyReportController } from "@/backend/controllers/WeeklyReportController"
 
-const weeklyReportController = new WeeklyReportController();
+import { WeeklyReportService } from "@/backend/services/WeeklyReportService"
+import { WeeklyReportRepository } from "@/backend/repositories/WeeklyReportRepository"
+import { UserRepository } from "@/backend/repositories/UserRepository"
+import { DailyLogRepository } from "@/backend/repositories/DailyLogRepository"
+
+const weeklyReportService = new WeeklyReportService(
+  new WeeklyReportRepository(),
+  new UserRepository(),
+  new DailyLogRepository(),
+);
 
 // GET: Obter relatórios semanais
 export async function GET(request: Request) {
@@ -16,12 +24,13 @@ export async function GET(request: Request) {
     const session = await getServerSession(authOptions)
     const currentUser = session?.user as any
 
-    let reports = await weeklyReportController.getAllReports();
+    let reports = await weeklyReportService.findAll();
 
     if (userId) reports = reports.filter((r: any) => r.userId === Number(userId));
     if (weekStart) reports = reports.filter((r: any) => new Date(r.weekStart) >= new Date(weekStart));
     if (weekEnd) reports = reports.filter((r: any) => new Date(r.weekEnd) <= new Date(weekEnd));
-    return createApiResponse({ weeklyReports: reports })
+    
+    return NextResponse.json({ weeklyReports: reports })
   } catch (error) {
     console.error("Erro ao buscar relatórios semanais:", error)
     return createApiError("Erro ao buscar relatórios semanais")
@@ -45,13 +54,14 @@ export async function POST(request: Request) {
       return createApiError("Sem permissão", 403)
     }
     
-    const weeklyReport = await weeklyReportController.createReport({
+    const weeklyReport = await weeklyReportService.create({
       userId: Number(userId),
       userName: user.name,
       weekStart: new Date(weekStart),
       weekEnd: new Date(weekEnd),
       summary: summary || null,
     }, Number(userId));
+
     return createApiResponse({ weeklyReport }, 201)
   } catch (error: any) {
     console.error("Erro ao criar relatório semanal:", error)

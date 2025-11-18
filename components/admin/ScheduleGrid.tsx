@@ -48,9 +48,13 @@ function getUserColor(userId: number) {
 
 interface ScheduleGridProps {
   users: any[]
+  readOnly?: boolean
+  currentUser?: { id: number; roles?: string[] }
 }
 
-export function ScheduleGrid({ users }: ScheduleGridProps) {
+const ADMIN_ROLES = ['COORDENADOR', 'GERENTE']
+
+export function ScheduleGrid({ users, readOnly = false, currentUser }: ScheduleGridProps) {
   const { toast } = useToast()
   const [schedules, setSchedules] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -67,6 +71,18 @@ export function ScheduleGrid({ users }: ScheduleGridProps) {
   useEffect(() => {
     setUserSchedule([])
   }, [selectedUserId])
+
+  const canManageAllSchedules = currentUser?.roles?.some(role => ADMIN_ROLES.includes(role)) || false
+  const canEditSelectedUser = !readOnly && (
+    canManageAllSchedules ||
+    (currentUser && selectedUserId === currentUser.id?.toString())
+  )
+
+  useEffect(() => {
+    if (!canManageAllSchedules && currentUser?.id) {
+      setSelectedUserId(currentUser.id.toString())
+    }
+  }, [canManageAllSchedules, currentUser])
 
   const fetchSchedules = async () => {
     setLoading(true)
@@ -87,6 +103,14 @@ export function ScheduleGrid({ users }: ScheduleGridProps) {
   }
 
   const handleDelete = async (scheduleId: number) => {
+    if (!canEditSelectedUser) {
+      toast({
+        title: "Sem permissão",
+        description: "Você só pode remover seus próprios horários.",
+        variant: "destructive"
+      })
+      return
+    }
     try {
       const response = await fetch(`/api/schedules/${scheduleId}`, {
         method: "DELETE",
@@ -124,6 +148,14 @@ export function ScheduleGrid({ users }: ScheduleGridProps) {
   }
 
   const handleSave = async () => {
+    if (!canEditSelectedUser) {
+      toast({
+        title: "Sem permissão",
+        description: "Você só pode editar seus próprios horários.",
+        variant: "destructive"
+      })
+      return
+    }
     setSaving(true)
     setError("")
     
@@ -210,13 +242,31 @@ export function ScheduleGrid({ users }: ScheduleGridProps) {
               {schedules.length} horários cadastrados
             </span>
           </div>
-          <Button onClick={() => setDialogOpen(true)} variant="outline" size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Definir Horários
-          </Button>
+          {!readOnly && (
+            <Button 
+              onClick={() => {
+                if (!canEditSelectedUser) {
+                  toast({
+                    title: "Sem permissão",
+                    description: "Você só pode editar o seu próprio horário.",
+                    variant: "destructive"
+                  })
+                  return
+                }
+                setDialogOpen(true)
+              }} 
+              variant="outline" 
+              size="sm"
+              disabled={!currentUser}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Definir Horários
+            </Button>
+          )}
         </div>
 
         {/* Dialog para definir horários */}
+        {!readOnly && (
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
@@ -229,16 +279,24 @@ export function ScheduleGrid({ users }: ScheduleGridProps) {
             <div className="space-y-4">
               <div>
                 <label className="text-sm font-medium">Selecionar Usuário</label>
-                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <Select 
+                  value={selectedUserId} 
+                  onValueChange={setSelectedUserId}
+                  disabled={!canManageAllSchedules}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Escolha um usuário" />
                   </SelectTrigger>
                   <SelectContent>
-                    {users.filter(u => u.status === 'active').map((user) => (
-                      <SelectItem key={user.id} value={user.id.toString()}>
-                        {user.name} ({user.email})
-                      </SelectItem>
-                    ))}
+                    {users
+                      .filter(u => u.status === 'active')
+                      .filter(u => canManageAllSchedules || u.id === currentUser?.id)
+                      .map((user) => (
+                        <SelectItem key={user.id} value={user.id.toString()}>
+                          {user.name} ({user.email})
+                        </SelectItem>
+                      ))
+                    }
                   </SelectContent>
                 </Select>
               </div>
@@ -307,13 +365,17 @@ export function ScheduleGrid({ users }: ScheduleGridProps) {
                 <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
                   Cancelar
                 </Button>
-                <Button onClick={handleSave} disabled={!selectedUserId || userSchedule.length === 0 || saving}>
+                <Button 
+                  onClick={handleSave} 
+                  disabled={!selectedUserId || userSchedule.length === 0 || saving || !canEditSelectedUser}
+                >
                   {saving ? "Salvando..." : "Salvar"}
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
+        )}
 
         {/* Grade de horários */}
         <div className="overflow-x-auto">
@@ -363,13 +425,15 @@ export function ScheduleGrid({ users }: ScheduleGridProps) {
                                     <span className="ml-1 text-[10px] text-muted-foreground whitespace-nowrap">
                                       ({s.startTime} - {s.endTime})
                                     </span>
-                                    <button
-                                      onClick={() => handleDelete(s.id)}
-                                      className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity"
-                                      title="Remover"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
+                                    {!readOnly && canEditSelectedUser && (
+                                      <button
+                                        onClick={() => handleDelete(s.id)}
+                                        className="opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 transition-opacity"
+                                        title="Remover"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    )}
                                   </div>
                                 )
                               })}

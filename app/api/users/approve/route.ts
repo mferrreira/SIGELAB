@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { prisma } from "@/lib/database/prisma"
+
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 export async function GET(request: Request) {
   try {
@@ -16,18 +25,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Acesso negado.' }, { status: 403 });
     }
 
-    const pendingUsers = await prisma.users.findMany({
-      where: { status: "pending" },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        roles: true,
-        weekHours: true,
-        createdAt: true
-      },
-      orderBy: { createdAt: "asc" }
-    })
+    const pendingUsers = await userService.findPending();
 
     return NextResponse.json({ pendingUsers }, { status: 200 })
   } catch (error) {
@@ -58,17 +56,8 @@ export async function POST(request: Request) {
     }
 
     if (action === "approve") {
-      const updatedUser = await prisma.users.update({
-        where: { id: Number(userId) },
-        data: { status: "active" },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true,
-          status: true
-        }
-      })
+
+      const updatedUser = await userService.approveUser(Number(userId));
 
       return NextResponse.json({ 
         user: updatedUser, 
@@ -76,15 +65,7 @@ export async function POST(request: Request) {
       }, { status: 200 })
     } else {
 
-      const deletedUser = await prisma.users.delete({
-        where: { id: Number(userId) },
-        select: {
-          id: true,
-          name: true,
-          email: true,
-          roles: true
-        }
-      })
+      const deletedUser = await userService.delete(Number(userId));
 
       return NextResponse.json({ 
         user: deletedUser, 

@@ -1,15 +1,21 @@
 import { NextResponse } from "next/server"
-import { ProjectController } from "@/backend/controllers/ProjectController"
+//import { ProjectController } from "@/backend/controllers/ProjectController"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { ProjectService } from "@/backend/services/ProjectService";
+import { ProjectRepository } from "@/backend/repositories/ProjectRepository";
+import { ProjectMembershipRepository } from "@/backend/repositories/ProjectMembershipRepository";
 
-const projectController = new ProjectController();
+const projectService = new ProjectService(
+  new ProjectRepository(),
+  new ProjectMembershipRepository()
+)
 
 export async function GET(request: Request, context: { params: Promise<{ id: number }> }) {
   try {
     const params = await context.params;
     const id = Number(params.id);
-    const project = await projectController.getProject(id)
+    const project = await projectService.findById(id)
     return NextResponse.json({ project }, { status: 200 })
   } catch (error: any) {
     console.error("Erro ao buscar projeto:", error)
@@ -33,7 +39,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: num
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
     
-    const updatedProject = await projectController.updateProject(id, body, sessionUser.id)
+    const updatedProject = await projectService.update(id, body, sessionUser.id)
     return NextResponse.json({ project: updatedProject }, { status: 200 })
   } catch (error: any) {
     console.error("Erro ao atualizar projeto:", error)
@@ -59,7 +65,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
     
-    await projectController.deleteProject(id, sessionUser.id)
+    await projectService.delete(id, sessionUser.id)
     return NextResponse.json({ success: true }, { status: 200 })
   } catch (error: any) {
     console.error("Erro ao excluir projeto:", error)

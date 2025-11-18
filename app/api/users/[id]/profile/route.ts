@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
-import { UserController } from "@/backend/controllers/UserController";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 
-const userController = new UserController();
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 // GET: Obter perfil do usuário
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -21,7 +28,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
       return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
     }
 
-    const user = await userController.getUser(id);
+    const user = await userService.findById(id);
     if (!user) {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
     }
@@ -49,7 +56,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     }
 
     const body = await request.json();
-    const user = await userController.updateProfile(id, body);
+    const user = await userService.updateProfile(id, body);
     return NextResponse.json({ user });
   } catch (error: any) {
     console.error("Erro ao atualizar perfil do usuário:", error);

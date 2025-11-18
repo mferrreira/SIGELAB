@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react"
-import type { Project } from "@/contexts/types"
+import type { Project, ProjectFormData } from "@/contexts/types"
 import { ProjectsAPI } from "@/contexts/api-client"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -10,7 +10,7 @@ interface ProjectContextType {
   loading: boolean
   error: string | null
   fetchProjects: () => Promise<void>
-  createProject: (project: Omit<Project, "id" | "createdAt" | "createdBy">) => Promise<Project>
+  createProject: (project: ProjectFormData) => Promise<Project>
   updateProject: (id: number, project: Partial<Project>) => Promise<Project>
   deleteProject: (id: number) => Promise<void>
 }
@@ -46,7 +46,7 @@ export function ProjectProvider({ children }: { children: ReactNode }) {
     }
   }, [user, fetchProjects])
 
-  const createProject = async (projectData: Omit<Project, "id" | "createdAt" | "createdBy">) => {
+  const createProject = async (projectData: ProjectFormData) => {
     try {
       if (!user) throw new Error("Usuário não autenticado")
 

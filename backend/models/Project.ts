@@ -207,7 +207,9 @@ export class Project {
     }
 
     canBeDeleted(): boolean {
-        return this._status === ProjectStatus.ARCHIVED;
+        return this._status === ProjectStatus.ACTIVE || 
+               this._status === ProjectStatus.ARCHIVED || 
+               this._status === ProjectStatus.ON_HOLD;
     }
 
     getDaysSinceCreation(): number {

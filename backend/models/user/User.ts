@@ -35,7 +35,7 @@ export abstract class User {
     private timestamps: UserTimestamps;
 
     constructor(data: IUser | User) {
-        // Se data é um User, extrair os dados internos
+
         if (data instanceof User) {
             this.id = data.id;
             this.auth = (data as any).auth;
@@ -64,7 +64,6 @@ export abstract class User {
         }
     }
 
-    // Factory method to create appropriate role instance
     static create(data: Omit<IUser, 'id' | 'createdAt'>): User {
         const baseUser = new BaseUser({
             ...data,
@@ -78,9 +77,7 @@ export abstract class User {
             createdAt: new Date(),
         });
 
-        // Return role-specific instance if roles are specified
         if (data.roles && data.roles.length > 0) {
-            // Import UserFactory dynamically to avoid circular dependency
             const { UserFactory } = require('../UserFactory');
             return UserFactory.createFromRole(data.roles[0], baseUser);
         }

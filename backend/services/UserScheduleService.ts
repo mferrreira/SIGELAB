@@ -1,7 +1,6 @@
 import { UserSchedule } from '../models/UserSchedule';
 import { UserScheduleRepository, IUserScheduleRepository } from '../repositories/UserScheduleRepository';
 import { UserRepository } from '../repositories/UserRepository';
-import { HistoryService } from './HistoryService';
 
 export interface IUserScheduleService {
     findById(id: number): Promise<UserSchedule | null>;
@@ -16,7 +15,6 @@ export class UserScheduleService implements IUserScheduleService {
     constructor(
         private userScheduleRepo: IUserScheduleRepository,
         private userRepo: UserRepository,
-        private historyService?: HistoryService
     ) {}
 
     async findById(id: number): Promise<UserSchedule | null> {
@@ -41,14 +39,6 @@ export class UserScheduleService implements IUserScheduleService {
         const userSchedule = UserSchedule.create(data);
         const created = await this.userScheduleRepo.create(userSchedule);
 
-        if (this.historyService) {
-            await this.historyService.recordEntityCreation(
-                "USER_SCHEDULE",
-                created.id!,
-                data.userId,
-                created.toJSON()
-            );
-        }
 
         return created;
     }
@@ -73,18 +63,7 @@ export class UserScheduleService implements IUserScheduleService {
             );
         }
 
-
         const updated = await this.userScheduleRepo.update(existingSchedule);
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate(
-                "USER_SCHEDULE",
-                id,
-                existingSchedule.userId,
-                oldData,
-                updated.toJSON()
-            );
-        }
 
         return updated;
     }
@@ -98,14 +77,6 @@ export class UserScheduleService implements IUserScheduleService {
         const scheduleData = schedule.toJSON();
         await this.userScheduleRepo.delete(id);
 
-        if (this.historyService) {
-            await this.historyService.recordEntityDeletion(
-                "USER_SCHEDULE",
-                id,
-                schedule.userId,
-                scheduleData
-            );
-        }
     }
 
     async getSchedulesByUser(userId: number): Promise<UserSchedule[]> {

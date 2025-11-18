@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server"
-import { UserScheduleController } from "@/backend/controllers/UserScheduleController"
+import { UserScheduleService } from "@/backend/services/UserScheduleService";
+import { UserScheduleRepository } from "@/backend/repositories/UserScheduleRepository";
+import { UserRepository } from "@/backend/repositories/UserRepository";
 
-const userScheduleController = new UserScheduleController();
+const userScheduleService = new UserScheduleService(
+  new UserScheduleRepository(),
+  new UserRepository(),
+)
 
 // GET: Obter um horário específico
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -9,7 +14,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const params = await context.params;
     const id = parseInt(params.id);
 
-    const schedule = await userScheduleController.getSchedule(id);
+    const schedule = await userScheduleService.findById(id);
     if (!schedule) {
       return NextResponse.json({ error: "Horário não encontrado" }, { status: 404 });
     }
@@ -28,7 +33,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const id = parseInt(params.id);
     const body = await request.json();
 
-    const schedule = await userScheduleController.updateSchedule(id, body);
+    const schedule = await userScheduleService.update(id, body);
     return NextResponse.json({ schedule });
   } catch (error: any) {
     console.error("Erro ao atualizar horário:", error);
@@ -42,7 +47,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     const params = await context.params;
     const id = parseInt(params.id);
 
-    await userScheduleController.deleteSchedule(id);
+    await userScheduleService.delete(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Erro ao excluir horário:", error);

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server"
-import { PurchaseController } from "@/backend/controllers/PurchaseController"
+import { PurchaseService } from "@/backend/services/PurchaseService";
+import { PurchaseRepository } from "@/backend/repositories/PurchaseRepository";
+import { RewardRepository } from "@/backend/repositories/RewardRepository";
 
-const purchaseController = new PurchaseController();
+const purchaseService = new PurchaseService(
+  new PurchaseRepository(),
+  new RewardRepository(),
+)
 
 // GET: Obter todas as compras
 export async function GET(request: Request) {
@@ -16,18 +21,18 @@ export async function GET(request: Request) {
     let purchases;
     
     if (userId) {
-      purchases = await purchaseController.getPurchasesByUser(Number(userId));
+      purchases = await purchaseService.findByUserId(Number(userId));
     } else if (rewardId) {
-      purchases = await purchaseController.getPurchasesByReward(Number(rewardId));
+      purchases = await purchaseService.findByRewardId(Number(rewardId));
     } else if (status) {
-      purchases = await purchaseController.getPurchasesByStatus(status);
+      purchases = await purchaseService.findByStatus(status);
     } else if (startDate && endDate) {
-      purchases = await purchaseController.searchPurchases({
+      purchases = await purchaseService.searchPurchases({
         startDate: new Date(startDate),
         endDate: new Date(endDate)
       });
     } else {
-      purchases = await purchaseController.getAllPurchases();
+      purchases = await purchaseService.findAll();
     }
 
     return NextResponse.json({ purchases });
@@ -41,7 +46,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const data = await request.json();
-    const purchase = await purchaseController.createPurchase(data);
+    const purchase = await purchaseService.create(data);
     return NextResponse.json({ purchase }, { status: 201 });
   } catch (error: any) {
     console.error('Erro ao criar compra:', error);

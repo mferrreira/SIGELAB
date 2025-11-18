@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { BadgeController } from "@/backend/controllers/BadgeController";
+import { BadgeService } from "@/backend/services/BadgeService";
+import { BadgeRepository, UserBadgeRepository } from "@/backend/repositories/BadgeRepository";
 
-const badgeController = new BadgeController();
+const badgeService = new BadgeService(
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+);
 
 // DELETE: Remover badge de um usuário
 export async function DELETE(request: Request, context: { params: Promise<{ userId: string; badgeId: string }> }) {
@@ -10,7 +14,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ user
     const userId = parseInt(params.userId);
     const badgeId = parseInt(params.badgeId);
 
-    await badgeController.removeBadgeFromUser(userId, badgeId);
+    await badgeService.removeBadgeFromUser(userId, badgeId);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Erro ao remover badge do usuário:", error);

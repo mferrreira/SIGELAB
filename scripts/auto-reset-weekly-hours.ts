@@ -14,7 +14,7 @@ async function autoResetWeeklyHours() {
       select: {
         id: true,
         name: true,
-        weekHours: true
+        currentWeekHours: true
       }
     })
 
@@ -26,7 +26,7 @@ async function autoResetWeeklyHours() {
     let totalHoursSaved = 0
 
     for (const user of users) {
-      if (user.weekHours > 0) {
+      if (user.currentWeekHours > 0) {
         
         // Salvar as horas da semana atual no histórico
         await prisma.weekly_hours_history.create({
@@ -35,17 +35,17 @@ async function autoResetWeeklyHours() {
             userName: user.name,
             weekStart: currentWeekStart,
             weekEnd: currentWeekEnd,
-            totalHours: user.weekHours / 3600 // Converter de segundos para horas
+            totalHours: user.currentWeekHours / 3600 // Converter de segundos para horas
           }
         })
 
         // Resetar as horas semanais para 0
         await prisma.users.update({
           where: { id: user.id },
-          data: { weekHours: 0 }
+          data: { currentWeekHours: 0 }
         })
 
-        const savedHours = user.weekHours / 3600
+        const savedHours = user.currentWeekHours / 3600
         totalHoursSaved += savedHours
         results.push({
           userId: user.id,

@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useAuth } from "@/contexts/auth-context"
 import { useProject } from "@/contexts/project-context"
+import { useUser } from "@/contexts/user-context"
 import type { Project, ProjectFormData } from "@/contexts/types"
+import { Checkbox } from "@/components/ui/checkbox"
 
 interface ProjectDialogProps {
   open: boolean
@@ -20,6 +22,7 @@ interface ProjectDialogProps {
 export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDialogProps) {
   const { user } = useAuth()
   const { createProject, updateProject } = useProject()
+  const { users } = useUser()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -27,7 +30,9 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
     name: "",
     description: "",
     status: "active",
-    links: [], // Add links array to form state
+    leaderId: null,
+    volunteerIds: [],
+    links: [],
   })
 
   // Reset form when dialog opens/closes or project changes
@@ -37,13 +42,17 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
         name: project.name,
         description: project.description || "",
         status: project.status,
-        links: project.links || [], // Initialize links from project if editing
+        leaderId: project.leaderId ?? null,
+        volunteerIds: [],
+        links: project.links || [],
       })
     } else if (open) {
       setFormData({
         name: "",
         description: "",
         status: "active",
+        leaderId: null,
+        volunteerIds: [],
         links: [],
       })
     }
@@ -83,14 +92,21 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
 
     if (!user) return
 
+    const payloadForUpdate = { ...formData }
+    const { volunteerIds = [] } = formData
+    delete (payloadForUpdate as any).volunteerIds
+
     try {
       setIsSubmitting(true)
       setError(null)
 
       if (project) {
-        await updateProject(project.id, formData)
+        await updateProject(project.id, payloadForUpdate)
       } else {
-        await createProject(formData)
+        await createProject({
+          ...formData,
+          volunteerIds,
+        })
       }
 
       onOpenChange(false)
@@ -100,6 +116,33 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const leaderOptions = users.filter(u =>
+    u.roles?.includes("COORDENADOR") ||
+    u.roles?.includes("GERENTE") ||
+    u.roles?.includes("GERENTE_PROJETO")
+  )
+
+  const volunteerOptions = users.filter(u =>
+    u.roles?.includes("VOLUNTARIO") || u.roles?.includes("COLABORADOR")
+  )
+
+  const handleLeaderChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      leaderId: value === "none" ? null : Number(value)
+    }))
+  }
+
+  const toggleVolunteer = (userId: number, checked: boolean) => {
+    setFormData(prev => {
+      const current = prev.volunteerIds || []
+      const updated = checked
+        ? Array.from(new Set([...current, userId]))
+        : current.filter(id => id !== userId)
+      return { ...prev, volunteerIds: updated }
+    })
   }
 
   return (
@@ -153,6 +196,47 @@ export function ProjectDialog({ open, onOpenChange, project = null }: ProjectDia
                   <SelectItem value="archived">Arquivado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="leader">Líder do Projeto</Label>
+              <Select
+                value={formData.leaderId ? String(formData.leaderId) : "none"}
+                onValueChange={handleLeaderChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um líder" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sem líder definido</SelectItem>
+                  {leaderOptions.map(option => (
+                    <SelectItem key={option.id} value={String(option.id)}>
+                      {option.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-2">
+              <Label>Voluntários iniciais</Label>
+              <div className="rounded-md border p-2 max-h-48 overflow-y-auto space-y-2">
+                {volunteerOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum voluntário disponível para seleção.
+                  </p>
+                ) : (
+                  volunteerOptions.map(option => (
+                    <label key={option.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={formData.volunteerIds?.includes(option.id) || false}
+                        onCheckedChange={(checked) => toggleVolunteer(option.id, Boolean(checked))}
+                      />
+                      <span>{option.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
             </div>
 
             <div className="grid gap-2">

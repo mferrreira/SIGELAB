@@ -1,16 +1,16 @@
-import { WorkSessionController } from "@/backend/controllers/WorkSessionController"
+import { WorkSessionService } from "@/backend/services/WorkSessionService";
 
-const workSessionController = new WorkSessionController();
+const workSessionService = new WorkSessionService();
 
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const params = await context.params;
     const data = await request.json();
     const id = Number(params.id);
-    const userId = Number(data.userId) || 0; // Should be provided in request body
+    const userId = Number(data.userId) || 0;
     
     
-    const session = await workSessionController.updateSession(id, userId, {
+    const session = await workSessionService.updateSession(id, userId, {
       activity: data.activity,
       location: data.location,
       status: data.status,
@@ -37,7 +37,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     const id = Number(params.id);
     const userId = Number(data.userId) || 0; // Should be provided in request body
     
-    await workSessionController.deleteSession(id, userId);
+    await workSessionService.deleteSession(id, userId);
     
     return new Response(JSON.stringify({ success: true }), {
       status: 200,

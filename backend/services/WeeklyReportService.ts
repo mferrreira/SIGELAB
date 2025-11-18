@@ -27,7 +27,12 @@ export class WeeklyReportService implements IWeeklyReportService {
     private weeklyReportRepository: IWeeklyReportRepository,
     private userRepository: UserRepository,
     private dailyLogRepository: DailyLogRepository
-  ) {}
+  ) {
+    this.weeklyReportRepository = weeklyReportRepository || new WeeklyReportRepository();
+    this.userRepository = userRepository || new UserRepository();
+    this.dailyLogRepository = dailyLogRepository || new DailyLogRepository();
+
+  }
 
   async findById(id: number): Promise<WeeklyReport | null> {
     return await this.weeklyReportRepository.findById(id);
@@ -37,7 +42,10 @@ export class WeeklyReportService implements IWeeklyReportService {
     return await this.weeklyReportRepository.findAll();
   }
 
-  async create(data: Omit<WeeklyReport, 'id' | 'createdAt'>, creatorId: number): Promise<WeeklyReport> {
+  async create(data: Partial<WeeklyReport>, creatorId: number): Promise<WeeklyReport> {
+    if(!data.userId || !data.weekStart || !data.weekEnd)
+      throw new Error('Usuário não identificado!')
+    
 
     const user = await this.userRepository.findById(data.userId);
     if (!user) {

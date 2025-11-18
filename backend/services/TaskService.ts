@@ -1,4 +1,4 @@
-import { Task } from '../models/Task';
+import { Task, ITask } from '../models/Task';
 import { TaskRepository, ITaskRepository } from '../repositories/TaskRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import { ProjectRepository } from '../repositories/ProjectRepository';
@@ -16,6 +16,7 @@ export interface ITaskService {
   findByAssigneeId(userId: number): Promise<Task[]>;
   getTasksByUser(userId: number): Promise<Task[]>;
   getTasksForUser(userId: number, userRoles: string[]): Promise<Task[]>;
+  getProjectsForUser(userId: number): Promise<{ id: number }[]>;
   completeTask(taskId: number, userId: number): Promise<Task>;
   approveTask(taskId: number, leaderId: number): Promise<Task>;
   rejectTask(taskId: number, leaderId: number, reason?: string): Promise<Task>;
@@ -45,7 +46,7 @@ export class TaskService implements ITaskService {
     return await this.taskRepository.findAll();
   }
 
-  async create(data: Omit<Task, 'id'>, creatorId: number): Promise<Task> {
+  async create(data: Omit<ITask, 'id'>, creatorId: number): Promise<Task> {
     const creator = await this.userRepository.findById(creatorId);
     if (!creator) {
       throw new Error('Criador não encontrado');
@@ -185,6 +186,11 @@ export class TaskService implements ITaskService {
 
   async getTasksByProject(projectId: number): Promise<Task[]> {
     return await this.taskRepository.findByProjectId(projectId);
+  }
+
+  async getProjectsForUser(userId: number): Promise<{ id: number }[]> {
+    const memberships = await this.userRepository.getUserProjectMemberships(userId);
+    return memberships.map(membership => ({ id: membership.projectId }));
   }
 
   async getTasksForUser(userId: number, userRoles: string[]): Promise<Task[]> {

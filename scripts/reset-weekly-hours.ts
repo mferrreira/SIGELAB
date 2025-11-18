@@ -11,7 +11,7 @@ async function resetWeeklyHours() {
       select: {
         id: true,
         name: true,
-        weekHours: true
+        currentWeekHours: true
       }
     })
 
@@ -22,7 +22,7 @@ async function resetWeeklyHours() {
     const results = []
 
     for (const user of users) {
-      if (user.weekHours > 0) {
+      if (user.currentWeekHours > 0) {
         
         await prisma.weekly_hours_history.create({
           data: {
@@ -30,16 +30,16 @@ async function resetWeeklyHours() {
             userName: user.name,
             weekStart: currentWeekStart,
             weekEnd: currentWeekEnd,
-            totalHours: user.weekHours / 3600
+            totalHours: user.currentWeekHours / 3600
           }
         })
 
         await prisma.users.update({
           where: { id: user.id },
-          data: { weekHours: 0 }
+          data: { currentWeekHours: 0 }
         })
 
-        const savedHours = user.weekHours / 3600
+        const savedHours = user.currentWeekHours / 3600
         results.push({
           userId: user.id,
           userName: user.name,

@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth/server-auth"
-import { UserController } from "@/backend/controllers/UserController"
 
-const userController = new UserController()
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 export async function POST(
   request: NextRequest,
@@ -31,11 +38,12 @@ export async function POST(
       return NextResponse.json({ error: "Motivo é obrigatório" }, { status: 400 })
     }
 
-    const result = await userController.deductHours(userId, {
+    //TODO: Atualizar session para incluir todos os campos de interesse
+    const result = await userService.deductHours(userId, {
       hours,
       reason,
       projectId,
-      deductedBy: session.user.id,
+      deductedBy: session.user.id!,
       deductedByRoles: session.user.roles || []
     })
 

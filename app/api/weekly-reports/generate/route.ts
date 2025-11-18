@@ -4,6 +4,17 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/database/prisma"
 import { createApiResponse, createApiError } from "@/lib/utils/utils"
 
+import { WeeklyReportService } from "@/backend/services/WeeklyReportService"
+import { WeeklyReportRepository } from "@/backend/repositories/WeeklyReportRepository"
+import { UserRepository } from "@/backend/repositories/UserRepository"
+import { DailyLogRepository } from "@/backend/repositories/DailyLogRepository"
+
+const weeklyReportService = new WeeklyReportService(
+  new WeeklyReportRepository(),
+  new UserRepository(),
+  new DailyLogRepository(),
+);
+//TODO: tirar interação com banco de dados daqui e integrar com o service
 // POST: Gerar relatório semanal baseado nos logs diários
 export async function POST(request: Request) {
   try {

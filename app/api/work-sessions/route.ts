@@ -1,23 +1,25 @@
-import { WorkSessionController } from "@/backend/controllers/WorkSessionController"
-import { prisma } from "@/lib/database/prisma";
+import { WorkSessionService } from "@/backend/services/WorkSessionService";
 
-const workSessionController = new WorkSessionController();
+const workSessionService = new WorkSessionService();
 
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url);
     const userId = url.searchParams.get("userId");
     const managerId = url.searchParams.get("managerId");
+    const status = url.searchParams.get("status");
     const active = url.searchParams.get("active");
     
     let sessions;
 
     if (active === "true") {
-      sessions = await workSessionController.getActiveSessions();
+      sessions = await workSessionService.getSessionsByStatus('active');
     } else if (userId) {
-      sessions = await workSessionController.getSessionsByUser(Number(userId));
+      sessions = await workSessionService.getUserSessions(Number(userId));
+    } else if (status) {
+      sessions = await workSessionService.getSessionsByStatus(status);
     } else {
-      sessions = await workSessionController.getAllSessions();
+      sessions = await workSessionService.getAllSessions();
     }
     
     return new Response(JSON.stringify({ data: sessions }), {
@@ -38,7 +40,13 @@ export async function POST(request: Request) {
   try {
     const data = await request.json();
 
-    const session = await workSessionController.createSession(data);
+    const session = await workSessionService.createSession(
+      data.userId, 
+      data.userName, 
+      data.activity, 
+      data.location, 
+      data.projectId
+    );
     
     return new Response(JSON.stringify({ data: session }), {
       status: 201,

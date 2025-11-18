@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { UserController } from "@/backend/controllers/UserController";
 
-const userController = new UserController();
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 // PATCH: Atualizar roles do usuário
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -17,19 +24,19 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
         if (!role) {
           return NextResponse.json({ error: "Role é obrigatório para adicionar" }, { status: 400 });
         }
-        user = await userController.addRole(id, role);
+        user = await userService.addRole(id, role);
         break;
       case "remove":
         if (!role) {
           return NextResponse.json({ error: "Role é obrigatório para remover" }, { status: 400 });
         }
-        user = await userController.removeRole(id, role);
+        user = await userService.removeRole(id, role);
         break;
       case "set":
         if (!roles || !Array.isArray(roles)) {
           return NextResponse.json({ error: "Roles array é obrigatório para definir" }, { status: 400 });
         }
-        user = await userController.setRoles(id, roles);
+        user = await userService.setRoles(id, roles);
         break;
       default:
         return NextResponse.json({ error: "Ação inválida" }, { status: 400 });

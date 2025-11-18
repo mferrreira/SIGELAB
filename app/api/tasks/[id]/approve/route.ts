@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { TaskController } from "@/backend/controllers/TaskController"
+import { TaskService } from "@/backend/services/TaskService"
+import { TaskRepository } from "@/backend/repositories/TaskRepository"
+import { UserRepository } from "@/backend/repositories/UserRepository"
+import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
 
-const taskController = new TaskController()
+const taskService = new TaskService(
+  new TaskRepository(),
+  new UserRepository(),
+  new ProjectRepository(),
+);
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -17,7 +24,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       return NextResponse.json({ error: "ID de tarefa inválido" }, { status: 400 })
     }
 
-    const task = await taskController.approveTask(taskId, session.user.id)
+    const task = await taskService.approveTask(taskId, session.user.id)
     
     return NextResponse.json({ 
       success: true, 

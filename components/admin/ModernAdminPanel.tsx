@@ -399,7 +399,7 @@ export function ModernAdminPanel({ users, projects, tasks, sessions, stats }: Mo
 
               {/* Grade de Horários */}
               {canManageSchedule && (
-                <ScheduleGrid users={users} />
+                <ScheduleGrid users={users} currentUser={user || undefined} />
               )}
             </>
           )}

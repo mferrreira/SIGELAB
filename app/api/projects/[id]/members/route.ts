@@ -12,7 +12,8 @@ export async function GET(
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
-
+    
+    //TODO: mover lógica para um repository
     const user = await prisma.users.findUnique({
       where: { email: session.user.email },
       include: {

@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { ProjectHoursController } from '@/backend/controllers/ProjectHoursController'
 import { prisma } from '@/lib/database/prisma'
-
-const projectHoursController = new ProjectHoursController()
+import { getUserProjectHours } from '@/backend/services/ProjectHoursService'
 
 export async function GET(
   request: Request,
@@ -26,8 +24,8 @@ export async function GET(
 
     const targetUserId = parseInt(params.id)
     const { searchParams } = new URL(request.url)
-    const weekStart = searchParams.get('weekStart')
-    const weekEnd = searchParams.get('weekEnd')
+    const weekStartParam = searchParams.get('weekStart')
+    const weekEndParam = searchParams.get('weekEnd')
 
     // Verificar se o usuário pode acessar os dados do outro usuário
     const canAccess = user.id === targetUserId || 
@@ -37,11 +35,11 @@ export async function GET(
     if (!canAccess) {
       return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
     }
-
-    const hours = await projectHoursController.getUserProjectHours(
+    //TODO: Refatorar ProjectHour
+    const hours = await getUserProjectHours(
       targetUserId,
-      weekStart || undefined,
-      weekEnd || undefined
+      weekStartParam ? new Date(weekStartParam) : undefined,
+      weekEndParam ? new Date(weekEndParam) : undefined
     )
 
     return NextResponse.json({ hours }, { status: 200 })

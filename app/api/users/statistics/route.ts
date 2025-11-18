@@ -1,7 +1,16 @@
 import { NextResponse } from "next/server";
-import { UserController } from "@/backend/controllers/UserController";
 
-const userController = new UserController();
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
+
+
 
 // GET: Obter estatísticas dos usuários
 export async function GET(request: Request) {
@@ -12,16 +21,16 @@ export async function GET(request: Request) {
     let statistics;
     switch (type) {
       case "general":
-        statistics = await userController.getUserStatistics();
+        statistics = await userService.getUserStatistics();
         break;
       case "roles":
-        statistics = await userController.getUsersByRole();
+        statistics = await userService.getUsersByRole();
         break;
       case "status":
-        statistics = await userController.getUsersByStatus();
+        statistics = await userService.getUserByStatus();
         break;
       default:
-        statistics = await userController.getUserStatistics();
+        statistics = await userService.getUserStatistics();
     }
 
     return NextResponse.json({ statistics });

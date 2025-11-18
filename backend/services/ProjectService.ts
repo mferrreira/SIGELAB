@@ -6,13 +6,18 @@ import { UserRepository } from '../repositories/UserRepository';
 import { HistoryService } from './HistoryService';
 import { HistoryRepository } from '../repositories/HistoryRepository';
 import { UserRole } from '@prisma/client';
+import { prisma } from '@/lib/database/prisma';
+
+interface CreateProjectOptions {
+    volunteerIds?: number[];
+}
 
 export interface IProjectService {
     findById(id: number): Promise<Project | null>;
     findAll(): Promise<Project[]>;
     findByUserId(userId: number): Promise<Project[]>;
     findByCreatorId(creatorId: number): Promise<Project[]>;
-    create(data: Omit<IProject, 'id' | 'createdAt'>, creatorId: number): Promise<Project>;
+    create(data: Omit<IProject, 'id' | 'createdAt'>, creatorId: number, options?: CreateProjectOptions): Promise<Project>;
     update(id: number, data: Partial<IProject>, userId: number): Promise<Project>;
     delete(id: number, userId: number): Promise<void>;
     
@@ -50,7 +55,11 @@ export class ProjectService implements IProjectService {
         return await this.projectRepository.findByCreatorId(creatorId);
     }
 
-    async create(data: Omit<IProject, 'id' | 'createdAt'>, creatorId: number): Promise<Project> {
+    async create(
+        data: Omit<IProject, 'id' | 'createdAt'| 'createdBy'>,
+        creatorId: number,
+        options?: CreateProjectOptions
+    ): Promise<Project> {
         
         const project = Project.create({
             ...data,
@@ -66,10 +75,55 @@ export class ProjectService implements IProjectService {
         });
 
         await this.membershipRepository.create(membership);
+
+        if (data.leaderId && data.leaderId !== creatorId) {
+            await this.ensureProjectMembership(createdProject.id!, data.leaderId, ['GERENTE_PROJETO']);
+        }
+
+        if (options?.volunteerIds && options.volunteerIds.length > 0) {
+            const normalizedVolunteers = Array.from(
+                new Set(
+                    options.volunteerIds
+                        .filter(id => typeof id === 'number' && id > 0)
+                )
+            );
+
+            for (const volunteerId of normalizedVolunteers) {
+                if (volunteerId === creatorId || volunteerId === data.leaderId) {
+                    continue;
+                }
+
+                try {
+                    await this.ensureProjectMembership(createdProject.id!, volunteerId, ['VOLUNTARIO']);
+                } catch (error) {
+                    console.error(`Erro ao adicionar voluntário ${volunteerId} ao projeto ${createdProject.id}:`, error);
+                }
+            }
+        }
+
         await this.historyService.recordEntityCreation('PROJECT', createdProject.id!, creatorId, createdProject.toJSON());
         await this.historyService.recordAction('PROJECT', createdProject.id!, 'CREATE', creatorId, 'Projeto criado');
         
         return createdProject;
+    }
+
+    private async ensureProjectMembership(projectId: number, userId: number, roles: UserRole[]): Promise<ProjectMembership> {
+        const existingMembership = await this.membershipRepository.findByProjectAndUser(projectId, userId);
+        const uniqueRoles = (values: UserRole[]) => Array.from(new Set(values)) as UserRole[];
+
+        if (existingMembership) {
+            const mergedRoles = uniqueRoles([...existingMembership.roles, ...roles]);
+            existingMembership.setRoles(mergedRoles);
+            return await this.membershipRepository.update(existingMembership);
+        }
+
+        const membership = ProjectMembership.create({
+            projectId,
+            userId,
+            roles: uniqueRoles(roles),
+        });
+
+        return await this.membershipRepository.create(membership);
     }
 
     async update(id: number, data: Partial<IProject>, userId: number): Promise<Project> {
@@ -227,23 +281,65 @@ export class ProjectService implements IProjectService {
         };
     }> {
         const members = await this.membershipRepository.getProjectMembersWithDetails(projectId);
-        
-        // Converter membros em voluntários com dados reais
-        const volunteers = members.map(member => ({
-            id: member.userId,
-            name: member.user?.name || 'Usuário',
-            email: member.user?.email || '',
-            avatar: member.user?.avatar,
-            role: member.roles?.[0] || 'COLABORADOR',
-            joinedAt: member.joinedAt,
-            hoursWorked: member.user?.totalHours || 0,
-            tasksCompleted: member.user?.completedTasks || 0,
-            pointsEarned: member.user?.points || 0,
-            status: 'active' as const,
-            lastActivity: new Date().toISOString().split('T')[0]
-        }));
+        const volunteersOnly = members.filter(member =>
+            member.roles?.includes('VOLUNTARIO') || member.roles?.includes('COLABORADOR')
+        );
 
-        // Calcular estatísticas reais
+        const volunteers = [];
+        for (const member of volunteersOnly) {
+            const totalSessions = await prisma.work_sessions.findMany({
+                where: {
+                    userId: member.userId,
+                    projectId,
+                    status: 'completed'
+                },
+                select: { duration: true }
+            });
+
+            const totalSeconds = totalSessions.reduce((sum, session) => sum + (session.duration || 0), 0);
+            const totalHours = totalSeconds / 3600;
+
+            const now = new Date();
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+            weekStart.setHours(0, 0, 0, 0);
+
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            weekEnd.setHours(23, 59, 59, 999);
+
+            const weekSessions = await prisma.work_sessions.findMany({
+                where: {
+                    userId: member.userId,
+                    projectId,
+                    status: 'completed',
+                    startTime: {
+                        gte: weekStart,
+                        lte: weekEnd
+                    }
+                },
+                select: { duration: true }
+            });
+
+            const weekSeconds = weekSessions.reduce((sum, session) => sum + (session.duration || 0), 0);
+            const currentWeekHours = weekSeconds / 3600;
+
+            volunteers.push({
+                id: member.userId,
+                name: member.user?.name || 'Usuário',
+                email: member.user?.email || '',
+                avatar: member.user?.avatar,
+                role: member.roles?.[0] || 'VOLUNTARIO',
+                joinedAt: member.joinedAt,
+                hoursWorked: Math.round(totalHours * 100) / 100,
+                currentWeekHours: Math.round(currentWeekHours * 100) / 100,
+                tasksCompleted: member.user?.completedTasks || 0,
+                pointsEarned: member.user?.points || 0,
+                status: 'active' as const,
+                lastActivity: new Date().toISOString().split('T')[0]
+            });
+        }
+
         const totalVolunteers = volunteers.length;
         const totalHours = volunteers.reduce((sum, v) => sum + v.hoursWorked, 0);
         const completedTasks = volunteers.reduce((sum, v) => sum + v.tasksCompleted, 0);
@@ -253,7 +349,7 @@ export class ProjectService implements IProjectService {
             volunteers,
             stats: {
                 totalVolunteers,
-                totalHours,
+                totalHours: Math.round(totalHours * 100) / 100,
                 completedTasks,
                 totalPoints
             }

@@ -37,7 +37,9 @@ export class ProjectController {
     }
 
     async createProject(data: any, creatorId: number): Promise<any> {
-        const project = await this.projectService.create(data, creatorId);
+        const project = await this.projectService.create(data, creatorId, {
+            volunteerIds: data.volunteerIds
+        });
         return project.toJSON();
     }
 

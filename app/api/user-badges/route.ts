@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
-import { BadgeController } from "@/backend/controllers/BadgeController";
+import { BadgeService } from "@/backend/services/BadgeService";
+import { BadgeRepository, UserBadgeRepository } from "@/backend/repositories/BadgeRepository";
 
-const badgeController = new BadgeController();
+const badgeService = new BadgeService(
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+);
 
 // GET: Obter badges de um usuário
 export async function GET(request: Request) {
@@ -14,10 +18,10 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "userId é obrigatório" }, { status: 400 });
     }
 
-    const badges = await badgeController.getUserBadges(parseInt(userId));
+    const badges = await badgeService.getUserBadges(parseInt(userId));
     const recentBadges = limit 
-      ? await badgeController.getRecentUserBadges(parseInt(userId), parseInt(limit))
-      : await badgeController.getRecentUserBadges(parseInt(userId));
+      ? await badgeService.getRecentUserBadges(parseInt(userId), parseInt(limit))
+      : await badgeService.getRecentUserBadges(parseInt(userId));
 
     return NextResponse.json({ 
       badges, 
@@ -40,7 +44,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "badgeId e userId são obrigatórios" }, { status: 400 });
     }
 
-    const userBadge = await badgeController.awardBadgeToUser(badgeId, userId, awardedBy);
+    const userBadge = await badgeService.awardBadgeToUser(badgeId, userId, awardedBy);
     return NextResponse.json({ userBadge }, { status: 201 });
   } catch (error: any) {
     console.error("Erro ao conceder badge:", error);

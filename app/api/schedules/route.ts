@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { UserScheduleController } from "@/backend/controllers/UserScheduleController"
 
-const userScheduleController = new UserScheduleController();
+import { UserScheduleService } from "@/backend/services/UserScheduleService";
+import { UserScheduleRepository } from "@/backend/repositories/UserScheduleRepository";
+import { UserRepository } from "@/backend/repositories/UserRepository";
 
+const userScheduleService = new UserScheduleService(
+  new UserScheduleRepository(),
+  new UserRepository(),
+)
 // GET: Obter todos os horários ou filtrar por usuário
 export async function GET(request: Request) {
   try {
@@ -13,9 +18,9 @@ export async function GET(request: Request) {
     
     let schedules;
     if (userId) {
-      schedules = await userScheduleController.getSchedulesByUser(parseInt(userId));
+      schedules = await userScheduleService.getSchedulesByUser(parseInt(userId));
     } else {
-      schedules = await userScheduleController.getAllSchedules();
+      schedules = await userScheduleService.findAll();
     }
     
     return NextResponse.json({ 
@@ -40,7 +45,7 @@ export async function POST(request: Request) {
     const data = await request.json();
     const user = session.user as any;
     
-    const schedule = await userScheduleController.createSchedule({
+    const schedule = await userScheduleService.create({
       ...data,
       userId: data.userId || user.id
     });

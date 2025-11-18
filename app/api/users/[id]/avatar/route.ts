@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { UserController } from "@/backend/controllers/UserController"
 import { ImageProcessor } from "@/lib/utils/image-processor"
+
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 export async function DELETE(
   request: NextRequest,
@@ -19,14 +28,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Usuário não autorizado" }, { status: 403 })
     }
 
-    const userController = new UserController()
-    const currentUser = await userController.getUser(userId)
+    const currentUser = await userService.findById(userId)
     
     if (currentUser?.avatar) {
       await ImageProcessor.deleteImage(currentUser.avatar)
     }
     
-    await userController.updateProfile(userId, { avatar: null })
+    await userService.updateProfile(userId, { avatar: null })
 
     return NextResponse.json({ 
       success: true, 

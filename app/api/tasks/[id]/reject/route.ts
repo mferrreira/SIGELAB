@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { TaskController } from "@/backend/controllers/TaskController"
 
-const taskController = new TaskController()
+import { TaskService } from "@/backend/services/TaskService"
+import { TaskRepository } from "@/backend/repositories/TaskRepository"
+import { UserRepository } from "@/backend/repositories/UserRepository"
+import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
+
+const taskService = new TaskService(
+  new TaskRepository(),
+  new UserRepository(),
+  new ProjectRepository(),
+); 
 
 export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -20,7 +28,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     const body = await request.json()
     const { reason } = body
 
-    const task = await taskController.rejectTask(taskId, session.user.id, reason)
+    const task = await taskService.rejectTask(taskId, session.user.id, reason)
     
     return NextResponse.json({ 
       success: true, 

@@ -1,21 +1,17 @@
 import { WorkSession } from "../models/WorkSession";
 import { WorkSessionRepository, IWorkSessionRepository } from "../repositories/WorkSessionRepository";
 import { UserRepository } from "../repositories/UserRepository";
-import { HistoryService } from "./HistoryService";
 
 export class WorkSessionService {
     private workSessionRepo: IWorkSessionRepository;
     private userRepo?: UserRepository;
-    private historyService?: HistoryService;
 
     constructor(
         workSessionRepo?: IWorkSessionRepository,
         userRepo?: UserRepository,
-        historyService?: HistoryService
     ) {
         this.workSessionRepo = workSessionRepo || new WorkSessionRepository();
-        this.userRepo = userRepo;
-        this.historyService = historyService;
+        this.userRepo = userRepo || new UserRepository();
     }
 
     async getSessionById(id: number): Promise<WorkSession | null> {
@@ -45,34 +41,10 @@ export class WorkSessionService {
                 duration: duration,
                 status: 'completed'
             });
-
-            if (this.historyService) {
-                await this.historyService.recordAction(
-                    "WORK_SESSION",
-                    activeSession.id!,
-                    "AUTO-END",
-                    userId,
-                    `Sessão automaticamente encerrada ao iniciar nova sessão`,
-                    { oldData: activeSession.toJSON(), newData: { status: 'completed', endTime, duration } }
-                );
-            }
         }
 
         const session = WorkSession.create(userId, userName, activity, location, projectId);
-        const created = await this.workSessionRepo.create(session);
-
-        if (this.historyService) {
-            await this.historyService.recordAction(
-                "WORK_SESSION",
-                created.id!,
-                "CREATE",
-                userId,
-                `Sessão de trabalho iniciada: ${activity || 'Atividade não especificada'}`,
-                created.toJSON()
-            );
-        }
-
-        return created;
+        return await this.workSessionRepo.create(session);
     }
 
     async updateSession(id: number, userId: number, data: {
@@ -105,20 +77,7 @@ export class WorkSessionService {
             session.setLocation(data.location);
         }
 
-        const updated = await this.workSessionRepo.update(id, session);
-
-        if (this.historyService) {
-            await this.historyService.recordAction(
-                "WORK_SESSION",
-                id,
-                "UPDATE",
-                userId,
-                "Sessão de trabalho atualizada",
-                { oldData, newData: updated.toJSON() }
-            );
-        }
-
-        return updated;
+        return await this.workSessionRepo.update(id, session);
     }
 
     async deleteSession(id: number, userId: number): Promise<void> {
@@ -133,17 +92,6 @@ export class WorkSessionService {
 
         const sessionData = session.toJSON();
         await this.workSessionRepo.delete(id);
-
-        if (this.historyService) {
-            await this.historyService.recordAction(
-                "WORK_SESSION",
-                id,
-                "DELETE",
-                userId,
-                "Sessão de trabalho excluída",
-                sessionData
-            );
-        }
     }
 
     async getUserSessions(userId: number): Promise<WorkSession[]> {

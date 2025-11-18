@@ -4,6 +4,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { prisma } from "@/lib/database/prisma"
 import { createApiResponse, createApiError } from "@/lib/utils/utils"
 
+
+// TODO: Tirar chamada do prisma e chamar o service
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -77,6 +79,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
       return createApiError("ID inválido", 400)
     }
 
+    // TODO: Triar chamada do prisma e mover para o repository/service
     const report = await prisma.weekly_reports.findUnique({ where: { id } })
     if (!report) {
       return createApiError("Relatório não encontrado", 404)

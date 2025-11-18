@@ -48,6 +48,8 @@ export const authOptions: AuthOptions = {
         token.name = (user as any).name
         token.email = (user as any).email
         token.avatar = (user as any).avatar
+        token.weekHours = (user as any).weekHours
+        token.currentWeekHours = (user as any).currentWeekHours
       }
       return token
     },
@@ -61,6 +63,10 @@ export const authOptions: AuthOptions = {
         session.user.id = token.id
         // @ts-ignore: custom fields
         session.user.avatar = token.avatar
+        // @ts-ignore: custom fields
+        session.user.weekHours = token.weekHours
+        // @ts-ignore: custom fields
+        session.user.currentWeekHours = token.currentWeekHours
       }
       return session
     },

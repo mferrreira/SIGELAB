@@ -36,10 +36,23 @@ export function KanbanBoard() {
   const [isCompactView, setIsCompactView] = useState(false)
 
   const loadTasks = useCallback(() => {
-    if (user) {
-      fetchTasks(selectedProjectId)
+    if (!user) return
+
+    const canAccessAllProjects = hasAccess(user.roles || [], 'MANAGE_TASKS')
+    if (!canAccessAllProjects) {
+      const membershipProject = projects
+        ?.find(project =>
+          project.members?.some(member => member.userId === user.id)
+        )
+      if (membershipProject) {
+        setSelectedProjectId(membershipProject.id)
+      } else {
+        setSelectedProjectId(null)
+      }
     }
-  }, [user, fetchTasks, selectedProjectId])
+
+    fetchTasks(selectedProjectId)
+  }, [user, fetchTasks, selectedProjectId, projects])
 
   useEffect(() => {
     loadTasks()

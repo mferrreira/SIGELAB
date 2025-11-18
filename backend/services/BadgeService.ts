@@ -8,9 +8,7 @@ export class BadgeService {
         private userBadgeRepo: UserBadgeRepository
     ) {}
 
-    // Badge CRUD operations
     async create(data: any): Promise<Badge> {
-        // Validate required fields
         if (!data.name || !data.name.trim()) {
             throw new Error("Nome do badge é obrigatório");
         }

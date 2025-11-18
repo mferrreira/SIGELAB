@@ -141,22 +141,29 @@ export class WeeklyHoursHistoryController {
         const totalSeconds = sessions.reduce((sum, s) => sum + (s.duration || 0), 0)
         const totalHours = totalSeconds / 3600
 
-        await prisma.weekly_hours_history.create({
-          data: {
+        if (totalHours > 0) {
+          await prisma.weekly_hours_history.create({
+            data: {
+              userId: user.id,
+              userName: user.name,
+              weekStart: currentWeekStart,
+              weekEnd: currentWeekEnd,
+              totalHours
+            }
+          })
+
+          results.push({
             userId: user.id,
             userName: user.name,
-            weekStart: currentWeekStart,
-            weekEnd: currentWeekEnd,
-            totalHours: totalHours
-          }
-        })
+            savedHours: totalHours.toFixed(1),
+            weekStart: format(currentWeekStart, 'dd/MM/yyyy'),
+            weekEnd: format(currentWeekEnd, 'dd/MM/yyyy')
+          })
+        }
 
-        results.push({
-          userId: user.id,
-          userName: user.name,
-          savedHours: totalHours,
-          weekStart: format(currentWeekStart, 'dd/MM/yyyy'),
-          weekEnd: format(currentWeekEnd, 'dd/MM/yyyy')
+        await prisma.users.update({
+          where: { id: user.id },
+          data: { currentWeekHours: 0 }
         })
       }
 

@@ -2,14 +2,12 @@ import { User } from '../models/user/User';
 import { UserRepository } from '../repositories/UserRepository';
 import { BadgeService } from './BadgeService';
 import { BadgeRepository, UserBadgeRepository } from '../repositories/BadgeRepository';
-import { HistoryService } from './HistoryService';
 import { HistoryRepository } from '../repositories/HistoryRepository';
 import { BadgeEvaluationService } from './BadgeEvaluationService';
 import { UserRole } from '@prisma/client';
 
 export class UserService {
     private badgeService?: BadgeService;
-    private historyService?: HistoryService;
     private badgeEvaluationService?: BadgeEvaluationService;
 
     constructor(
@@ -21,10 +19,6 @@ export class UserService {
         if (badgeRepo && userBadgeRepo) {
             this.badgeService = new BadgeService(badgeRepo, userBadgeRepo);
         }
-        
-
-        const historyRepository = new HistoryRepository();
-        this.historyService = new HistoryService(historyRepository, userRepo);
         
 
         this.badgeEvaluationService = new BadgeEvaluationService();
@@ -64,16 +58,15 @@ export class UserService {
 
         const createdUser = await this.userRepo.create(user);
         
-
-        if (this.historyService) {
-            await this.historyService.recordEntityCreation('USER', createdUser.id!, createdUser.id!, createdUser.toJSON());
-        }
-        
         return createdUser;
     }
 
     async findById(id: number): Promise<User | null> {
         return await this.userRepo.findById(id);
+    }
+
+    async findByEmail(email: string): Promise<User | null>{
+        return await this.userRepo.findByEmail(email);
     }
 
     async findAll(): Promise<User[]> {
@@ -114,19 +107,12 @@ export class UserService {
             currentUser.updateStatus(data.status);
         }
         if (data.roles !== undefined) {
-            // Clear existing roles and add new ones
             const currentRoles = currentUser.roles;
             currentRoles.forEach((role: UserRole) => currentUser.removeRole(role));
             data.roles.forEach((role: UserRole) => currentUser.addRole(role));
         }
 
-        const oldUserData = currentUser.toJSON();
         const updatedUser = await this.userRepo.update(currentUser);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -139,11 +125,6 @@ export class UserService {
 
         const userData = user.toJSON();
         await this.userRepo.delete(id);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityDeletion('USER', id, id, userData);
-        }
     }
 
 
@@ -165,6 +146,9 @@ export class UserService {
         return user;
     }
 
+    async findPending(): Promise<User[] | null> {
+        return await this.userRepo.findPending();
+    }
 
     async approveUser(id: number): Promise<User> {
         const user = await this.userRepo.findById(id);
@@ -172,14 +156,8 @@ export class UserService {
             throw new Error("Usuário não encontrado");
         }
 
-        const oldUserData = user.toJSON();
         user.approve();
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -190,14 +168,8 @@ export class UserService {
             throw new Error("Usuário não encontrado");
         }
 
-        const oldUserData = user.toJSON();
         user.reject();
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -208,14 +180,8 @@ export class UserService {
             throw new Error("Usuário não encontrado");
         }
 
-        const oldUserData = user.toJSON();
         user.suspend();
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -226,14 +192,8 @@ export class UserService {
             throw new Error("Usuário não encontrado");
         }
 
-        const oldUserData = user.toJSON();
         user.activate();
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -244,15 +204,9 @@ export class UserService {
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
-
-        const oldUserData = user.toJSON();
+        
         user.addRole(role);
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -263,14 +217,8 @@ export class UserService {
             throw new Error("Usuário não encontrado");
         }
 
-        const oldUserData = user.toJSON();
         user.removeRole(role);
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -281,18 +229,11 @@ export class UserService {
             throw new Error("Usuário não encontrado");
         }
 
-        const oldUserData = user.toJSON();
-
         const currentRoles = user.roles;
         currentRoles.forEach(role => user.removeRole(role));
         roles.forEach(role => user.addRole(role));
         
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -304,14 +245,8 @@ export class UserService {
             throw new Error("Usuário não encontrado");
         }
 
-        const oldUserData = user.toJSON();
         user.addPoints(points);
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -322,14 +257,8 @@ export class UserService {
             throw new Error("Usuário não encontrado");
         }
 
-        const oldUserData = user.toJSON();
         user.removePoints(points);
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -340,14 +269,8 @@ export class UserService {
             throw new Error("Usuário não encontrado");
         }
 
-        const oldUserData = user.toJSON();
         user.setPoints(points);
         const updatedUser = await this.userRepo.update(user);
-        
-
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -400,14 +323,13 @@ export class UserService {
         avatar?: string | null;
         profileVisibility?: any;
         password?: string;
+        weekHours?: number;
     }): Promise<User> {
         const user = await this.userRepo.findById(id);
 
         if (!user) {
             throw new Error("Usuário não encontrado");
         }
-
-        const oldUserData = user.toJSON();
         
         if (data.name !== undefined) {
             user.updateName(data.name);
@@ -421,6 +343,9 @@ export class UserService {
         if (data.profileVisibility !== undefined) {
             user.updateProfileVisibility(data.profileVisibility);
         }
+        if (data.weekHours !== undefined) {
+            user.updateWeekHours(data.weekHours);
+        }
         if (data.password !== undefined) {
             if (data.password.trim()) {
                 await user.setPassword(data.password);
@@ -430,10 +355,6 @@ export class UserService {
         // Se password é undefined, não fazemos nada (mantém a senha atual)
 
         const updatedUser = await this.userRepo.update(user);
-        
-        if (this.historyService) {
-            await this.historyService.recordEntityUpdate('USER', id, id, oldUserData, updatedUser.toJSON());
-        }
         
         return updatedUser;
     }
@@ -472,31 +393,26 @@ export class UserService {
         }
 
         // Verificar se o usuário tem horas suficientes
-        if (user.totalHours < data.hours) {
+        if (user.currentWeekHours < data.hours) {
             throw new Error("Usuário não possui horas suficientes");
         }
-
-        const oldUserData = user.toJSON();
         
         // Retirar horas
         user.deductHours(data.hours);
         const updatedUser = await this.userRepo.update(user);
 
-        // Registrar no histórico
-        if (this.historyService) {
-            await this.historyService.recordAction(
-                'USER', 
-                userId, 
-                'DEDUCT_HOURS', 
-                data.deductedBy, 
-                `Horas retiradas: ${data.hours}h. Motivo: ${data.reason}`
-            );
-        }
-
         return {
             message: `${data.hours} horas retiradas com sucesso`,
             user: updatedUser
         };
+    }
+
+    async getUsersByRole() {
+        return await this.userRepo.getUsersByRole();
+    }
+
+    async getUserByStatus() {
+        return await this.userRepo.getUsersByStatus();
     }
 
     private canDeductHours(roles: string[], projectId?: number): boolean {

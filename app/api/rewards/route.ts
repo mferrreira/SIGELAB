@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
-import { RewardController } from "@/backend/controllers/RewardController"
+import { RewardService } from "@/backend/services/RewardService";
+import { RewardRepository } from "@/backend/repositories/RewardRepository";
 
-const rewardController = new RewardController();
+const rewardService = new RewardService(
+  new RewardRepository(),
+)
 
-// GET: Obter todas as recompensas
 export async function GET() {
   try {
-    const rewards = await rewardController.getAllRewards();
+    const rewards = await rewardService.findAll();
     return NextResponse.json({ rewards });
   } catch (error: any) {
     console.error('Erro ao buscar recompensas:', error);
@@ -14,13 +16,22 @@ export async function GET() {
   }
 }
 
-// POST: Criar uma nova recompensa
 export async function POST(request: Request) {
-  try {
-    const response = await rewardController.createReward(request);
-    return response;
-  } catch (error: any) {
-    console.error('Erro ao criar recompensa:', error);
-    return NextResponse.json({ error: 'Erro ao criar recompensa', details: error?.message }, { status: 500 });
-  }
+    try {
+      const data = await request.json();
+      const reward = await rewardService.create(data);
+      return new Response(JSON.stringify({ reward: reward.toPrisma() }), { 
+        status: 201, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    } catch (error: any) {
+      console.error('Erro ao criar recompensa:', error);
+      return new Response(JSON.stringify({ 
+        error: 'Erro ao criar recompensa', 
+        details: error?.message 
+      }), { 
+        status: 400, 
+        headers: { 'Content-Type': 'application/json' } 
+      });
+    }
 }

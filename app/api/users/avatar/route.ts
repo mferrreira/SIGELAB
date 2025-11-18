@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { UserController } from "@/backend/controllers/UserController"
 import { ImageProcessor } from "@/lib/utils/image-processor"
+
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,7 +28,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 })
     }
 
-    if (!userId || parseInt(userId) !== (session.user as any).id) {
+    if (!userId || Number(userId) !== (session.user as any).id) {
       return NextResponse.json({ error: "Usuário não autorizado" }, { status: 403 })
     }
 
@@ -28,21 +37,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: validation.error }, { status: 400 })
     }
 
-    const userController = new UserController()
-    const currentUser = await userController.getUser(parseInt(userId))
+    const currentUser = await userService.findById(Number(userId));
     
     if (currentUser?.avatar) {
       await ImageProcessor.deleteImage(currentUser.avatar)
     }
 
-    const avatarUrl = await ImageProcessor.processAndSave(file, parseInt(userId), {
+    const avatarUrl = await ImageProcessor.processAndSave(file, Number(userId), {
       width: 300,
       height: 300,
       quality: 85,
       format: 'webp'
     })
 
-    await userController.updateProfile(parseInt(userId), { avatar: avatarUrl })
+    await userService.updateProfile(Number(userId), { avatar: avatarUrl })
 
     return NextResponse.json({ 
       success: true, 

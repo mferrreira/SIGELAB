@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server"
-import { TaskController } from "@/backend/controllers/TaskController"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
+import { TaskService } from "@/backend/services/TaskService"
+import { TaskRepository } from "@/backend/repositories/TaskRepository"
+import { UserRepository } from "@/backend/repositories/UserRepository"
+import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
 
-const taskController = new TaskController();
+const taskService = new TaskService(
+  new TaskRepository(),
+  new UserRepository(),
+  new ProjectRepository(),
+);
 
-// GET: Obter tarefas baseado no usuário logado
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -16,25 +22,33 @@ export async function GET(request: Request) {
     const userId = parseInt((session.user as any).id);
     const userRoles = (session.user as any).roles || [];
     const { searchParams } = new URL(request.url)
-    const projectId = searchParams.get('projectId')
-    
+    const projectIdParam = searchParams.get('projectId')
     let tasks
-    if (projectId) {
-      // Buscar tasks do projeto específico
-      const projectTasks = await taskController.getTasksByProject(parseInt(projectId))
-      // Buscar tasks globais/públicas
-      const allTasks = await taskController.getTasksForUser(userId, userRoles)
-      const globalTasks = allTasks.filter(task => task.isGlobal || task.taskVisibility === 'public')
-      // Combinar tasks do projeto + tasks globais
-      tasks = [...projectTasks, ...globalTasks]
-      // Remover duplicatas baseado no ID
-      const uniqueTasks = tasks.filter((task, index, self) => 
+
+    if (projectIdParam) {
+      const projectId = parseInt(projectIdParam)
+      if (isNaN(projectId)) {
+        return NextResponse.json({ error: "projectId inválido" }, { status: 400 })
+      }
+
+      const canAccessAllProjects = userRoles.includes('COORDENADOR') || userRoles.includes('GERENTE')
+      if (!canAccessAllProjects) {
+        const projectMemberships = await taskService.getProjectsForUser(userId)
+        const allowedProjectIds = new Set(projectMemberships.map(project => project.id))
+        if (!allowedProjectIds.has(projectId)) {
+          return NextResponse.json({ tasks: [] })
+        }
+      }
+
+      const projectTasks = await taskService.getTasksByProject(projectId)
+      const globalTasks = (await taskService.getTasksForUser(userId, userRoles))
+        .filter(task => task.isGlobal || task.taskVisibility === 'public')
+      const merged = [...projectTasks, ...globalTasks]
+      tasks = merged.filter((task, index, self) => 
         index === self.findIndex(t => t.id === task.id)
       )
-      tasks = uniqueTasks
     } else {
-      // Filtrar tarefas baseado no usuário e suas permissões
-      tasks = await taskController.getTasksForUser(userId, userRoles)
+      tasks = await taskService.getTasksForUser(userId, userRoles)
     }
     
     return NextResponse.json({ tasks: tasks.map(task => task.toJSON()) })
@@ -44,7 +58,6 @@ export async function GET(request: Request) {
   }
 }
 
-// POST: Criar uma nova tarefa
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -68,7 +81,7 @@ export async function POST(request: Request) {
       isGlobal
     } = body
 
-    const task = await taskController.createTask({
+    const task = await taskService.create({
       title,
       description,
       status,

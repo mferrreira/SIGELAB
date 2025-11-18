@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ProjectDialog } from "./project-dialog"
-import { Plus, Edit, Trash2, Calendar } from "lucide-react"
+import { Plus, Edit, Trash2, Calendar, Eye } from "lucide-react"
 import type { Project } from "@/contexts/types"
 import { hasAccess } from "@/lib/utils/utils"
 
@@ -24,10 +24,16 @@ const statusLabels = {
   archived: "Arquivado",
 }
 
-export function ProjectList() {
+interface ProjectListProps {
+  onProjectSelect?: (project: Project) => void
+  projects?: Project[]
+}
+
+export function ProjectList({ onProjectSelect, projects: providedProjects }: ProjectListProps) {
   const { user } = useAuth()
-  const { projects, deleteProject, loading } = useProject()
+  const { projects: contextProjects, deleteProject, loading } = useProject()
   const { users } = useUser()
+  const projects = providedProjects ?? contextProjects
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
@@ -140,24 +146,36 @@ export function ProjectList() {
                     Criado por: {users.find(u => u.id === project.createdBy)?.name || project.createdBy}
                   </div>
 
-                  {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
-                    <div className="flex space-x-2">
+                  <div className="flex space-x-2">
+                    {onProjectSelect && (
                       <Button
+                        type="button"
                         variant="outline"
                         size="sm"
-                        onClick={() => handleEdit(project)}
+                        onClick={() => onProjectSelect(project)}
                       >
-                        <Edit className="h-3 w-3" />
+                        <Eye className="h-3 w-3" />
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(project.id)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  )}
+                    )}
+                    {user && hasAccess(user?.roles || [], 'MANAGE_PROJECTS') && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(project)}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(project.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {project.links &&

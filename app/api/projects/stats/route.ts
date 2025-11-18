@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { ProjectHoursController } from '@/backend/controllers/ProjectHoursController'
 import { prisma } from '@/lib/database/prisma'
-
-const projectHoursController = new ProjectHoursController()
+import { getProjectStats } from '@/backend/services/ProjectHoursService'
 
 export async function GET() {
   try {
@@ -27,7 +25,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Apenas coordenadores e gerentes podem acessar estatísticas gerais' }, { status: 403 })
     }
 
-    const stats = await projectHoursController.getProjectStats()
+    const stats = await getProjectStats()
 
     return NextResponse.json({ stats }, { status: 200 })
   } catch (error: any) {

@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import { ProjectHoursController } from '@/backend/controllers/ProjectHoursController'
 import { prisma } from '@/lib/database/prisma'
-
-const projectHoursController = new ProjectHoursController()
+import { getProjectHoursHistory } from '@/backend/services/ProjectHoursService'
 
 export async function GET(
   request: Request,
@@ -16,6 +14,7 @@ export async function GET(
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
     }
 
+    //TODO: mover lógica para um repository
     const user = await prisma.users.findUnique({
       where: { email: session.user.email },
       include: {
@@ -44,7 +43,7 @@ export async function GET(
       return NextResponse.json({ error: 'Acesso negado ao projeto' }, { status: 403 })
     }
 
-    const history = await projectHoursController.getProjectHoursHistory(projectId, months)
+    const history = await getProjectHoursHistory(projectId, months)
 
     return NextResponse.json({ history }, { status: 200 })
   } catch (error: any) {

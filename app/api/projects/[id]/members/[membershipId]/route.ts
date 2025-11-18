@@ -31,7 +31,7 @@ export async function DELETE(
     const projectId = parseInt(params.id)
     const membershipId = parseInt(params.membershipId)
 
-    // Verificar se a membership existe e pertence ao projeto
+    //TODO: mover lógica para um repository
     const membership = await prisma.project_members.findFirst({
       where: {
         id: membershipId,

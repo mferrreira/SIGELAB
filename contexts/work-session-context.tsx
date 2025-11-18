@@ -296,25 +296,24 @@ export function WorkSessionProvider({ children }: { children: ReactNode }) {
 
   const getWeeklyHours = async (userId: number, weekStart: string, weekEnd: string): Promise<number> => {
     try {
-      // Calcular horas a partir das sessões completadas na semana atual
       const weekStartDate = new Date(weekStart);
       const weekEndDate = new Date(weekEnd);
       
-      // Filtrar sessões completadas dentro do período da semana
       const completedSessions = sessions.filter(session => 
         session &&
         session.userId === userId &&
         session.status === 'completed' &&
         session.startTime &&
-        session.duration &&
+        typeof session.duration === 'number' &&
         new Date(session.startTime) >= weekStartDate &&
         new Date(session.startTime) <= weekEndDate
       );
       
-      // Somar as durações das sessões (converter de segundos para horas)
-      const totalHours = completedSessions.reduce((sum, session) => {
-        return sum + ((session.duration || 0) / 3600);
+      const totalSeconds = completedSessions.reduce((sum, session) => {
+        return sum + ((session.duration || 0));
       }, 0);
+
+      const totalHours = totalSeconds / 3600;
       
       return totalHours;
     } catch (error) {

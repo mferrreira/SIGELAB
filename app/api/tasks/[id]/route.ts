@@ -1,14 +1,21 @@
 import { NextResponse } from "next/server"
-import { TaskController } from "@/backend/controllers/TaskController"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth/server-auth"
+import { TaskService } from "@/backend/services/TaskService"
+import { TaskRepository } from "@/backend/repositories/TaskRepository"
+import { UserRepository } from "@/backend/repositories/UserRepository"
+import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
 
-const taskController = new TaskController();
+const taskService = new TaskService(
+  new TaskRepository(),
+  new UserRepository(),
+  new ProjectRepository(),
+);
 
 export async function GET(request: Request, { params }: { params: { id: string } }) {
   try {
     const id = parseInt(params.id)
-    const task = await taskController.getTask(id)
+    const task = await taskService.findById(id)
     if (!task) {
       return NextResponse.json({ error: "Tarefa não encontrada" }, { status: 404 })
     }
@@ -38,7 +45,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
       if (body[key] !== undefined) data[key] = body[key]
     }
 
-    const task = await taskController.updateTask(id, data, parseInt((session.user as any).id))
+    const task = await taskService.update(id, data, parseInt((session.user as any).id))
     return NextResponse.json({ task: task.toJSON() })
   } catch (error: any) {
     if (error.message?.includes('not found')) {
@@ -58,7 +65,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
 
     const params = await context.params
     const id = parseInt(params.id)
-    await taskController.deleteTask(id, parseInt((session.user as any).id))
+    await taskService.delete(id, parseInt((session.user as any).id))
     return NextResponse.json({ success: true })
   } catch (error: any) {
     if (error.message?.includes('not found')) {
@@ -87,7 +94,7 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
 
     const userToAward = userId ? parseInt(userId) : parseInt((session.user as any).id);
     
-    const task = await taskController.completeTask(id, userToAward)
+    const task = await taskService.completeTask(id, userToAward)
     
     console.log(`✅ Task ${id} completed by user ${userToAward}. Awarded ${task.points} points.`)
     

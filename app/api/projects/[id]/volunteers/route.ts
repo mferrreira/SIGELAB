@@ -2,8 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth/server-auth"
 import { ProjectController } from "@/backend/controllers/ProjectController"
+import { ProjectService } from "@/backend/services/ProjectService"
+import { ProjectRepository } from "@/backend/repositories/ProjectRepository"
+import { ProjectMembershipRepository } from "@/backend/repositories/ProjectMembershipRepository"
 
-const projectController = new ProjectController()
+const projectService = new ProjectService(
+  new ProjectRepository(),
+  new ProjectMembershipRepository()
+)
 
 export async function GET(
   request: NextRequest,
@@ -20,7 +26,7 @@ export async function GET(
       return NextResponse.json({ error: "ID do projeto inválido" }, { status: 400 })
     }
 
-    const result = await projectController.getVolunteersStats(projectId)
+    const result = await projectService.getVolunteersStats(projectId)
     return NextResponse.json(result, { status: 200 })
   } catch (error) {
     console.error("Erro ao buscar estatísticas dos voluntários:", error)

@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-import { LabResponsibilityController } from "@/backend/controllers/LabResponsibilityController"
+import { LabResponsibilityService } from "@/backend/services/LabResponsibilityService";
+import { UserRepository } from "@/backend/repositories/UserRepository";
+import { LabResponsibilityRepository } from "@/backend/repositories/LabResponsibilityRepository";
 
-const labResponsibilityController = new LabResponsibilityController();
+const labResponsibilityService = new LabResponsibilityService(
+  new LabResponsibilityRepository(),
+  new UserRepository(),
+);
 
-// GET: Obter todas as responsabilidades ou filtrar por período
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -15,7 +19,7 @@ export async function GET(request: Request) {
 
     if (active === "true") {
       // Obter apenas a responsabilidade ativa
-      const activeResponsibility = await labResponsibilityController.getActiveResponsibility()
+      const activeResponsibility = await labResponsibilityService.getActiveResponsibility()
       if (activeResponsibility) {
         return NextResponse.json({
           activeResponsibility: activeResponsibility.toJSON()
@@ -25,7 +29,7 @@ export async function GET(request: Request) {
       }
     } else if (startDate && endDate) {
       // Filtrar por período
-      const responsibilities = await labResponsibilityController.getResponsibilitiesByDateRange(
+      const responsibilities = await labResponsibilityService.getResponsibilitiesByDateRange(
         new Date(startDate),
         new Date(endDate)
       )
@@ -34,7 +38,7 @@ export async function GET(request: Request) {
       }, { status: 200 })
     } else {
       // Obter todas
-      const responsibilities = await labResponsibilityController.getAllResponsibilities()
+      const responsibilities = await labResponsibilityService.findAll()
       return NextResponse.json({ 
         responsibilities: responsibilities.map(r => r.toJSON()) 
       }, { status: 200 })
@@ -60,7 +64,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "ID do usuário e nome são obrigatórios" }, { status: 400 })
     }
 
-    const responsibility = await labResponsibilityController.startResponsibility(
+    const responsibility = await labResponsibilityService.startResponsibility(
       Number(body.userId),
       body.userName,
       body.notes || ""

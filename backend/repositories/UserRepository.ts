@@ -43,6 +43,7 @@ export interface IUserRepository {
     getUserWorkSessionsCount(userId: number): Promise<number>;
     getUserAverageWeeklyHours(userId: number): Promise<number>;
     getUserMaxConsecutiveDays(userId: number): Promise<number>;
+    getUserProjectMemberships(userId: number): Promise<{ projectId: number }[]>;
 }
 
 export class UserRepository implements IUserRepository {
@@ -430,5 +431,13 @@ export class UserRepository implements IUserRepository {
         });
 
         return users.map(user => User.fromPrisma(user));
+    }
+
+    async getUserProjectMemberships(userId: number): Promise<{ projectId: number }[]> {
+        const memberships = await prisma.project_members.findMany({
+            where: { userId },
+            select: { projectId: true }
+        });
+        return memberships;
     }
 }

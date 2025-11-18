@@ -140,6 +140,7 @@ export class UserController {
         avatar?: string | null;
         profileVisibility?: any;
         password?: string;
+        weekHours?: number;
     }): Promise<any> {
         const user = await this.userService.updateProfile(id, data);
         return user.toJSON();

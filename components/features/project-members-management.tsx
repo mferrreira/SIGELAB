@@ -338,6 +338,7 @@ export function ProjectMembersManagement({ project, onUpdate }: ProjectMembersMa
                         <SelectItem value="COLABORADOR">Colaborador</SelectItem>
                         <SelectItem value="PESQUISADOR">Pesquisador</SelectItem>
                         <SelectItem value="GERENTE_PROJETO">Gerente de Projeto</SelectItem>
+                        <SelectItem value="VOLUNTARIO">Voluntário</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

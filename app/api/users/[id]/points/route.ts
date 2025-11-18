@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { UserController } from "@/backend/controllers/UserController";
 
-const userController = new UserController();
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 // PATCH: Atualizar pontos do usuário
 export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -18,13 +25,13 @@ export async function PATCH(request: Request, context: { params: Promise<{ id: s
     let user;
     switch (action) {
       case "add":
-        user = await userController.addPoints(id, points);
+        user = await userService.addPoints(id, points);
         break;
       case "remove":
-        user = await userController.removePoints(id, points);
+        user = await userService.removePoints(id, points);
         break;
       case "set":
-        user = await userController.setPoints(id, points);
+        user = await userService.setPoints(id, points);
         break;
       default:
         return NextResponse.json({ error: "Ação inválida" }, { status: 400 });

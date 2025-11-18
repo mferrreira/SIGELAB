@@ -1,7 +1,14 @@
 import { NextResponse } from "next/server";
-import { UserController } from "@/backend/controllers/UserController";
 
-const userController = new UserController();
+import { UserService } from '@/backend/services/UserService'
+import { UserRepository } from '@/backend/repositories/UserRepository'
+import { BadgeRepository, UserBadgeRepository } from '@/backend/repositories/BadgeRepository'
+
+const userService = new UserService(
+  new UserRepository(),
+  new BadgeRepository(),
+  new UserBadgeRepository(),
+)
 
 // GET: Obter um usuário específico
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -9,7 +16,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const params = await context.params;
     const id = parseInt(params.id);
 
-    const user = await userController.getUser(id);
+    const user = await userService.findById(id);
     if (!user) {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
     }
@@ -28,7 +35,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     const id = parseInt(params.id);
     const body = await request.json();
 
-    const user = await userController.updateUser(id, body);
+    const user = await userService.update(id, body);
     return NextResponse.json({ user });
   } catch (error: any) {
     console.error("Erro ao atualizar usuário:", error);
@@ -42,7 +49,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     const params = await context.params;
     const id = parseInt(params.id);
 
-    await userController.deleteUser(id);
+    await userService.delete(id);
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error("Erro ao excluir usuário:", error);
